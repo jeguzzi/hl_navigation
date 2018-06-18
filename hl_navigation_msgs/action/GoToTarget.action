@@ -1,0 +1,9 @@
+#goal definition
+geometry_msgs/PointStamped target_point
+geometry_msgs/PoseStamped target_pose
+---
+#result definition
+
+---
+#feedback
+int32 distance
