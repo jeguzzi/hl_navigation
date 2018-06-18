@@ -206,8 +206,18 @@ void Navigator::readDynamicParameters(hl_navigation::NavigationConfig &config, u
         setAgentFromString(config.behavior);
         agent->setOptimalSpeed(config.optimal_speed);
         /// TODO: distinguish between these two that are alternative in the old code
-        agent->setOptimalAngularSpeed(config.optimal_angular_speed);
-        agent->setOptimalRotationSpeed(config.optimal_rotation_speed);
+        if(abs(config.optimal_angular_speed - agent->optimalAngularSpeed.GetValue()) > 1e-3)
+        {
+          agent->setOptimalAngularSpeed(config.optimal_angular_speed);
+          config.optimal_rotation_speed = agent->optimalRotationSpeed;
+          config.optimal_angular_speed = agent->optimalAngularSpeed.GetValue();
+        }
+        if(config.optimal_rotation_speed != agent->optimalRotationSpeed)
+        {
+          agent->setOptimalRotationSpeed(config.optimal_rotation_speed);
+          config.optimal_rotation_speed = agent->optimalRotationSpeed;
+          config.optimal_angular_speed = agent->optimalAngularSpeed.GetValue();
+        }
         ///
         tauZ = config.tau_z;
         optimalVerticalSpeed=config.optimal_vertical_speed;

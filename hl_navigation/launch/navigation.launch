@@ -89,7 +89,7 @@
       <param name="publish_cmd_stamped" value="$(arg publish_cmd_stamped)" />
       <param name="rate" value="$(arg rate)" />
 
-      <param name="optimalSpeed" value="$(arg optimalSpeed)"/>
+      <param name="optimal_speed" value="$(arg optimal_speed)"/>
       <param name="optimal_angular_speed" value="$(arg optimal_angular_speed)"/>
       <param name="optimal_rotation_speed" value="$(arg optimal_rotation_speed)"/>
       <param name="tau" value="$(arg tau)"/>
