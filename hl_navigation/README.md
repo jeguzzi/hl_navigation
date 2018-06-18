@@ -35,7 +35,7 @@ float32 height
 
 ### Actions
 
--
+- `go_to_target`: `hl_navigation_msgs/GoToTarget`, blocking action to reach a target (either a pose or a point). It provides the distance to target as a feedback
 
 
 Parameters
