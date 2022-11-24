@@ -1,14 +1,18 @@
-FROM jeguzzi/ros:kinetic-ros-dev
+FROM ros:humble
 MAINTAINER Jerome Guzzi "jerome@idsia.ch"
 
-RUN apt-get update && apt-get install -y \
-   ros-kinetic-dynamic-reconfigure \
-   ros-kinetic-tf \
-   ros-kinetic-angles \
-   && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install -y \
+#    ros-humble-angles \
+#    && rm -rf /var/lib/apt/lists/*
 
-COPY hl_navigation src/hl_navigation
-COPY hl_navigation_msgs src/hl_navigation_msgs
-COPY hl_navigation_launch src/hl_navigation_launch
+SHELL ["/bin/bash", "-c"]
 
-RUN catkin build
+RUN mkdir -p /ros_ws/src
+
+COPY hl_navigation /ros_ws/src/hl_navigation
+COPY hl_navigation_msgs /ros_ws/src/hl_navigation_msgs
+
+RUN cd /ros_ws \
+    && source /ros_entrypoint.sh \
+    && colcon build --merge-install --install-base /opt/ros/humble \
+    && rm -r /ros_ws/build /ros_ws/log

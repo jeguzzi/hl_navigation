@@ -1,4 +1,4 @@
 # This contains all the currently localized circular obstacles with timestamps
 
-Header header
+std_msgs/Header header
 Obstacle[] obstacles

@@ -6,23 +6,27 @@
 #define _NAVIGATOR_H_
 
 #include <cstdlib>
-#include <ros/ros.h>
-#include <dynamic_reconfigure/server.h>
-#include <tf/tf.h>
-#include <tf/transform_listener.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/Vector3Stamped.h>
-#include <geometry_msgs/PointStamped.h>
-#include <nav_msgs/Odometry.h>
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "tf2_ros/transform_listener.h"
+#include "tf2_ros/buffer.h"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/vector3_stamped.hpp"
+#include "geometry_msgs/msg/point_stamped.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/twist_stamped.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "std_msgs/msg/empty.hpp"
+#include "hl_navigation_msgs/action/go_to_target.hpp"
+#include "rcl_interfaces/msg/set_parameters_result.hpp"
 
-#include <actionlib/server/simple_action_server.h>
-#include <hl_navigation_msgs/GoToTargetAction.h>
 
-#include <hl_navigation_msgs/Obstacles.h>
-#include <hl_navigation/NavigationConfig.h>
+// #include "hl_navigation_msgs/action/go_to_target_action.hpp"
+#include "hl_navigation_msgs/msg/obstacles.hpp"
 
-#include <angles/angles.h>
+// #include <angles/angles.h>
 
 #include "Agent.h"
 #include "HLAgent.h"
@@ -33,37 +37,46 @@
     this is the class documentation
 */
 
-class Navigator
+using GoToTarget = hl_navigation_msgs::action::GoToTarget;
+using GoalHandleGoToTarget = rclcpp_action::ServerGoalHandle<GoToTarget>;
+
+class Navigator : public rclcpp::Node
 {
 
  private:
-  ros::NodeHandle n;
-  ros::NodeHandle pn;
+
   std::string ns;
-  tf::TransformListener listener;
-  dynamic_reconfigure::Server<hl_navigation::NavigationConfig> server;
+  //std::string tf_prefix;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
   std::string odom_frame;
-  ros::Time lastTimeWhenLocalized;
+  rclcpp::Time lastTimeWhenLocalized;
   bool localized;
-  void updateLocalization(ros::Time now);
-  void setOdometryFromMessage(const nav_msgs::Odometry& msg);
-  ros::Subscriber odometrySubscriber;
+  void updateLocalization(rclcpp::Time now);
+  void setOdometryFromMessage(const nav_msgs::msg::Odometry& msg);
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometrySubscriber;
 
   enum {POSE, POINT} targetType;
-  void setTargetFromPointMessage(const geometry_msgs::PointStamped& msg);
-  void setTargetFromPoseMessage(const geometry_msgs::PoseStamped& msg);
-  bool setTargetFromPoint(const geometry_msgs::PointStamped& msg);
-  bool setTargetFromPose(const geometry_msgs::PoseStamped& msg);
+  void setTargetFromPointMessage(const geometry_msgs::msg::PointStamped& msg);
+  void setTargetFromPoseMessage(const geometry_msgs::msg::PoseStamped& msg);
+  bool setTargetFromPoint(const geometry_msgs::msg::PointStamped& msg);
+  bool setTargetFromPose(const geometry_msgs::msg::PoseStamped& msg);
 
-  ros::Subscriber targetPoseSubscriber, targetPointSubscriber;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr targetPoseSubscriber;
+  rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr targetPointSubscriber;
 
   //actions
 
-  actionlib::SimpleActionServer<hl_navigation_msgs::GoToTargetAction> as_;
-  void goToTarget();
-  void preemptTarget();
+  rclcpp_action::Server<hl_navigation_msgs::action::GoToTarget>::SharedPtr action_server_;
+  std::shared_ptr<GoalHandleGoToTarget> goal_handle;
 
+  rclcpp_action::GoalResponse handle_goal(
+    const rclcpp_action::GoalUUID & uuid,
+    std::shared_ptr<const GoToTarget::Goal> goal);
+
+  rclcpp_action::CancelResponse handle_cancel(const std::shared_ptr<GoalHandleGoToTarget>);
+  void handle_accepted(const std::shared_ptr<GoalHandleGoToTarget>);
   //States
 
   Agent *agent;
@@ -87,20 +100,21 @@ class Navigator
   void stop();
   void turn();
   void brake();
-  void setStopFromMessage(const std_msgs::Empty& msg);
-  ros::Subscriber stopSubscriber;
+  void setStopFromMessage(const std_msgs::msg::Empty& msg);
+  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr stopSubscriber;
 
   bool publishCmdStamped;
   void setMotorVelocity(double speed,double verticalVelocity, double angularSpeed);
   void setMotorVelocity(double newVelocityX,double newVelocityY,double verticalVelocity,double newAngularSpeed);
-  ros::Publisher navPublisher, cmdStampedPublisher;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr navPublisher;
+  rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr cmdStampedPublisher;
   void updateVerticalVelocity();
-  void update(const ros::TimerEvent&);
-  ros::Timer timer;
+  void update();
+  rclcpp::TimerBase::SharedPtr timer_;
 
 
-  void setObstaclesFromMessage(const hl_navigation_msgs::Obstacles& msg);
-  ros::Subscriber obstaclesSubscriber;
+  void setObstaclesFromMessage(const hl_navigation_msgs::msg::Obstacles& msg);
+  rclcpp::Subscription<hl_navigation_msgs::msg::Obstacles>::SharedPtr obstaclesSubscriber;
 
   //RVIZ drawing
   bool drawing_enabled;
@@ -109,11 +123,14 @@ class Navigator
   void initDrawing();
   void drawCollisionMap();
   void drawDesiredVelocity(double s,double a);
-  void drawObstacleVelocity(geometry_msgs::PointStamped &p,geometry_msgs::Vector3 velocity ,bool relevan);
-  void drawObstacle(geometry_msgs::PointStamped &p,double height,double r,double s,bool relevant);
-  void drawTarget(const geometry_msgs::Point &msg, std::string frame_id);
-  ros::Publisher obstacles_marker_pub,target_marker_pub,collision_marker_pub,desired_velocity_marker_pub;
+  void drawObstacleVelocity(geometry_msgs::msg::PointStamped &p,geometry_msgs::msg::Vector3 velocity ,bool relevan);
+  void drawObstacle(geometry_msgs::msg::PointStamped &p,double height,double r,double s,bool relevant);
+  void drawTarget(const geometry_msgs::msg::Point &msg, std::string frame_id);
 
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr obstacles_marker_pub;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr target_marker_pub;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr collision_marker_pub;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr desired_velocity_marker_pub;
 
   //TF
 
@@ -133,12 +150,18 @@ class Navigator
   double minimalSpeed;
   double maximalAngularSpeed; //rad/sec
   void readStaticParameters();
+  void init_params();
   void setAgentFromString(std::string behaviorName);
-  void readDynamicParameters(hl_navigation::NavigationConfig &config, uint32_t level);
+
+
+  OnSetParametersCallbackHandle::SharedPtr param_callback_handle;
+
+
+  rcl_interfaces::msg::SetParametersResult on_set_parameters(const std::vector<rclcpp::Parameter> &parameters);
+
 
  public:
-
-  Navigator();
+   Navigator();
   ~Navigator();
 };
 

@@ -9,23 +9,23 @@
   <!-- The maximal speed -->
   <arg name="maximal_speed" default="0.3"/>
   <!-- The maximal angular speed -->
-  <arg name="maximal_angular_speed" default=""/>
+  <arg name="maximal_angular_speed" default="0.2"/>
 
   <!-- KINEMATIC: TWO_WHEELED  -->
   <!-- The wheel axis length -->
-  <arg name="axis_length" value="1.0"/>
+  <arg name="axis_length" default="1.0"/>
   <!-- Unless maximal_angular_speed is defined: the maximal wheel speed while rotating,
    if undefined, will use maximal_speed-->
-  <arg name="maximal_rotation_speed" value=""/>
+  <arg name="maximal_rotation_speed" default="0.2"/>
 
   <!-- KINEMATIC: HOLONOMIC -->
   <!-- Enable point towards target -->
-  <arg name="point_toward_target" default="False"/>
+  <arg name="point_toward_target" default="false"/>
 
 
   <!-- PLANNING -->
   <!-- The navigation behavior. One of "HL", "ORCA", "HRVO" -->
-  <arg name="behavior" default="0.3"/>
+  <arg name="behavior" default="HL"/>
   <!-- The horizontal speed at which a free agent should move -->
   <arg name="optimal_speed" default="0.3"/>
   <!-- The angular speed at which a free agent should move [radian/sec]-->
@@ -37,7 +37,7 @@
   <!-- The relaxation constant on angular speed -->
   <arg name="rotation_tau" default="0.5"/>
   <!-- The (planning) horizon -->
-  <arg name="horizon" default="1"/>
+  <arg name="horizon" default="1.0"/>
   <!-- The safety margin to add to the robot radius-->
   <arg name="safety_margin" default="0.1"/>
   <!-- Target tolerance (angle) -->
@@ -58,57 +58,57 @@
 
   <!-- PLANNING: ORCA - HRVO -->
   <!-- The (planning) time horizon-->
-  <arg name="time_horizon" default="1"/>
+  <arg name="time_horizon" default="1.0"/>
 
   <!-- PLANNING: 3D -->
   <!-- The vertical speed at which a free agent should move -->
   <arg name="optimal_vertical_speed" default="0.1"/>
   <!-- The relaxation constant on vertical velocity -->
-  <arg name="tau_z" default="1"/>
+  <arg name="tau_z" default="1.0"/>
 
   <!-- DEBUGGING -->
   <!-- enable (rviz) markers  -->
-  <arg name="drawing" default='False'/>
+  <arg name="drawing" default='false'/>
 
   <!-- ROS -->
   <!-- Enable publish a TwistStamped instead of a Twist -->
-  <arg name="publish_cmd_stamped" default='False'/>
+  <arg name="publish_cmd_stamped" default='false'/>
   <!-- The control rate -->
-  <arg name="rate" default='10'/>
+  <arg name="rate" default='10.0'/>
 
 
-   <node name="navigation" pkg="hl_navigation" type="controller" respawn="false" output="screen">
-      <param name="type" value="$(arg type)" />
-      <param name="radius" value="$(arg radius)" />
-      <param name="axis_length" value="$(arg axis_length)" />
-      <param name="maximal_speed" value="$(arg maximal_speed)" />
-      <param name="maximal_angular_speed" value="$(arg maximal_angular_speed)" />
-      <param name="maximal_rotation_speed" value="$(arg maximal_rotation_speed)" />
-      <param name="behavior" value="$(arg behavior)" />
+   <node name="navigation" pkg="hl_navigation" exec="controller" output="screen">
+      <param name="type" value="$(var type)" />
+      <param name="radius" value="$(var radius)" />
+      <param name="axis_length" value="$(var axis_length)" />
+      <param name="maximal_speed" value="$(var maximal_speed)" />
+      <param name="maximal_angular_speed" value="$(var maximal_angular_speed)" />
+      <param name="maximal_rotation_speed" value="$(var maximal_rotation_speed)" />
+      <param name="behavior" value="$(var behavior)" />
 
-      <param name="publish_cmd_stamped" value="$(arg publish_cmd_stamped)" />
-      <param name="rate" value="$(arg rate)" />
+      <param name="publish_cmd_stamped" value="$(var publish_cmd_stamped)" />
+      <param name="rate" value="$(var rate)" />
 
-      <param name="optimal_speed" value="$(arg optimal_speed)"/>
-      <param name="optimal_angular_speed" value="$(arg optimal_angular_speed)"/>
-      <param name="optimal_rotation_speed" value="$(arg optimal_rotation_speed)"/>
-      <param name="tau" value="$(arg tau)"/>
-      <param name="rotation_tau" value="$(arg rotation_tau)"/>
-      <param name="horizon" value="$(arg horizon)"/>
-      <param name="safety_margin" value="$(arg safety_margin)"/>
-      <param name="tol_angle" value="$(arg tol_angle)"/>
-      <param name="tol_distance" value="$(arg tol_distance)"/>
-      <param name="minimal_speed" value="$(arg minimal_speed)"/>
+      <param name="optimal_speed" value="$(var optimal_speed)"/>
+      <param name="optimal_angular_speed" value="$(var optimal_angular_speed)"/>
+      <param name="optimal_rotation_speed" value="$(var optimal_rotation_speed)"/>
+      <param name="tau" value="$(var tau)"/>
+      <param name="rotation_tau" value="$(var rotation_tau)"/>
+      <param name="horizon" value="$(var horizon)"/>
+      <param name="safety_margin" value="$(var safety_margin)"/>
+      <param name="tol_angle" value="$(var tol_angle)"/>
+      <param name="tol_distance" value="$(var tol_distance)"/>
+      <param name="minimal_speed" value="$(var minimal_speed)"/>
 
-      <param name="optimal_vertical_speed" value="$(arg optimal_vertical_speed)"/>
-      <param name="tau_z" value="$(arg tau_z)"/>
+      <param name="optimal_vertical_speed" value="$(var optimal_vertical_speed)"/>
+      <param name="tau_z" value="$(var tau_z)"/>
 
-      <param name="eta" value="$(arg eta)"/>
-      <param name="aperture" value="$(arg aperture)"/>
-      <param name="resolution" value="$(arg resolution)"/>
+      <param name="eta" value="$(var eta)"/>
+      <param name="aperture" value="$(var aperture)"/>
+      <param name="resolution" value="$(var resolution)"/>
 
-      <param name="time_horizon" value="$(arg time_horizon)"/>
+      <param name="time_horizon" value="$(var time_horizon)"/>
 
-      <param name="drawing" value="$(arg drawing)"/>
+      <param name="drawing" value="$(var drawing)"/>
    </node>
 </launch>

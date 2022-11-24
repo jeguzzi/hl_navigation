@@ -1,7 +1,7 @@
 version: '2'
 services:
   control:
-    image: jeguzzi/hl_navigation:kinetic
+    image: jeguzzi/hl_navigation:humble
     build:
       dockerfile: Dockerfile
       context: .

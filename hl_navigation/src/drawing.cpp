@@ -1,28 +1,30 @@
 // RVIZ Drawing (Just for debugging)
 
-#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/msg/marker.hpp>
 #include "Navigator.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 void Navigator::initDrawing()
 {
-        target_marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker/target", 1);
-        obstacles_marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker/obstacles", 1);
-        collision_marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker/collision", 1);
-        desired_velocity_marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker/desired_velocity", 1);
+        target_marker_pub = create_publisher<visualization_msgs::msg::Marker>("visualization_marker/target", 1);
+        obstacles_marker_pub = create_publisher<visualization_msgs::msg::Marker>("visualization_marker/obstacles", 1);
+        collision_marker_pub = create_publisher<visualization_msgs::msg::Marker>("visualization_marker/collision", 1);
+        desired_velocity_marker_pub = create_publisher<visualization_msgs::msg::Marker>("visualization_marker/desired_velocity", 1);
 }
 
-void Navigator::drawObstacleVelocity(geometry_msgs::PointStamped &p,geometry_msgs::Vector3 velocity, bool relevant)
+void Navigator::drawObstacleVelocity(geometry_msgs::msg::PointStamped &p,geometry_msgs::msg::Vector3 velocity, bool relevant)
 {
-        visualization_msgs::Marker marker;
+
+        visualization_msgs::msg::Marker marker;
         marker.header.frame_id = p.header.frame_id;
-        marker.header.stamp = ros::Time::now();
+        marker.header.stamp = now();
         marker.id=obstacleIndex++;
         marker.ns = ns+"/obstacles";
-        marker.type =visualization_msgs::Marker::ARROW;
+        marker.type =visualization_msgs::msg::Marker::ARROW;
 
-        geometry_msgs::Point p1=p.point;
+        geometry_msgs::msg::Point p1=p.point;
         p1.z+=0.05;
-        geometry_msgs::Point p2=p1;
+        geometry_msgs::msg::Point p2=p1;
         p2.x+=velocity.x;
         p2.y+=velocity.y;
         p2.z+=velocity.z;
@@ -43,19 +45,19 @@ void Navigator::drawObstacleVelocity(geometry_msgs::PointStamped &p,geometry_msg
                 marker.color.a = 1.0;
         }
 
-        marker.lifetime = ros::Duration(updatePeriod*1.5);
+        marker.lifetime = rclcpp::Duration::from_seconds(updatePeriod*1.5);
         // Publish the marker
-        obstacles_marker_pub.publish(marker);
+        obstacles_marker_pub->publish(marker);
 }
 
-void Navigator::drawObstacle(geometry_msgs::PointStamped &p,double height,double radius,double socialMargin,bool relevant)
+void Navigator::drawObstacle(geometry_msgs::msg::PointStamped &p,double height,double radius,double socialMargin,bool relevant)
 {
-        visualization_msgs::Marker marker;
+        visualization_msgs::msg::Marker marker;
         marker.header.frame_id = p.header.frame_id;
-        marker.header.stamp = ros::Time::now();
+        marker.header.stamp = now();
         marker.id=obstacleIndex++;
         marker.ns = ns+"/obstacles";
-        marker.type =visualization_msgs::Marker::CYLINDER;
+        marker.type =visualization_msgs::msg::Marker::CYLINDER;
         marker.pose.position=p.point;
         marker.pose.position.z = p.point.z-height*0.5;
         marker.pose.orientation.x = 0.0;
@@ -79,20 +81,20 @@ void Navigator::drawObstacle(geometry_msgs::PointStamped &p,double height,double
                 marker.color.a = 1.0;
         }
 
-        marker.lifetime = ros::Duration(updatePeriod*1.5);
+        marker.lifetime = rclcpp::Duration::from_seconds(updatePeriod*1.5);
         // Publish the marker
-        obstacles_marker_pub.publish(marker);
+        obstacles_marker_pub->publish(marker);
 }
 
 
 void Navigator::drawDesiredVelocity(double desiredSpeed,double desiredAngle)
 {
-        visualization_msgs::Marker marker;
+        visualization_msgs::msg::Marker marker;
         marker.header.frame_id = "base_link"; //ns;//ns+"/base_link";
-        marker.header.stamp = ros::Time::now();
+        marker.header.stamp = now();
         marker.id=0;
         marker.ns = ns+"/desired_velocity";
-        marker.type =visualization_msgs::Marker::ARROW;
+        marker.type =visualization_msgs::msg::Marker::ARROW;
 
 
         //ROS_INFO("%.4f %.4f\n",desiredSpeed,desiredAngle);
@@ -101,7 +103,9 @@ void Navigator::drawDesiredVelocity(double desiredSpeed,double desiredAngle)
         marker.scale.y = 0.05;
         marker.scale.z = 0.05;
 
-        marker.pose.orientation=tf::createQuaternionMsgFromRollPitchYaw(0,0,desiredAngle);
+        tf2::Quaternion quat_tf;
+        quat_tf.setRPY(0.0, 0.0, desiredAngle);
+        tf2::convert(quat_tf, marker.pose.orientation);
 
         marker.color.r = 1.0f;
         marker.color.g = 0.5f;
@@ -110,24 +114,24 @@ void Navigator::drawDesiredVelocity(double desiredSpeed,double desiredAngle)
 
         //marker.lifetime = ros::Duration(dt);
         // Publish the marker
-        desired_velocity_marker_pub.publish(marker);
+        desired_velocity_marker_pub->publish(marker);
 }
 
 void Navigator::drawCollisionMap()
 {
-        visualization_msgs::Marker lines;
+        visualization_msgs::msg::Marker lines;
         lines.header.frame_id = "base_link"; //ns;//ns+"/base_link";
-        lines.header.stamp = ros::Time::now();
+        lines.header.stamp = now();
         lines.id=0;
         lines.ns = ns+"/collisions";
-        lines.type =visualization_msgs::Marker::LINE_STRIP;
+        lines.type =visualization_msgs::msg::Marker::LINE_STRIP;
         lines.pose.orientation.w = 1.0;
         lines.scale.x = 0.05;
         lines.color.r =0.0;
         lines.color.g =1.0;
         lines.color.b =0.0;
         lines.color.a=1.0f;
-        lines.lifetime = ros::Duration();
+        lines.lifetime = rclcpp::Duration(0, 0);
 
         std::vector<Real> d=hlAgent.getDistances();
 
@@ -137,7 +141,7 @@ void Navigator::drawCollisionMap()
         for(uint i=0; i<d.size(); i++)
         {
                 if(d[i]<0) continue;
-                geometry_msgs::Point p;
+                geometry_msgs::msg::Point p;
                 p.y = (r+d[i]) * sin(a);
                 p.x = (r+d[i]) * cos(a);
                 lines.points.push_back(p);
@@ -145,17 +149,17 @@ void Navigator::drawCollisionMap()
         }
 
         // Publish the marker
-        collision_marker_pub.publish(lines);
+        collision_marker_pub->publish(lines);
 }
 
-void Navigator::drawTarget(const geometry_msgs::Point &msg, std::string frame_id)
+void Navigator::drawTarget(const geometry_msgs::msg::Point &msg, std::string frame_id)
 {
-        visualization_msgs::Marker marker;
+        visualization_msgs::msg::Marker marker;
         marker.header.frame_id = frame_id;
-        marker.header.stamp = ros::Time::now();
+        marker.header.stamp = now();
         marker.id=0;
         marker.ns = ns+"/target";
-        marker.type =visualization_msgs::Marker::CYLINDER;
+        marker.type =visualization_msgs::msg::Marker::CYLINDER;
         marker.pose.position=msg;
         marker.pose.position.z = 0.0;
         marker.pose.orientation.x = 0.0;
@@ -173,8 +177,8 @@ void Navigator::drawTarget(const geometry_msgs::Point &msg, std::string frame_id
         marker.color.b =0.0;
         marker.color.a=1.0f;
 
-        marker.lifetime = ros::Duration();
+        marker.lifetime = rclcpp::Duration(0, 0);
 
         // Publish the marker
-        target_marker_pub.publish(marker);
+        target_marker_pub->publish(marker);
 }
