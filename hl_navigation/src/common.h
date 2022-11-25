@@ -8,8 +8,7 @@
 #include "argos2/common/utility/math/angles.h"
 #include "argos2/common/utility/math/vector2.h"
 #include "argos2/common/utility/math/vector3.h"
-#include <time.h>
 #include <stdio.h>
-
+#include <time.h>
 
 #endif

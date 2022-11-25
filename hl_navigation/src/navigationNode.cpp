@@ -2,8 +2,8 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "rclcpp/rclcpp.hpp"
 #include "Navigator.h"
+#include "rclcpp/rclcpp.hpp"
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
