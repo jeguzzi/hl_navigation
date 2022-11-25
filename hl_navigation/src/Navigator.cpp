@@ -46,12 +46,24 @@ void Navigator::setTargetFromPointMessage(const geometry_msgs::msg::PointStamped
 
 bool Navigator::setTargetFromPoint(const geometry_msgs::msg::PointStamped& msg)
 {
-        if(odom_frame=="") return false;
+        if(odom_frame=="") {
+          RCLCPP_WARN(
+              this->get_logger(), "Cannot set target point: odometry frame is not known yet");
+          return false;
+        }
         geometry_msgs::msg::PointStamped targetPoint;
-        if(!inOdomFrame(msg, targetPoint)) return false;
+        if(!inOdomFrame(msg, targetPoint)) {
+          RCLCPP_WARN(
+              this->get_logger(), "Cannot set target point: cannot transform to odometry frame %s",
+              odom_frame.c_str());
+          return false;
+        }
         targetType = POINT;
         agent->targetPosition = CVector2(targetPoint.point.x,targetPoint.point.y);
         targetZ = targetPoint.point.z;
+        RCLCPP_INFO(
+            this->get_logger(), "Set target point to (%.3f, %.3f)",
+            targetPoint.point.x, targetPoint.point.y);
         state = MOVE;
         if(drawing_enabled) drawTarget(targetPoint.point, targetPoint.header.frame_id);
         return true;
@@ -111,15 +123,36 @@ void Navigator::setOdometryFromMessage(const nav_msgs::msg::Odometry& msg)
 {
         lastTimeWhenLocalized=now();
         odom_frame=msg.header.frame_id;
-        geometry_msgs::msg::Pose pose = msg.pose.pose;
-        geometry_msgs::msg::Twist twist = msg.twist.twist;
-        // HACK: We assume that twist and pose are in the same frame!
+        const geometry_msgs::msg::Pose & pose = msg.pose.pose;
+
+        if (odom_frame != msg.child_frame_id) {
+          geometry_msgs::msg::Vector3Stamped linear, angular;
+          geometry_msgs::msg::Vector3Stamped linear_odom, angular_odom;
+          linear.header.frame_id = msg.child_frame_id;
+          angular.header.frame_id = msg.child_frame_id;
+          linear.vector = msg.twist.twist.linear;
+          // TODO(Jerome): not needed
+          angular.vector = msg.twist.twist.angular;
+          if (inOdomFrame(linear, linear_odom) && inOdomFrame(angular, angular_odom)) {
+            agent->velocity = CVector2(linear_odom.vector.x, linear_odom.vector.y);
+            agent->angularSpeed = CRadians(angular_odom.vector.z);
+          } else {
+            RCLCPP_INFO(
+              get_logger(), "Cannot set odometry: cannot transform %s to odometry frame %s",
+              msg.child_frame_id.c_str(), odom_frame.c_str());
+            return;
+          }
+        } else {
+          const geometry_msgs::msg::Twist & twist = msg.twist.twist;
+          agent->velocity=CVector2(twist.linear.x,twist.linear.y);
+          agent->angularSpeed=CRadians(twist.angular.z);
+        }
+        // CHANGED: We don't assume anymore that twist and pose are in the same frame!
         yaw=tf2::getYaw(pose.orientation);
         z=pose.position.z;
         agent->position=CVector2(pose.position.x,pose.position.y);
         agent->angle=CRadians(yaw);
-        agent->velocity=CVector2(twist.linear.x,twist.linear.y);
-        agent->angularSpeed=CRadians(twist.angular.z);
+
 }
 
 // ROS Parameters
@@ -171,10 +204,14 @@ void Navigator::readStaticParameters()
                 agent->radius = radius;
                 agent->setMaxSpeed(max_speed);
                 agent->setMaxAngularSpeed(maximal_angular_speed);
+                // TODO(Jerome): reenable after sync angular vs rotation speed
+
                 if(agent_type==TWO_WHEELED)
                 {
                   agent->setMaxRotationSpeed(maximal_rotation_speed);
+                  //agent->setMaxRotationSpeed(maximal_speed);
                 }
+
         }
         //   pn.param("maximal_vertical_speed",maximalVerticalSpeed, 1.0);
 
@@ -190,10 +227,10 @@ void Navigator::turn()
 
 void Navigator::brake()
 {
-   RCLCPP_INFO(this->get_logger(), "Asked to break %d", state);
+   RCLCPP_INFO(this->get_logger(), "Asked to brake %d", state);
    if(state!=BRAKING)
       {
-        RCLCPP_INFO(this->get_logger(), "Will break");
+        RCLCPP_INFO(this->get_logger(), "Will brake");
         state=BRAKING;
      }
 }
@@ -203,7 +240,7 @@ void Navigator::stop()
    // RCLCPP_INFO(this->get_logger(), "Asked to stop %d %d", state, as_.isActive());
       if(state!=IDLE)
       {
-        RCLCPP_INFO(this->get_logger(), "Will break");
+        RCLCPP_INFO(this->get_logger(), "Will brake");
         state=IDLE;
         setMotorVelocity(0,0,0);
 
@@ -221,7 +258,7 @@ bool Navigator::is_at_target_point()
 {
 
         targetDistance = (agent->targetPosition - agent->position).Length();
-        //ROS_INFO("is_at_target_point? %.2f %.2f", targetDistance, minDeltaDistance);
+        // RCLCPP_INFO(this->get_logger(), "is_at_target_point? %.2f %.2f", targetDistance, minDeltaDistance);
         return targetDistance < minDeltaDistance;
 }
 
@@ -241,6 +278,7 @@ bool Navigator::is_at_target_angle()
 
 void Navigator::updateTargetState()
 {
+  // RCLCPP_INFO(this->get_logger(), "updateTargetState");
         switch(state)
         {
         case MOVE:
@@ -263,6 +301,7 @@ void Navigator::updateTargetState()
                         }
                         else
                         {
+                          RCLCPP_INFO(this->get_logger(), "Start turning");
                                 turn();
                         }
                 }
@@ -270,6 +309,7 @@ void Navigator::updateTargetState()
                 {
                         if(goal_handle)
                         {
+                          // RCLCPP_INFO(this->get_logger(), "publish feedback");
                                 auto f = std::make_shared<GoToTarget::Feedback>();
                                 f->distance = targetDistance;
                                 goal_handle->publish_feedback(f);
@@ -284,8 +324,11 @@ void Navigator::updateTargetState()
                                 RCLCPP_INFO(this->get_logger(), "Set goal reached");
                                 auto r = std::make_shared<GoToTarget::Result>();
                                 goal_handle->succeed(r);
+                                goal_handle = nullptr;
                         }
                         brake();
+                } else {
+                  // RCLCPP_INFO(this->get_logger(), "Keep turning");
                 }
                 break;
         default:
@@ -323,10 +366,13 @@ void Navigator::setMotorVelocity(double newVelocityX,double newVelocityY,double 
         geometry_msgs::msg::Twist base_cmd;
         base_cmd.linear.x=newVelocityX;
         base_cmd.linear.y=newVelocityY;
-        base_cmd.linear.z=newVelocityZ;
+        // TODO(Jerome): check ... is nan in
+        // base_cmd.linear.z=newVelocityZ;
         base_cmd.angular.z=newAngularSpeed;
         navPublisher->publish(base_cmd);
-        if(!publishCmdStamped)
+        // RCLCPP_INFO(this->get_logger(), "navPublisher publish %.3f %.3f %.3f", newVelocityX,
+        //             newVelocityY, newAngularSpeed);
+        if(publishCmdStamped)
         {
                 geometry_msgs::msg::TwistStamped msg;
                 msg.header.frame_id = odom_frame;
@@ -348,16 +394,18 @@ void Navigator::setMotorVelocity(double newSpeed,double newVelocityZ,double newA
 
 void Navigator::update()
 {
+      // RCLCPP_INFO(this->get_logger(), "update %d", state);
         updateLocalization(now());
-        if(!localized && state!=IDLE)
+        if(!localized && state!=IDLE && state!=BRAKING)
         {
-                RCLCPP_WARN(this->get_logger(), "NOT localized -> break");
+                RCLCPP_WARN(this->get_logger(), "NOT localized -> brake");
                 brake();
                 return;
         }
         if(state==IDLE) return;
 
         updateTargetState();
+        // RCLCPP_INFO(this->get_logger(), "->", state);
         if(state==BRAKING)
         {
            if(agent->velocity.Length() > minimalSpeed)
@@ -374,8 +422,10 @@ void Navigator::update()
         }
         if(state==MOVE)
         {
+            // RCLCPP_INFO(this->get_logger(), "Update move");
                 agent->updateDesiredVelocity();
                 agent->updateRepulsiveForce();
+              // RCLCPP_INFO(this->get_logger(), "-> %.3f %.3f", agent->desiredSpeed, agent->desiredAngle.GetValue());
                 if(drawing_enabled)
                 {
                         drawDesiredVelocity(agent->desiredSpeed, agent->desiredAngle.GetValue());
@@ -433,6 +483,7 @@ rcl_interfaces::msg::SetParametersResult Navigator::on_set_parameters(const std:
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   for (const auto &param : parameters) {
+      RCLCPP_INFO(this->get_logger(), "param %s", param.get_name().c_str());
       if (param.get_name() == "behavior") {
           setAgentFromString(param.as_string());
       }
@@ -449,11 +500,12 @@ rcl_interfaces::msg::SetParametersResult Navigator::on_set_parameters(const std:
           // config.optimal_rotation_speed = agent->optimalRotationSpeed;
           // config.optimal_angular_speed = agent->optimalAngularSpeed.GetValue();
       }
+      /// TODO(Jerome): reenable (maybe) after sync angular vs rotation speed
       else if (param.get_name() == "optimal_rotation_speed") {
         if (param.as_double() != agent->optimalRotationSpeed) {
-          agent->setOptimalAngularSpeed(param.as_double());
-        }
           agent->setOptimalRotationSpeed(param.as_double());
+        }
+          // agent->setOptimalRotationSpeed(param.as_double());
           // TODO(Jerome): replace with set param
           // config.optimal_rotation_speed = agent->optimalRotationSpeed;
           // config.optimal_angular_speed = agent->optimalAngularSpeed.GetValue();
@@ -486,7 +538,7 @@ rcl_interfaces::msg::SetParametersResult Navigator::on_set_parameters(const std:
         agent->setAperture(param.as_double());
       }
       else if (param.get_name() == "resolution") {
-        agent->setResolution(param.as_double());
+        agent->setResolution(param.as_int());
       }
       else if (param.get_name() == "drawing") {
         drawing_enabled = param.as_bool();
@@ -531,6 +583,11 @@ void Navigator::init_params() {
 
 Navigator::Navigator() : Node("navigator")
 {
+      agents.push_back(&orcaAgent);
+      agents.push_back(&hrvoAgent);
+      agents.push_back(&hlAgent);
+      agent = &hlAgent;
+
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
         state = IDLE;
@@ -558,20 +615,15 @@ Navigator::Navigator() : Node("navigator")
         ns = get_effective_namespace();
 
         initDrawing();
-        agents.push_back(&orcaAgent);
-        agents.push_back(&hrvoAgent);
-        agents.push_back(&hlAgent);
 
-        readStaticParameters();
-        init_params();
-
+        param_callback_handle = add_on_set_parameters_callback(std::bind(&Navigator::on_set_parameters, this, _1));
         double rate = declare_parameter("rate", 10.0);
         updatePeriod = 1.0/rate;
         hlAgent.dt = updatePeriod;
+        readStaticParameters();
+        init_params();
 
-        param_callback_handle = add_on_set_parameters_callback(std::bind(&Navigator::on_set_parameters, this, _1));
-
-        create_wall_timer(std::chrono::milliseconds((long) (1e6 * updatePeriod)), std::bind(&Navigator::update, this));
+        timer_ = create_wall_timer(std::chrono::milliseconds((long) (1e3 * updatePeriod)), std::bind(&Navigator::update, this));
 
 }
 
@@ -616,6 +668,9 @@ void Navigator::handle_accepted(const std::shared_ptr<GoalHandleGoToTarget> _goa
           auto r = std::make_shared<GoToTarget::Result>();
           goal_handle->abort(r);
           goal_handle = nullptr;
+  } else {
+    RCLCPP_INFO(this->get_logger(), "Start moving");
+    state = MOVE;
   }
 }
 
