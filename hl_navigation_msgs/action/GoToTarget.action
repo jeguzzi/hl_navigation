@@ -6,4 +6,4 @@ geometry_msgs/PoseStamped target_pose
 
 ---
 #feedback
-int32 distance
+float32 distance
