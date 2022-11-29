@@ -24,7 +24,7 @@ public:
   virtual void setEta(double value){};
 
   virtual void updateDesiredVelocity();
-  virtual void updateVelocity();
+  virtual void updateVelocity(float);
   // virtual void Init(TConfigurationNode& t_tree);
   virtual void clearObstacles();
 
@@ -54,6 +54,8 @@ private:
   Real rangeSq;
   virtual void setup();
   RVO::Agent *_RVOAgent;
+
+  static const char * name;
 };
 
 #endif

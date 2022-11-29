@@ -8,6 +8,8 @@
 #include "common.h"
 #include <algorithm>
 #include <list>
+#include <map>
+#include <algorithm>
 
 using namespace argos;
 
@@ -39,7 +41,12 @@ using namespace argos;
 
 typedef enum { HOLONOMIC, TWO_WHEELED, HEAD } agentType;
 
+
+
 class Agent {
+
+using CreateMethod = std::function<std::unique_ptr<Agent>()>;
+
 public:
   void stop();
   // Type
@@ -64,7 +71,6 @@ public:
   CRadians maxAngularSpeed;
   CRadians angle;
   Real rotationTau;
-  Real dt;
 
   ////Two wheeled
 
@@ -103,7 +109,7 @@ public:
 
   virtual void updateRepulsiveForce() = 0;
   virtual void updateDesiredVelocity() = 0;
-  virtual void updateVelocity();
+  virtual void updateVelocity(float);
   void updatePolarVelocity();
   virtual void clearObstacles() = 0;
 
@@ -123,6 +129,7 @@ public:
   void setRotationTau(double value);
   void setSafetyMargin(double value);
 
+
 protected:
   Real marginForObstacleAtDistance(Real distance, Real obstacleRadius,
                                    Real safetyMargin, Real socialMargin);
@@ -130,8 +137,32 @@ protected:
                                         Real &distance);
   void setDesiredWheelSpeeds(double left, double right);
 
+  static std::map<std::string, CreateMethod> _agent_create_functions;
+  template<typename T>
+  static const char * register_type(const char * name) {
+    _agent_create_functions[name] = [](){ return std::make_unique<T>();};
+    return name;
+  }
+
 private:
   virtual void setup() = 0;
+
+public:
+  static std::unique_ptr<Agent> agent_with_name(const std::string & name) {
+    if (_agent_create_functions.count(name)) {
+      return _agent_create_functions[name]();
+    }
+    return nullptr;
+  }
+
+  static const std::vector<std::string> behavior_names() {
+    std::vector<std::string> keys;
+    std::transform(_agent_create_functions.begin(), _agent_create_functions.end(),
+                   back_inserter(keys),
+                   [](std::pair<std::string, CreateMethod> p) { return p.first;});
+    return keys;
+  }
+
 };
 
 #endif

@@ -66,7 +66,7 @@ void ORCAAgent::updateDesiredVelocity() {
   //  %.2f\n",_RVOAgent->newVelocity_.x(),_RVOAgent->newVelocity_.y());
 }
 
-void ORCAAgent::updateVelocity() {
+void ORCAAgent::updateVelocity(float dt) {
   if (useEffectiveCenter && desiredSpeed != 0) {
     setDesiredWheelSpeeds(
         desiredSpeed *
@@ -74,7 +74,7 @@ void ORCAAgent::updateVelocity() {
         desiredSpeed *
             (Cos(desiredAngle) + axisLength * 0.5 / D * Sin(desiredAngle)));
   } else {
-    Agent::updateVelocity();
+    Agent::updateVelocity(dt);
   }
 
   // printf("target  %.2f %.2f\n",leftWheelDesiredSpeed,rightWheelDesiredSpeed);
@@ -116,3 +116,5 @@ void ORCAAgent::addObstacleAtPoint(CVector2 p, CVector2 v, Real r,
 void ORCAAgent::addObstacleAtPoint(CVector2 p, Real r, Real socialMargin) {
   addObstacleAtPoint(p, CVector2(0, 0), r, socialMargin);
 }
+
+const char * ORCAAgent::name = register_type<ORCAAgent>("ORCA");

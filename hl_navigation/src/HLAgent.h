@@ -53,7 +53,7 @@ public:
   virtual void clearObstacles();
   virtual void updateDesiredVelocity();
   virtual void updateRepulsiveForce();
-  virtual void updateVelocity();
+  virtual void updateVelocity(float);
   // virtual void Init(TConfigurationNode& t_tree);
 
   Real *collisionMap();
@@ -104,6 +104,8 @@ private:
   void updateVelocityCartesian();
   void debugAgents();
   void debugStaticObstacles();
+
+  static const char * name;
 };
 
 #endif

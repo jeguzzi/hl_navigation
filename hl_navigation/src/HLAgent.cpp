@@ -483,13 +483,13 @@ Real HLAgent::staticDistForAngle(AgentCache *agent, CRadians alpha) {
   return -B - sqrt(D);
 }
 
-void HLAgent::updateVelocity() {
+void HLAgent::updateVelocity(float dt) {
   // printf("A L %.3f R %.3f\n",leftWheelSpeed,rightWheelSpeed);
 
   // printf("desired lin speed %.3f, des angle %.3f, optimal speed
   // %.3f\n",desiredSpeed,desiredAngle.GetValue(),optimalSpeed);
 
-  Agent::updateVelocity();
+  Agent::updateVelocity(dt);
 
   //    printf("=> L %.3f -> %.3f R %.3f -> %.3f
   //    (%.3f)\n",leftWheelSpeed,leftWheelDesiredSpeed,rightWheelSpeed,rightWheelDesiredSpeed,tau);
@@ -568,3 +568,5 @@ delta=(CVector2(v,desiredVelocity.Angle())+CVector2(1-v,desiredAngle)).Angle();
     rightWheelDesiredSpeed=linearSpeed+angularSpeed;
   }
 */
+
+const char * HLAgent::name = register_type<HLAgent>("HL");

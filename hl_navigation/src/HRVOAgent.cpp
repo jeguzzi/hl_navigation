@@ -48,7 +48,7 @@ void HRVOAgent::updateDesiredVelocity() {
   desiredSpeed = abs(_HRVOAgent->newVelocity_);
 }
 
-void HRVOAgent::updateVelocity() { Agent::updateVelocity(); }
+void HRVOAgent::updateVelocity(float dt) { Agent::updateVelocity(dt); }
 
 HRVOAgent::HRVOAgent() : Agent() {
   _HRVOAgent = new HRVO::Agent();
@@ -82,3 +82,5 @@ void HRVOAgent::addObstacleAtPoint(CVector2 p, CVector2 v, Real r,
 void HRVOAgent::addObstacleAtPoint(CVector2 p, Real r, Real socialMargin) {
   addObstacleAtPoint(p, CVector2(0, 0), r, socialMargin);
 }
+
+const char * HRVOAgent::name = register_type<HRVOAgent>("HRVO");

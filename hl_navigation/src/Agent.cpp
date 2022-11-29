@@ -71,7 +71,7 @@ void Agent::setOptimalRotationSpeed(double value) {
   }
 }
 
-void Agent::updateVelocity() {
+void Agent::updateVelocity(float dt) {
   CRadians delta = desiredAngle.SignedNormalize();
   desiredAngularSpeed = (1.0 / rotationTau) * delta;
 
@@ -186,3 +186,5 @@ Real Agent::marginForObstacleAtDistance(Real distance, Real obstacleRadius,
            safetyMargin;
   }
 }
+
+std::map<std::string, Agent::CreateMethod> Agent::_agent_create_functions = {};

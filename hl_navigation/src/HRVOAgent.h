@@ -21,7 +21,7 @@ public:
 
   virtual void updateDesiredVelocity();
   virtual void updateRepulsiveForce(){};
-  virtual void updateVelocity();
+  virtual void updateVelocity(float);
   // virtual void Init(TConfigurationNode& t_tree);
   virtual void clearObstacles();
 
@@ -37,6 +37,7 @@ private:
   Real rangeSq;
   virtual void setup();
   HRVO::Agent *_HRVOAgent;
+  static const char * name;
 };
 
 #endif
