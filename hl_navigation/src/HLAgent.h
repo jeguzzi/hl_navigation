@@ -9,7 +9,7 @@
 
 // trajectory planning
 
-#define UNKNOWN -2
+#define UNKNOWN_DIST -2
 #define MAX_RESOLUTION 301
 
 // configuration

@@ -68,12 +68,12 @@ void HLAgent::debugAgents() {
 void HLAgent::initDistanceCache() {
   unsigned int k = 0;
   for (; k < resolution; k++)
-    distanceCache[k] = UNKNOWN;
+    distanceCache[k] = UNKNOWN_DIST;
 }
 
 Real HLAgent::fearedDistanceToCollisionAtRelativeAngle(CRadians relativeAngle) {
   if (relativeAngle.SignedNormalize().GetAbsoluteValue() >= aperture.GetValue())
-    return UNKNOWN;
+    return UNKNOWN_DIST;
   int k = indexOfRelativeAngle(relativeAngle);
   return staticDistanceCache[k];
 }
@@ -89,7 +89,7 @@ unsigned int HLAgent::indexOfRelativeAngle(CRadians relativeAngle) {
 
 Real HLAgent::distanceToCollisionAtRelativeAngle(CRadians relativeAngle) {
   if (relativeAngle.SignedNormalize().GetAbsoluteValue() >= aperture.GetValue())
-    return UNKNOWN;
+    return UNKNOWN_DIST;
   int k = indexOfRelativeAngle(relativeAngle);
   if (distanceCache[k] < 0) {
     distanceCache[k] = computeDistanceToCollisionAtRelativeAngle(
@@ -233,14 +233,14 @@ void HLAgent::updateDesiredVelocity() {
 
     // printf("%.2f -> %.2f\r\n",searchAngle.GetValue(),d);
 
-    if (d == UNKNOWN && leftOut == 1)
+    if (d == UNKNOWN_DIST && leftOut == 1)
       leftOut = 2;
-    if (d != UNKNOWN && leftOut == 0)
+    if (d != UNKNOWN_DIST && leftOut == 0)
       leftOut = 1;
 
     d = fmin(D, d);
 
-    if (d != UNKNOWN) {
+    if (d != UNKNOWN_DIST) {
       if (Cos(searchAngle) * D < d) {
         distanceToTarget = fabs(Sin(searchAngle) * D);
       } else {
@@ -258,14 +258,14 @@ void HLAgent::updateDesiredVelocity() {
 
       //  printf("%.2f -> %.2f\r\n",-searchAngle.GetValue(),d);
 
-      if (d == UNKNOWN && rightOut == 1)
+      if (d == UNKNOWN_DIST && rightOut == 1)
         rightOut = 2;
-      if (d != UNKNOWN && rightOut == 0)
+      if (d != UNKNOWN_DIST && rightOut == 0)
         rightOut = 1;
 
       d = fmin(D, d);
 
-      if (d != UNKNOWN) {
+      if (d != UNKNOWN_DIST) {
         if (Cos(searchAngle) * D < d) {
           distanceToTarget = fabs(Sin(searchAngle) * D);
         } else {
@@ -502,6 +502,10 @@ void HLAgent::updateVelocity(float dt) {
 
     leftWheelSpeed = leftWheelDesiredSpeed;
     rightWheelSpeed = rightWheelDesiredSpeed;
+
+    // auto v = velocity_from_wheel_speed(leftWheelSpeed, rightWheelSpeed);
+    // desiredVelocity = CVector2(std::get<0>(v), 0.0);
+    // desiredAngularSpeed = CRadians(std::get<1>(v));
   } else {
     desiredVelocity = relax(previousDesiredVelocity, desiredVelocity, tau, dt);
     previousDesiredVelocity = desiredVelocity;
