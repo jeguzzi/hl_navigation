@@ -9,6 +9,15 @@ void Agent::stop() {
   desiredAngle = CRadians::ZERO;
 }
 
+std::tuple<float, float> Agent::velocity_from_wheel_speed(float left, float right) {
+  return std::make_tuple<float, float>((left + right) * 0.5, (right - left) * 0.5 / axisLength);
+}
+
+std::tuple<float, float> Agent::wheel_speed_from_velocity(float linear_speed, float angular_speed) {
+  return std::make_tuple<float, float>(
+      linear_speed - angular_speed * axisLength, linear_speed + angular_speed * axisLength);
+}
+
 // Called after updating the left-right wheel speeds
 
 void Agent::setDesiredWheelSpeeds(double left, double right) {
@@ -105,10 +114,14 @@ void Agent::updateVelocity(float dt) {
         desiredLinearSpeed = maxSpeed - fabs(targetAngularMotorSpeed);
       }
     }
+
     // #endif
 
     leftWheelDesiredSpeed = desiredLinearSpeed - targetAngularMotorSpeed;
     rightWheelDesiredSpeed = desiredLinearSpeed + targetAngularMotorSpeed;
+
+    // TODO(Jerome): do not duplicate velocity and wheel speeds (should use computed properties)
+    desiredVelocity = CVector2(desiredLinearSpeed, 0.0);
 
   } else {
     if (desiredAngularSpeed > optimalAngularSpeed) {

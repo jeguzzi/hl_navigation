@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <list>
 #include <map>
-#include <algorithm>
+#include <tuple>
 
 using namespace argos;
 
@@ -41,11 +41,9 @@ using namespace argos;
 
 typedef enum { HOLONOMIC, TWO_WHEELED, HEAD } agentType;
 
-
-
 class Agent {
 
-using CreateMethod = std::function<std::unique_ptr<Agent>()>;
+  using CreateMethod = std::function<std::unique_ptr<Agent>()>;
 
 public:
   void stop();
@@ -118,7 +116,7 @@ public:
   virtual void addObstacleAtPoint(CVector2 p, Real r, Real socialMargin) = 0;
 
   Agent();
-  ~Agent(){};
+  virtual ~Agent() = default;
 
   void setMaxAngularSpeed(double value);
   void setMaxRotationSpeed(double value);
@@ -129,6 +127,8 @@ public:
   void setRotationTau(double value);
   void setSafetyMargin(double value);
 
+  std::tuple<float, float> velocity_from_wheel_speed(float left, float right);
+  std::tuple<float, float> wheel_speed_from_velocity(float linear_speed, float angular_speed);
 
 protected:
   Real marginForObstacleAtDistance(Real distance, Real obstacleRadius,
@@ -138,9 +138,8 @@ protected:
   void setDesiredWheelSpeeds(double left, double right);
 
   static std::map<std::string, CreateMethod> _agent_create_functions;
-  template<typename T>
-  static const char * register_type(const char * name) {
-    _agent_create_functions[name] = [](){ return std::make_unique<T>();};
+  template <typename T> static const char *register_type(const char *name) {
+    _agent_create_functions[name] = []() { return std::make_unique<T>(); };
     return name;
   }
 
@@ -148,21 +147,25 @@ private:
   virtual void setup() = 0;
 
 public:
-  static std::unique_ptr<Agent> agent_with_name(const std::string & name) {
+  static std::unique_ptr<Agent> agent_with_name(const std::string &name) {
     if (_agent_create_functions.count(name)) {
       return _agent_create_functions[name]();
     }
     return nullptr;
   }
 
+  static const std::map<std::string, CreateMethod> & all_behaviors() {
+    return _agent_create_functions;
+  };
+
   static const std::vector<std::string> behavior_names() {
     std::vector<std::string> keys;
-    std::transform(_agent_create_functions.begin(), _agent_create_functions.end(),
-                   back_inserter(keys),
-                   [](std::pair<std::string, CreateMethod> p) { return p.first;});
+    std::transform(
+        _agent_create_functions.begin(), _agent_create_functions.end(),
+        back_inserter(keys),
+        [](std::pair<std::string, CreateMethod> p) { return p.first; });
     return keys;
   }
-
 };
 
 #endif

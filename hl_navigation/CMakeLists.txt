@@ -55,25 +55,54 @@ set(hrvo_IMPLEMENTATIONS
   src/HRVO/Vector2.cpp
   )
 
-add_executable(controller src/navigationNode.cpp
- src/Navigator.cpp
- src/drawing.cpp
- src/Agent.cpp
- src/HLAgent.cpp
- src/ORCAAgent.cpp
- src/HRVOAgent.cpp
- src/argos2/common/utility/math/angles.cpp
- ${orca_IMPLEMENTATIONS}
- ${hrvo_IMPLEMENTATIONS}
+add_library(navigation_lib SHARED
+  src/Controller.cpp
+  src/Agent.cpp
+  src/HLAgent.cpp
+  src/ORCAAgent.cpp
+  src/HRVOAgent.cpp
+  src/argos2/common/utility/math/angles.cpp
+  ${orca_IMPLEMENTATIONS}
+  ${hrvo_IMPLEMENTATIONS}
 )
+ament_export_targets(navigation_libTargets HAS_LIBRARY_TARGET)
 
+add_executable(test_behavior src/test_behavior.cpp)
+target_link_libraries(test_behavior navigation_lib)
+add_dependencies(test_behavior navigation_lib)
+
+add_executable(test_controller src/test_controller.cpp)
+target_link_libraries(test_controller navigation_lib)
+add_dependencies(test_controller navigation_lib)
+
+find_package(pybind11 REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development)
+pybind11_add_module(hl_navigation_py src/python.cpp)
+target_link_libraries(hl_navigation_py PRIVATE navigation_lib)
+add_dependencies(hl_navigation_py navigation_lib)
+
+add_executable(controller src/ROSControllerNode.cpp)
+add_dependencies(controller navigation_lib)
+target_link_libraries(controller navigation_lib)
 ament_target_dependencies(controller
   rclcpp tf2 tf2_ros tf2_geometry_msgs std_msgs visualization_msgs
   nav_msgs geometry_msgs hl_navigation_msgs)
 
+
 install(TARGETS
   controller
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(TARGETS
+  test_behavior test_controller
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(TARGETS
+  navigation_lib
+  EXPORT navigation_libTargets
+  DESTINATION lib
 )
 
 install(DIRECTORY
