@@ -3,6 +3,7 @@
  */
 
 #include "HRVOAgent.h"
+#include "HRVO/Obstacle.h"
 
 void HRVOAgent::clearObstacles() {
   _HRVOAgent->velocity_ =
