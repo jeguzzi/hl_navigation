@@ -3,6 +3,20 @@
  */
 
 #include "ORCAAgent.h"
+#include "RVO/Agent.h"
+#include "RVO/Definitions.h"
+#include "RVO/Obstacle.h"
+#include "RVO/Vector2.h"
+
+ORCAAgent::ORCAAgent(agent_type_t type, float radius, float axis_length) :
+  Agent(type, radius, axis_length), useEffectiveCenter(false), timeHorizon(10.0),
+  _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
+  _RVOAgent->maxNeighbors_ = 1000;
+  _RVOAgent->timeStep_ = TIME_STEP;
+  _RVOAgent->timeHorizon_ = timeHorizon;
+}
+
+ORCAAgent::~ORCAAgent() = default;
 
 void ORCAAgent::setTimeHorizon(double value) { timeHorizon = value; }
 

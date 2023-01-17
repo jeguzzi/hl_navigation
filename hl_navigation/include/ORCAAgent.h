@@ -6,26 +6,20 @@
 #define _ORCAAGENT_H_
 
 #include "Agent.h"
-#include "RVO/Agent.h"
-#include "RVO/Definitions.h"
-#include "RVO/Obstacle.h"
-#include "RVO/Vector2.h"
+
 
 #define TIME_STEP 0.1
 
-using namespace argos;
+namespace RVO
+{
+    class Agent;
+}
 
 class ORCAAgent : public Agent {
 public:
   bool useEffectiveCenter;
-  ORCAAgent(agent_type_t type, float radius, float axis_length=0.0) :
-    Agent(type, radius, axis_length), useEffectiveCenter(false), timeHorizon(10.0),
-    _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
-    _RVOAgent->maxNeighbors_ = 1000;
-    _RVOAgent->timeStep_ = TIME_STEP;
-    _RVOAgent->timeHorizon_ = timeHorizon;
-  }
-  ~ORCAAgent() {}
+  ORCAAgent(agent_type_t type, float radius, float axis_length=0.0);
+  ~ORCAAgent();
   virtual void setTimeHorizon(double value);
 
 protected:

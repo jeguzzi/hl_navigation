@@ -2,7 +2,7 @@
 
   <group>
     <push-ros-namespace namespace="user_1"/>
-    <include file="$(find-pkg-share hl_navigation)/launch/navigation.launch">
+    <include file="$(find-pkg-share hl_navigation_ros)/launch/navigation.launch">
       <arg name="type" value="HEAD"/>
       <arg name="tol_distance" value="0.75"/>
       <arg name="tol_angle" value="0.5"/>
@@ -23,7 +23,7 @@
 
   <group>
     <push-ros-namespace namespace="user_2"/>
-    <include file="$(find-pkg-share hl_navigation)/launch/navigation.launch">
+    <include file="$(find-pkg-share hl_navigation_ros)/launch/navigation.launch">
       <arg name="type" value="HEAD"/>
       <arg name="tol_distance" value="0.75"/>
       <arg name="tol_angle" value="0.5"/>

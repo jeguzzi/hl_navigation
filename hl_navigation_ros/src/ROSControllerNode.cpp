@@ -2,17 +2,14 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "Agent.h"
-#include "HLAgent.h"
-#include "HRVOAgent.h"
-#include "ORCAAgent.h"
-
 #include <chrono>
 #include <memory>
 
-#include "Controller.h"
-#include "Drawing.hpp"
-
+#include "hl_navigation/Agent.h"
+#include "hl_navigation/HLAgent.h"
+#include "hl_navigation/HRVOAgent.h"
+#include "hl_navigation/ORCAAgent.h"
+#include "hl_navigation/Controller.h"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "std_msgs/msg/empty.hpp"
@@ -21,7 +18,6 @@
 #include "tf2/exceptions.h"
 #include "tf2/utils.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-
 #include "geometry_msgs/msg/point_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -33,6 +29,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "rcl_interfaces/msg/set_parameters_result.hpp"
 
+#include "Drawing.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;

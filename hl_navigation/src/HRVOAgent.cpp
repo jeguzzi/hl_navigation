@@ -3,7 +3,19 @@
  */
 
 #include "HRVOAgent.h"
+#include "HRVO/Agent.h"
+#include "HRVO/HRVO.h"
 #include "HRVO/Obstacle.h"
+
+
+HRVOAgent::HRVOAgent(agent_type_t type, float radius, float axis_length) :
+  Agent(type, radius, axis_length),
+  _HRVOAgent(std::make_unique<HRVO::Agent>()) {
+    _HRVOAgent->radius_ = radius;
+    _HRVOAgent->maxNeighbors_ = 1000;
+}
+
+HRVOAgent::~HRVOAgent() = default;
 
 void HRVOAgent::prepare() {
   _HRVOAgent->velocity_ =

@@ -16,27 +16,11 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(visualization_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(hl_navigation_msgs REQUIRED)
-find_package(tf2 REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 
-
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11_vendor REQUIRED)
+find_package(pybind11 REQUIRED)
 
 set(orca_IMPLEMENTATIONS
   src/RVO/Agent.cpp
@@ -55,7 +39,10 @@ set(hrvo_IMPLEMENTATIONS
   src/HRVO/Vector2.cpp
   )
 
-add_library(navigation_lib SHARED
+include_directories(include)
+
+
+add_library(hl_navigation SHARED
   src/Controller.cpp
   src/Agent.cpp
   src/HLAgent.cpp
@@ -65,49 +52,47 @@ add_library(navigation_lib SHARED
   ${orca_IMPLEMENTATIONS}
   ${hrvo_IMPLEMENTATIONS}
 )
-ament_export_targets(navigation_libTargets HAS_LIBRARY_TARGET)
+
+ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
+
+ament_python_install_package(hl_navigation)
 
 add_executable(test_behavior src/test_behavior.cpp)
-target_link_libraries(test_behavior navigation_lib)
-add_dependencies(test_behavior navigation_lib)
+target_link_libraries(test_behavior hl_navigation)
+add_dependencies(test_behavior hl_navigation)
 
 add_executable(test_controller src/test_controller.cpp)
-target_link_libraries(test_controller navigation_lib)
-add_dependencies(test_controller navigation_lib)
+target_link_libraries(test_controller hl_navigation)
+add_dependencies(test_controller hl_navigation)
 
 find_package(pybind11 REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development)
-pybind11_add_module(hl_navigation_py src/python.cpp)
-target_link_libraries(hl_navigation_py PRIVATE navigation_lib)
-add_dependencies(hl_navigation_py navigation_lib)
-
-add_executable(controller src/ROSControllerNode.cpp)
-add_dependencies(controller navigation_lib)
-target_link_libraries(controller navigation_lib)
-ament_target_dependencies(controller
-  rclcpp tf2 tf2_ros tf2_geometry_msgs std_msgs visualization_msgs
-  nav_msgs geometry_msgs hl_navigation_msgs)
-
-
-install(TARGETS
-  controller
-  DESTINATION lib/${PROJECT_NAME}
-)
+pybind11_add_module(_hl_navigation src/python.cpp)
+target_link_libraries(_hl_navigation PRIVATE hl_navigation)
+add_dependencies(_hl_navigation hl_navigation)
 
 install(TARGETS
   test_behavior test_controller
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(TARGETS
-  navigation_lib
-  EXPORT navigation_libTargets
-  DESTINATION lib
+install(
+  DIRECTORY include/
+  DESTINATION include/${PROJECT_NAME})
+
+install(
+  TARGETS hl_navigation
+  EXPORT hl_navigationTargets
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
 )
 
-install(DIRECTORY
-  launch
-  DESTINATION share/${PROJECT_NAME}
-)
+install(TARGETS _hl_navigation DESTINATION "${PYTHON_INSTALL_DIR}/${PROJECT_NAME}")
 
 ament_package()
+
+# See https://www.foonathan.net/2016/03/cmake-install/
+# meglio fare uno step intermedio che separa i package (ROS/non ROS) ma che usa ament_cmake.
+# Poi eventualmente posso rimuovere ament_cmake dal package non ROS

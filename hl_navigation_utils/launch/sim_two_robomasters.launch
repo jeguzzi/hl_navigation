@@ -15,7 +15,7 @@
   <group>
 
     <push-ros-namespace namespace="rm_1"/>
-    <include file="$(find-pkg-share hl_navigation)/launch/navigation.launch">
+    <include file="$(find-pkg-share hl_navigation_ros)/launch/navigation.launch">
       <arg name="type" value="HOLONOMIC"/>
       <arg name="radius" value="0.25"/>
       <arg name="social_radius" value="0.05"/>
@@ -36,7 +36,7 @@
 
   <group>
     <push-ros-namespace namespace="rm_2"/>
-    <include file="$(find-pkg-share hl_navigation)/launch/navigation.launch">
+    <include file="$(find-pkg-share hl_navigation_ros)/launch/navigation.launch">
       <arg name="type" value="HOLONOMIC"/>
       <arg name="radius" value="0.25"/>
       <arg name="social_radius" value="0.05"/>

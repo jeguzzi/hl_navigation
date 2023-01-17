@@ -6,20 +6,16 @@
 #define _HRVOAGENT_H_
 
 #include "Agent.h"
-#include "HRVO/Agent.h"
-#include "HRVO/HRVO.h"
 
-using namespace argos;
+namespace HRVO
+{
+    class Agent;
+}
 
 class HRVOAgent : public Agent {
 public:
-  HRVOAgent(agent_type_t type, float radius, float axis_length=0.0) :
-    Agent(type, radius, axis_length),
-    _HRVOAgent(std::make_unique<HRVO::Agent>()) {
-      _HRVOAgent->radius_ = radius;
-      _HRVOAgent->maxNeighbors_ = 1000;
-  }
-  ~HRVOAgent() {}
+  HRVOAgent(agent_type_t type, float radius, float axis_length=0.0);
+  ~HRVOAgent();
 
 protected:
   virtual void update_desired_velocity() override;

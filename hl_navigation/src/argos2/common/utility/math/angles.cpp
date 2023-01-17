@@ -16,14 +16,14 @@
 /**
  * @file   argos2/common/utility/math/angles.cpp
  * @author Carlo Pinciroli <cpinciro@ulb.ac.be>
- * 
+ *
  * @brief Contains definitions for angle management, such as the CRadians and CDegrees classes.
- * 
+ *
  * Contains definitions for angle management, such as the CRadians and CDegrees classes, as well as
  * trigonometric and conversion functions.
  */
 
-#include "angles.h"
+#include "argos2/common/utility/math/angles.h"
 
 namespace argos {
 

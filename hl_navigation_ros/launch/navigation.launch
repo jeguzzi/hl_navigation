@@ -77,7 +77,7 @@
   <arg name="rate" default='10.0'/>
 
 
-   <node name="navigation" pkg="hl_navigation" exec="controller" output="screen">
+   <node name="navigation" pkg="hl_navigation_ros" exec="controller" output="screen">
       <param name="type" value="$(var type)" />
       <param name="radius" value="$(var radius)" />
       <param name="axis_length" value="$(var axis_length)" />

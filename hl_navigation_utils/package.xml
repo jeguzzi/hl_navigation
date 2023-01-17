@@ -13,6 +13,7 @@
   <test_depend>python3-pytest</test_depend>
 
   <depend>hl_navigation_msgs</depend>
+  <depend>hl_navigation_ros</depend>
 
   <export>
     <build_type>ament_python</build_type>

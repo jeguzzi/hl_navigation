@@ -14,7 +14,7 @@
 
   <group>
     <push-ros-namespace namespace="thymio_0"/>
-    <include file="$(find-pkg-share hl_navigation)/launch/navigation.launch">
+    <include file="$(find-pkg-share hl_navigation_ros)/launch/navigation.launch">
       <arg name="type" value="TWO_WHEELED"/>
       <arg name="radius" value="0.08"/>
       <arg name="social_radius" value="0.05"/>

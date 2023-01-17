@@ -9,7 +9,7 @@
 #include "Controller.h"
 
 namespace py = pybind11;
-PYBIND11_MODULE(hl_navigation_py, m) {
+PYBIND11_MODULE(_hl_navigation, m) {
     py::class_<Agent>(m, "Agent")
         // .def_readwrite("type", &Agent::type)
         // .def_readwrite("radius", &Agent::radius)
