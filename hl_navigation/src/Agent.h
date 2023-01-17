@@ -13,124 +13,133 @@
 
 using namespace argos;
 
-// mobility
-
-#define DEFAULT_LINEAR_SPEED_CONTINUOUS false
-#define DEFAULT_MAX_ANGULAR_SPEED 0.2 // 20 //cm/s
-#define MIN_ANGULAR_SPEED 0.02
-#define MAX_SPEED 1.0 // 0.2
 #define DEFAULT_ROTATION_TAU 0.5
-#define DEFAULT_HORIZON 3
-// configuration
 
-#define DEFAULT_OPTIMAL_SPEED 0.6
-//#define DEFAULT_SOCIAL_SENSING_RATIO 1
-//#define DEFAULT_FOOTBOT_SOCIAL_RADIUS 20 //40
-//#define DEFAULT_HUMAN_SOCIAL_RADIUS 40
-//#define DEFAULT_OBSTACLE_SOCIAL_RADIUS 20
-#define RADIUS 0.3 // Footbot's radius
-//#define HUMAN_RADIUS 0.05//0.25//m
+struct Twist2D {
+  float longitudinal;
+  float lateral;
+  float angular;
 
-#define NO_COLLISION -1
-// Agent Types
+  Twist2D(float vx, float vy, float wz) :
+    longitudinal(vx), lateral(vy), angular(wz) {}
+};
 
-// enum {FOOTBOT=0,OBSTACLE=2,HUMAN=1};
-//#define NUMBER_OF_AGENT_TYPES 3
+struct Disc {
+  CVector2 position;
+  CVector2 velocity;
+  float radius;
+  float social_margin;
 
-#define ANGULAR_SPEED_DOMINATE
+  Disc(const CVector2 p, float r,float s = 0.0, CVector2 v = CVector2(0, 0)) :
+    position(p), velocity(v), radius(r), social_margin(s) { }
+};
 
-typedef enum { HOLONOMIC, TWO_WHEELED, HEAD } agentType;
+
+using WheelSpeeds = std::vector<float>;
+
+typedef enum { HOLONOMIC, TWO_WHEELED, HEAD, FOUR_WHEELED_OMNI } agent_type_t;
+
+typedef enum {IDLE, TARGET_POINT, TARGET_ANGLE, DESIRED_ANGLE} heading_t;
 
 class Agent {
 
-  using CreateMethod = std::function<std::unique_ptr<Agent>()>;
+  using CreateMethod = std::function<std::unique_ptr<Agent>(agent_type_t, float, float)>;
 
 public:
-  void stop();
-  // Type
 
-  agentType type;
-
-  // Mobility
-
-  Real optimalSpeed;
-
-  CVector2 desiredVelocity;
-
-  Real desiredSpeed;
-  CRadians desiredAngle;
-  CRadians desiredAngularSpeed;
-  Real maxSpeed;
   CVector2 position;
+  CRadians angle;
   CVector2 velocity;
   CRadians angularSpeed;
-  CRadians optimalAngularSpeed;
-  double optimalRotationSpeed;
-  CRadians maxAngularSpeed;
-  CRadians angle;
-  Real rotationTau;
-
-  ////Two wheeled
-
-  Real axisLength;
-  Real maxRotationSpeed;
-  bool linearSpeedIsContinuos;
-
-  Real leftWheelSpeed;
-  Real rightWheelSpeed;
-  Real leftWheelDesiredSpeed;
-  Real rightWheelDesiredSpeed;
-  Real desiredLinearSpeed;
-
-  // Margins
-
-  // Real socialMargin;
-  // Real socialRadius[NUMBER_OF_AGENT_TYPES];
-  Real safetyMargin;
-  Real radius;
-
-  // Navigation
   CVector2 targetPosition;
+  CRadians targetAngle;
+  // absolute
+  CVector2 desiredVelocity;
+  // relative
+  Twist2D desired_twist;
+  Twist2D target_twist;
+  WheelSpeeds desired_wheel_speeds;
+  WheelSpeeds target_wheel_speeds;
+
+  Agent(agent_type_t type, float radius, float axis_length=0.0) :
+    desiredVelocity(0.0, 0.0), desired_twist(0.0, 0.0, 0.0), target_twist(0.0, 0.0, 0.0),
+    type(type), axisLength(axis_length), radius(radius), maxSpeed(10000.0),
+    horizon(0.0), safetyMargin(0.0), rotationTau(DEFAULT_ROTATION_TAU), optimalSpeed(0.0),
+    heading_behavior(DESIRED_ANGLE), static_obstacles(), neighbors() {
+      if(type == TWO_WHEELED)
+        target_wheel_speeds = std::vector<float>(2, 0.0);
+      if(type == FOUR_WHEELED_OMNI)
+        target_wheel_speeds = std::vector<float>(4, 0.0);
+    }
+
+  virtual ~Agent() = default;
+
+  CRadians get_max_angular_speed() const;
+  double get_optimal_speed() const;
+  CRadians get_optimal_angular_speed() const;
+  double get_max_speed() const;
+  double get_rotation_tau() const;
+  double get_safety_margin() const;
+  double get_horizon() const;
+  double get_radius() const { return radius; }
+  heading_t get_heading_behavior() const { return heading_behavior; }
+  void set_max_angular_speed(double value);
+  void set_optimal_speed(double value);
+  void set_optimal_angular_speed(double value);
+  void set_max_speed(double value);
+  void set_rotation_tau(double value);
+  void set_safety_margin(double value);
+  void set_horizon(double value);
+  void set_desired_twist(const Twist2D & twist);
+  void set_heading_behavior(heading_t value) {
+    if (is_omnidirectional()) {
+      heading_behavior = value;
+    } else {
+      heading_behavior = DESIRED_ANGLE;
+    }
+  }
+
+  void update(float dt);
+  virtual void update_target_twist(float dt);
+  void set_neighbors(const std::vector<Disc> & value) {
+    neighbors = value;
+  }
+  void set_static_obstacles(const std::vector<Disc> & value) {
+    static_obstacles = value;
+  }
+
+protected:
+
+  agent_type_t type;
+  Real axisLength;
+  Real radius;
+  CRadians maxAngularSpeed;
+  Real maxSpeed;
+
   Real horizon;
+  Real safetyMargin;
+  Real rotationTau;
+  Real optimalSpeed;
 
-  // Repulsive Force
-
+  CRadians optimalAngularSpeed;
+  heading_t heading_behavior;
   CVector2 repulsiveForce;
   bool insideObstacle;
 
-  void setHorizon(double value);
-  virtual void setTimeHorizon(double value) = 0;
-  virtual void setAperture(double value) = 0;
-  virtual void setResolution(unsigned int value) = 0;
-  virtual void setTau(double value) = 0;
-  virtual void setEta(double value) = 0;
+  std::vector<Disc> static_obstacles;
+  std::vector<Disc> neighbors;
 
-  virtual void updateRepulsiveForce() = 0;
-  virtual void updateDesiredVelocity() = 0;
-  virtual void updateVelocity(float);
-  void updatePolarVelocity();
-  virtual void clearObstacles() = 0;
+  virtual void update_desired_velocity() = 0;
+  virtual void update_repulsive_force() { };
 
-  virtual void addObstacleAtPoint(CVector2 p, CVector2 v, Real r,
-                                  Real socialMargin) = 0;
-  virtual void addObstacleAtPoint(CVector2 p, Real r, Real socialMargin) = 0;
 
-  Agent();
-  virtual ~Agent() = default;
+  virtual void add_neighbor(const Disc & disc) = 0;
+  virtual void add_static_obstacle(const Disc & disc) = 0;
+  virtual void clear() = 0;
+  virtual void prepare() { }
 
-  void setMaxAngularSpeed(double value);
-  void setMaxRotationSpeed(double value);
-  void setOptimalSpeed(double value);
-  void setOptimalAngularSpeed(double value);
-  void setOptimalRotationSpeed(double value);
-  void setMaxSpeed(double value);
-  void setRotationTau(double value);
-  void setSafetyMargin(double value);
+  virtual Twist2D compute_desired_twist() const;
 
-  std::tuple<float, float> velocity_from_wheel_speed(float left, float right);
-  std::tuple<float, float> wheel_speed_from_velocity(float linear_speed, float angular_speed);
-
-protected:
   Real marginForObstacleAtDistance(Real distance, Real obstacleRadius,
                                    Real safetyMargin, Real socialMargin);
   CVector2 relativePositionOfObstacleAt(CVector2 &position, Real obstacleRadius,
@@ -139,17 +148,22 @@ protected:
 
   static std::map<std::string, CreateMethod> _agent_create_functions;
   template <typename T> static const char *register_type(const char *name) {
-    _agent_create_functions[name] = []() { return std::make_unique<T>(); };
+    _agent_create_functions[name] = [](agent_type_t type, float radius, float axis_length=0.0) {
+      return std::make_unique<T>(type, radius, axis_length); };
     return name;
   }
 
-private:
-  virtual void setup() = 0;
-
 public:
-  static std::unique_ptr<Agent> agent_with_name(const std::string &name) {
+  Twist2D twist_from_wheel_speeds(const WheelSpeeds & speeds) const;
+  WheelSpeeds wheel_speeds_from_twist(const Twist2D &) const;
+  CVector2 get_target_velocity() const;
+  void set_wheel_speeds(const WheelSpeeds & speeds);
+  bool is_wheeled() const;
+  bool is_omnidirectional() const;
+  static std::unique_ptr<Agent> agent_with_name(
+      const std::string &name, agent_type_t type, float radius, float axis_length=0.0) {
     if (_agent_create_functions.count(name)) {
-      return _agent_create_functions[name]();
+      return _agent_create_functions[name](type, radius, axis_length);
     }
     return nullptr;
   }

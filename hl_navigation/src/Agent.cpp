@@ -4,160 +4,172 @@
 
 #include "Agent.h"
 
-void Agent::stop() {
-  desiredSpeed = 0.0;
-  desiredAngle = CRadians::ZERO;
+template<typename T>
+static T clamp(T value, T min, T max) {
+  return std::min(std::max(value, min), max);
 }
 
-std::tuple<float, float> Agent::velocity_from_wheel_speed(float left, float right) {
-  return std::make_tuple<float, float>((left + right) * 0.5, (right - left) * 0.5 / axisLength);
+Twist2D Agent::twist_from_wheel_speeds(const WheelSpeeds & speeds) const {
+  if (type == TWO_WHEELED && speeds.size() == 2) {
+    // {left, right}
+    return Twist2D(0.5 * (speeds[0] + speeds[1]), 0.0, (speeds[1] - speeds[0]) / axisLength);
+  }
+  if (type == FOUR_WHEELED_OMNI && speeds.size() == 4) {
+    // {front left, rear left, rear right, rear left}
+    return Twist2D(
+        0.25 * (speeds[0] + speeds[1] + speeds[2] + speeds[3]),
+        0.25 * (-speeds[0] + speeds[1] - speeds[2] + speeds[3]),
+        0.25 * (-speeds[0] - speeds[1] + speeds[2] + speeds[3]) / axisLength);
+  }
+  return Twist2D(0, 0, 0);
 }
 
-std::tuple<float, float> Agent::wheel_speed_from_velocity(float linear_speed, float angular_speed) {
-  return std::make_tuple<float, float>(
-      linear_speed - angular_speed * axisLength, linear_speed + angular_speed * axisLength);
+WheelSpeeds Agent::wheel_speeds_from_twist(const Twist2D & twist) const {
+  if (type == TWO_WHEELED) {
+     // {left, right}
+     const float rotation = clamp(0.5f * twist.angular * axisLength, -maxSpeed, maxSpeed);
+     const float linear = clamp(twist.longitudinal, 0.0f, maxSpeed);
+     float left = linear - rotation;
+     float right = linear + rotation;
+     if (abs(left) > maxSpeed) {
+       left = clamp(left, -maxSpeed, maxSpeed);
+       right = left + 2 * rotation;
+     } else if (abs(right) > maxSpeed) {
+       right = clamp(right, -maxSpeed, maxSpeed);
+       left = right - 2 * rotation;
+     }
+     return {left, right};
+  }
+  if (type == FOUR_WHEELED_OMNI) {
+     // {front left, rear left, rear right, rear left}
+     const float rotation = clamp(twist.angular * axisLength, -maxSpeed, maxSpeed);
+     const float longitudinal = clamp(twist.longitudinal, -maxSpeed, maxSpeed);
+     const float lateral = clamp(twist.longitudinal, -maxSpeed, maxSpeed);
+     float front_left = longitudinal - lateral - rotation;
+     float front_right = longitudinal + lateral + rotation;
+     float rear_left = longitudinal + lateral - rotation;
+     float rear_right = longitudinal - lateral + rotation;
+     if (abs(front_left) > maxSpeed) {
+       front_left = clamp(front_left, -maxSpeed, maxSpeed);
+       front_right = front_left + 2 * lateral + 2 * rotation;
+       rear_left = front_left + 2 * lateral;
+       rear_right = front_left + 2 * rotation;
+     } else if (abs(front_right) > maxSpeed) {
+       front_right = clamp(front_right, -maxSpeed, maxSpeed);
+       front_left = front_right - 2 * lateral - 2 * rotation;
+       rear_left = front_right - 2 * rotation;
+       rear_right = front_right - 2 * lateral;
+     } else if (abs(rear_left) > maxSpeed) {
+       rear_left = clamp(rear_left, -maxSpeed, maxSpeed);
+       front_left = rear_left - 2 * lateral;
+       front_right = rear_left + 2 * rotation;
+       rear_right = rear_left - 2 * rotation + 2 * rotation;
+     } else if (abs(rear_right) > maxSpeed) {
+       rear_right = clamp(rear_right, -maxSpeed, maxSpeed);
+       front_left = rear_right - 2 * rotation;
+       front_right = rear_right + 2 * lateral;
+       rear_left = rear_right + 2 * lateral - 2 * rotation;
+     }
+     return {front_left, rear_left, rear_right, front_right};
+  }
+  return {};
 }
 
-// Called after updating the left-right wheel speeds
-
-void Agent::setDesiredWheelSpeeds(double left, double right) {
-  rightWheelDesiredSpeed = right;
-  leftWheelDesiredSpeed = left;
-  desiredAngularSpeed = CRadians(
-      (rightWheelDesiredSpeed - leftWheelDesiredSpeed) * 0.5 / axisLength);
-  desiredLinearSpeed = (rightWheelDesiredSpeed + leftWheelDesiredSpeed) * 0.5;
-  desiredVelocity = CVector2(desiredLinearSpeed, desiredAngularSpeed);
+CVector2 Agent::get_target_velocity() const {
+  CVector2 v = CVector2(target_twist.longitudinal, target_twist.lateral);
+  v.Rotate(angle);
+  return v;
 }
 
-void Agent::setRotationTau(double value) { rotationTau = value; }
-void Agent::setSafetyMargin(double value) { safetyMargin = value; }
+void Agent::set_wheel_speeds(const WheelSpeeds & speeds) {
+  Twist2D twist = twist_from_wheel_speeds(speeds);
+  CVector2 v = CVector2(twist.longitudinal, twist.lateral);
+  v.Rotate(angle);
+  velocity = v;
+  angularSpeed = CRadians(twist.angular);
+}
 
-void Agent::setHorizon(double value) { horizon = value; }
+Twist2D Agent::compute_desired_twist() const {
+  float delta_angle = 0.0;
+  if (heading_behavior == DESIRED_ANGLE) {
+    delta_angle = (desiredVelocity.Angle() - angle).SignedNormalize().GetValue();
+  } else if (heading_behavior == TARGET_ANGLE) {
+    delta_angle = (targetAngle - angle).SignedNormalize().GetValue();
+  } else if (heading_behavior == TARGET_POINT) {
+    delta_angle = ((targetPosition - position).Angle() - angle).SignedNormalize().GetValue();
+  }
+  float angular_speed = (1.0 / rotationTau) * delta_angle;
+  if (is_omnidirectional()) {
+    auto v = desiredVelocity;
+    v.Rotate(-angle);
+    return Twist2D(v.GetX(), v.GetY(), angular_speed);
+  }
+  // TODO(Jerome): wrong!!! ... check how it was before
+  return Twist2D(desiredVelocity.Length(), 0.0, angular_speed);
+}
 
-void Agent::setMaxSpeed(double value) { maxSpeed = value; }
+bool Agent::is_wheeled() const {
+  return type == TWO_WHEELED || type == FOUR_WHEELED_OMNI;
+}
 
-void Agent::setMaxAngularSpeed(double value) {
+bool Agent::is_omnidirectional() const {
+  return type == HOLONOMIC || type == FOUR_WHEELED_OMNI;
+}
+
+double Agent::get_rotation_tau() const { return rotationTau; }
+void Agent::set_rotation_tau(double value) { rotationTau = value; }
+double Agent::get_safety_margin() const { return safetyMargin; }
+void Agent::set_safety_margin(double value) { safetyMargin = std::max(0.0, value); }
+double Agent::get_horizon() const { return horizon; }
+void Agent::set_horizon(double value) { horizon = std::max(0.0, value); }
+double Agent::get_max_speed() const { return maxSpeed; }
+void Agent::set_max_speed(double value) {
+  maxSpeed = value;
+  if (is_wheeled()) {
+    maxAngularSpeed = CRadians(maxSpeed / axisLength);
+  }
+}
+CRadians Agent::get_max_angular_speed() const { return maxAngularSpeed; }
+void Agent::set_max_angular_speed(double value) {
+  if (is_wheeled()) return;
   maxAngularSpeed = CRadians(value);
-  if (type == TWO_WHEELED) {
-    maxRotationSpeed = value * 0.5 * axisLength;
-  }
+}
+double Agent::get_optimal_speed() const { return optimalSpeed;}
+void Agent::set_optimal_speed(double value) {
+  optimalSpeed = clamp<double>(value, 0.0, maxSpeed);
+}
+CRadians Agent::get_optimal_angular_speed() const { return optimalAngularSpeed;}
+void Agent::set_optimal_angular_speed(double value) {
+  optimalAngularSpeed = CRadians(clamp<double>(value, 0.0, maxAngularSpeed.GetAbsoluteValue()));
 }
 
-void Agent::setMaxRotationSpeed(double value) {
-  maxRotationSpeed = value;
-  if (type == TWO_WHEELED) {
-    maxAngularSpeed = CRadians(value * 2.0 / axisLength);
+void Agent::update(float dt) {
+  prepare();
+  clear();
+  for (auto const & d : static_obstacles) {
+    add_static_obstacle(d);
   }
+  for (auto const & d : neighbors) {
+    add_neighbor(d);
+  }
+  update_desired_velocity();
+  set_desired_twist(compute_desired_twist());
+  update_target_twist(dt);
 }
 
-void Agent::setOptimalSpeed(double value) {
-  if (value < maxSpeed && value >= 0) {
-    optimalSpeed = value;
+void Agent::set_desired_twist(const Twist2D & twist) {
+  if (is_wheeled()) {
+    desired_wheel_speeds = wheel_speeds_from_twist(twist);
+    desired_twist = twist_from_wheel_speeds(desired_wheel_speeds);
   } else {
-    optimalSpeed = maxSpeed;
+    // TODO(Jerome): Should clamp here too
+    desired_twist = twist;
   }
 }
 
-void Agent::setOptimalAngularSpeed(double value) {
-  if (value < maxAngularSpeed.GetAbsoluteValue() && value >= 0) {
-    optimalAngularSpeed = CRadians(value);
-  } else {
-    optimalAngularSpeed = maxAngularSpeed;
-  }
-  if (type == TWO_WHEELED) {
-    optimalRotationSpeed = optimalAngularSpeed.GetValue() * 0.5 * axisLength;
-  }
-}
-
-void Agent::setOptimalRotationSpeed(double value) {
-  if (value < maxRotationSpeed && value >= 0) {
-    optimalRotationSpeed = value;
-  } else {
-    optimalRotationSpeed = maxRotationSpeed;
-  }
-  if (type == TWO_WHEELED) {
-    optimalAngularSpeed = CRadians(optimalRotationSpeed * 2.0 / axisLength);
-  }
-}
-
-void Agent::updateVelocity(float dt) {
-  CRadians delta = desiredAngle.SignedNormalize();
-  desiredAngularSpeed = (1.0 / rotationTau) * delta;
-
-  if (type == TWO_WHEELED) {
-    desiredLinearSpeed = 0;
-    Real targetAngularMotorSpeed =
-        desiredAngularSpeed.GetValue() * 0.5 * axisLength;
-
-    if (targetAngularMotorSpeed > optimalRotationSpeed) {
-      targetAngularMotorSpeed = optimalRotationSpeed;
-      desiredAngularSpeed =
-          CRadians(targetAngularMotorSpeed * 2.0 / axisLength);
-    } else if (targetAngularMotorSpeed < -optimalRotationSpeed) {
-      targetAngularMotorSpeed = -optimalRotationSpeed;
-      desiredAngularSpeed =
-          CRadians(targetAngularMotorSpeed * 2.0 / axisLength);
-    } else {
-      if (linearSpeedIsContinuos) {
-        desiredLinearSpeed = desiredSpeed * (1 - fabs(targetAngularMotorSpeed) /
-                                                     maxRotationSpeed);
-      } else {
-        desiredLinearSpeed = desiredSpeed;
-      }
-    }
-
-    // #ifdef ANGULAR_SPEED_DOMINATE
-    if (fabs(desiredLinearSpeed) + fabs(targetAngularMotorSpeed) > maxSpeed) {
-      if (desiredLinearSpeed < 0) {
-        desiredLinearSpeed = -maxSpeed + fabs(targetAngularMotorSpeed);
-      } else {
-        desiredLinearSpeed = maxSpeed - fabs(targetAngularMotorSpeed);
-      }
-    }
-
-    // #endif
-
-    leftWheelDesiredSpeed = desiredLinearSpeed - targetAngularMotorSpeed;
-    rightWheelDesiredSpeed = desiredLinearSpeed + targetAngularMotorSpeed;
-
-    // TODO(Jerome): do not duplicate velocity and wheel speeds (should use computed properties)
-    desiredVelocity = CVector2(desiredLinearSpeed, 0.0);
-
-  } else {
-    if (desiredAngularSpeed > optimalAngularSpeed) {
-      desiredAngularSpeed = optimalAngularSpeed;
-    } else if (desiredAngularSpeed < -optimalAngularSpeed) {
-      desiredAngularSpeed = -optimalAngularSpeed;
-    }
-    desiredLinearSpeed = desiredSpeed;
-
-    desiredVelocity = CVector2(desiredLinearSpeed, desiredAngle);
-  }
-
-  // printf("%p TV L:%.3f,
-  // R:%.3f\n",this,leftWheelDesiredSpeed,rightWheelDesiredSpeed);
-}
-
-Agent::Agent() {
-  type = TWO_WHEELED;
-  maxSpeed = MAX_SPEED;
-  leftWheelSpeed = 0.0;
-  rightWheelSpeed = 0.0;
-  linearSpeedIsContinuos = DEFAULT_LINEAR_SPEED_CONTINUOUS;
-  //    maxRotationSpeed=DEFAULT_MAX_ANGULAR_SPEED;
-  radius = RADIUS;
-  rotationTau = DEFAULT_ROTATION_TAU;
-  setOptimalSpeed(DEFAULT_OPTIMAL_SPEED);
-  setOptimalRotationSpeed(DEFAULT_OPTIMAL_SPEED);
-
-  //    socialRadius[HUMAN]=DEFAULT_HUMAN_SOCIAL_RADIUS;
-  // socialRadius[FOOTBOT]=DEFAULT_FOOTBOT_SOCIAL_RADIUS;
-  // socialRadius[OBSTACLE]=DEFAULT_OBSTACLE_SOCIAL_RADIUS;
-  safetyMargin = 0.1;
-  // socialMargin=safetMargin;
-  // ratioOfSocialRadiusForSensing=DEFAULT_SOCIAL_SENSING_RATIO;
-
-  horizon = DEFAULT_HORIZON;
+void Agent::update_target_twist(float dt) {
+  target_wheel_speeds = desired_wheel_speeds;
+  target_twist = desired_twist;
 }
 
 CVector2 Agent::relativePositionOfObstacleAt(CVector2 &obstaclePosition,

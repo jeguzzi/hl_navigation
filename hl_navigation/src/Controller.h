@@ -13,25 +13,20 @@ class Controller {
 
 private:
 
-  enum { POSE, POINT } targetType;
+  enum { POSE, POINT } target_type;
 
   bool is_at_target_point();
   bool is_at_target_angle();
-  void updateTargetState();
-
+  void update_target_state();
   void turn();
   void brake();
-
-  void setMotorVelocity(double speed, double verticalVelocity,
-                        double angularSpeed);
-  void updateVerticalVelocity();
+  void update_vertical_velocity();
 
   // Navigation parameters
 
 protected:
   double z;
   double targetZ;
-  double targetAngle;
   double targetDistance;
   double velocityZ;
   double tauZ;
@@ -42,17 +37,16 @@ protected:
   virtual void aborted() {};
   virtual void updated_control() {};
   virtual void updated() {};
-  virtual void setMotorVelocity(double newVelocityX, double newVelocityY,
-                                double verticalVelocity, double newAngularSpeed) {};
+  virtual void set_target_twist(const Twist2D & twist, float vertical_speed);
   virtual bool localized() {return true;}
 public:
-  double minDeltaAngle;
-  double minDeltaDistance;
-  double minimalSpeed;
+  double angle_tolerance;
+  double distance_tolerance;
+  double speed_tolerance;
   void stop();
-  void setPose(float x, float y, float z, float theta);
-  void setTargetPoint(float x, float y, float z);
-  void setTargetPose(float x, float y, float z, float theta);
+  void set_pose(float x, float y, float z, float theta);
+  void set_target_point(float x, float y, float z);
+  void set_target_pose(float x, float y, float z, float theta);
   State state;
   Agent *agent;
   void update(float dt);

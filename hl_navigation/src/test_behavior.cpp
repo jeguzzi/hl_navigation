@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
       return 0;
     }
   }
-  auto agent = Agent::agent_with_name(behavior_name);
+  auto agent = Agent::agent_with_name(behavior_name, TWO_WHEELED, 0.1, 0.1);
   if (!agent) {
     printf("No behavior with name %s\n", behavior_name);
     exit(1);
@@ -41,46 +41,42 @@ int main(int argc, char *argv[]) {
   const auto& r = *agent.get();
   printf("Use behavior %s - %s\n", behavior_name, typeid(r).name());
   float dt = 0.1;
-  agent->type = TWO_WHEELED;
-  agent->radius = 0.1;
-  agent->axisLength = 0.1;
-  agent->setMaxSpeed(1.0);
-  agent->setMaxRotationSpeed(1.0);
-  // agent->setMaxAngularSpeed(1.0);
-  agent->setOptimalSpeed(1.0);
-  agent->setOptimalRotationSpeed(1.0);
-  agent->setHorizon(1.0);
-  // Set max speed ...
-  // Start in 0, 0
+  agent->set_max_speed(1.0);
+  agent->set_max_angular_speed(1.0);
+  agent->set_optimal_speed(1.0);
+  agent->set_optimal_angular_speed(1.0);
+  agent->set_horizon(1.0);
+
   agent->position = CVector2(0.0f, 0.05f);
   agent->velocity = CVector2(0.0f, 0.0f);
   // Go to 1, 0
   agent->targetPosition = CVector2(3.0f, 0.0f);
+  agent->set_static_obstacles({Disc(CVector2(1.5f, 0.0f), 0.5f)});
   // This should be in init
-  agent->clearObstacles();
-  agent->addObstacleAtPoint(CVector2(0.5f, 0.0f), 0.2f, 0.0);
   printf("Start loop @ (%.3f, %.3f)\n", agent->position.GetX(), agent->position.GetY());
   for (size_t i = 0; i < 30; i++) {
     // printf("P (%.3f, %.3f, %.3f)\n",
     //   agent->position.GetX(), agent->position.GetY(), agent->angle.GetValue());
     // TODO(Jerome): rivedere tutte le cache.
     // Per esempio, qui mi obbliga a ricreare gli ostacoli ogni volta
-    agent->clearObstacles();
-    agent->addObstacleAtPoint(CVector2(0.5f, 0.0f), CVector2(-0.1f, 0.0f), 0.1f, 0.0);
+
     printf("%.3f, %.3f,", agent->position.GetX(), agent->position.GetY());
     //       agent->velocity.GetX(), agent->velocity.GetY());
     // printf("%zu (%.3f, %.3f), (%.3f, %.3f)\n", i, agent->position.GetX(), agent->position.GetY(),
     //       agent->velocity.GetX(), agent->velocity.GetY());
-    agent->updateDesiredVelocity();
+    // agent->updateDesiredVelocity();
     // printf("V (%.3f, %.3f)\n", agent->desiredVelocity.GetX(), agent->desiredVelocity.GetY());
-    agent->updateVelocity(dt);
+    agent->update(dt);
+    // std::cout << agent->desiredVelocity << std::endl;
+    // std::cout << agent->get_target_velocity() << std::endl;
     // printf("V1 (%.3f, %.3f, %.3f. %.3f)\n",
     //   agent->desiredLinearSpeed, agent->desiredVelocity.GetX(), agent->desiredVelocity.GetY(),
     //   agent->desiredAngularSpeed.GetValue());
 
     // agent->velocity = agent->desiredVelocity;
-    agent->velocity = CVector2(agent->desiredLinearSpeed, agent->angle);
-    agent->angle += agent->desiredAngularSpeed * dt;
+
+    agent->velocity = agent->get_target_velocity();
+    agent->angle += CRadians(agent->target_twist.angular) * dt;
     agent->position += agent->velocity * dt;
   }
   printf("\nEnd loop @ (%.3f, %.3f), (%.3f %.3f)\n",

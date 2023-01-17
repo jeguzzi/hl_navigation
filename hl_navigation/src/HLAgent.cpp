@@ -5,8 +5,6 @@
 #include "HLAgent.h"
 #include <algorithm>
 
-using namespace argos;
-using namespace std;
 
 void HLAgent::setTau(double value) { tau = value; }
 void HLAgent::setEta(double value) { eta = value; }
@@ -16,22 +14,42 @@ void HLAgent::setResolution(unsigned int value) {
   resolution = std::min((int)value, MAX_RESOLUTION);
 }
 
-static CVector2 relax(CVector2 x0, CVector2 x1, Real tau, Real dt);
-static Real relax(Real x0, Real x1, Real tau, Real dt);
-
-static CVector2 relax(CVector2 x0, CVector2 x1, Real tau, Real dt) {
-  if (tau == 0)
-    return x1;
-  // Real dt=0.1;
-  return exp(-dt / tau) * (x0 - x1) + x1;
-}
-
 static Real relax(Real x0, Real x1, Real tau, Real dt) {
   if (tau == 0)
     return x1;
   // Real dt=0.1;
   return exp(-dt / tau) * (x0 - x1) + x1;
 }
+
+#if 0
+static CVector2 relax(CVector2 x0, CVector2 x1, Real tau, Real dt) {
+  if (tau == 0)
+    return x1;
+  // Real dt=0.1;
+  return exp(-dt / tau) * (x0 - x1) + x1;
+}
+#endif
+
+static std::vector<float> relax(const std::vector<float> & v0, const std::vector<float> & v1,
+                                Real tau, Real dt) {
+  if (tau == 0)
+    return v1;
+  auto v2 = std::vector<float>(v0.size());
+  for (size_t i = 0; i < v0.size(); i++) {
+    v2[i] = relax(v0[i], v1[i], tau, dt);
+  }
+  return v2;
+}
+
+static Twist2D relax(const Twist2D & v0, const Twist2D & v1, Real tau, Real dt) {
+  if (tau == 0)
+    return v1;
+  return Twist2D(
+    relax(v0.longitudinal, v1.longitudinal, tau, dt),
+    relax(v0.lateral, v1.lateral, tau, dt),
+    relax(v0.angular, v1.angular, tau, dt));
+}
+
 
 static void setDx(AgentCache &agent, CVector2 p) {
   agent.dx = p;
@@ -48,11 +66,7 @@ static void setDx(AgentCache &agent, CVector2 p) {
   // agent.beta2=agent.gamma+alpha;
 }
 
-void HLAgent::addObstacleAtPoint(CVector2 point, Real radius,
-                                 Real socialMargin) {
-  AgentCache obstacle = makeObstacleAtPoint(point, radius, socialMargin);
-  staticObstacles.push_back(obstacle);
-}
+
 
 CRadians HLAgent::angleResolution() { return 2 * aperture / resolution; }
 
@@ -166,7 +180,7 @@ static Real penetration(AgentCache *agent) {
   }
 }
 
-void HLAgent::updateRepulsiveForce() {
+void HLAgent::update_repulsive_force() {
   repulsiveForce = CVector2(0, 0);
   insideObstacle = false;
 
@@ -189,8 +203,8 @@ void HLAgent::updateRepulsiveForce() {
   }
 }
 
-void HLAgent::updateDesiredVelocity() {
-  setup();
+void HLAgent::update_desired_velocity() {
+  // setup();
 
   // debugAgents();
   // debugStaticObstacles();
@@ -201,7 +215,9 @@ void HLAgent::updateDesiredVelocity() {
   Real D = agentToTarget.Length();
   effectiveHorizon = horizon;
   // effectiveHorizon=fmin(horizon,D);
-  CVector2 effectiveTarget = agentToTarget / D * effectiveHorizon;
+
+  // CVector2 effectiveTarget = agentToTarget / D * effectiveHorizon;
+
 
   // printf("HLAgent: updateDesiredVelocity to %.2f, h = %.2f
   // \r\n",a0.GetValue(),horizon);
@@ -296,9 +312,10 @@ void HLAgent::updateDesiredVelocity() {
     newTargetSpeed = 0;
   }
 
-  desiredAngle = nearestAngle;
-  desiredSpeed = newTargetSpeed;
-  desiredVelocity = CVector2(newTargetSpeed, nearestAngle);
+  // desiredAngle = nearestAngle;
+  // desiredSpeed = newTargetSpeed;
+  // TODO(Jerome): verify that all desired velocities are in the fixed frame
+  desiredVelocity = CVector2(newTargetSpeed, nearestAngle + angle);
 
   // DEBUG_CONTROLLER("=> desiredVelocity (%.2f,%.2f) %.2f
   // \n",desiredVelocity.GetX(),desiredVelocity.GetY(),desiredAngle.GetValue());
@@ -307,19 +324,21 @@ void HLAgent::updateDesiredVelocity() {
   //    \n",desiredSpeed,desiredAngle.GetValue());
 }
 
-void HLAgent::clearObstacles() {
+void HLAgent::clear() {
   nearAgents.clear();
   staticObstacles.clear();
-  initDistanceCache();
-  effectiveHorizon = horizon;
 }
 
-void HLAgent::addObstacleAtPoint(CVector2 p, CVector2 v, Real r,
-                                 Real socialMargin) {
+
+void HLAgent::add_static_obstacle(const Disc & d) {
+  AgentCache obstacle = makeObstacleAtPoint(d.position, d.radius, d.social_margin);
+  staticObstacles.push_back(obstacle);
+}
+
+void HLAgent::add_neighbor(const Disc & d) {
   // printf("Add obstacle at (%.2f %.2f) with v (%.2f %.2f) and r %.2f
   // \n",p.GetX(),p.GetY(),v.GetX(),v.GetY(),r);
-
-  AgentCache agent = makeObstacleAtPoint(p, v, r, socialMargin);
+  AgentCache agent = makeObstacleAtPoint(d.position, d.velocity, d.radius, d.social_margin);
   nearAgents.push_back(agent);
 }
 
@@ -330,14 +349,15 @@ void HLAgent::addObstacleWithHuman(Human *human)
   nearAgents.push_back(agent);
   }*/
 
+# if 0
 static bool compare(AgentCache first, AgentCache second) {
   return first.centerDistance < second.centerDistance;
 }
+#endif
 
-void HLAgent::setup() {
-  //  printf("HL Target %.2f %.2f, Position %.2f
-  //  %.2f\n",targetPosition.GetX(),targetPosition.GetY(),position.GetX(),position.GetY());
-  // nearAgents.sort(compare);
+void HLAgent::prepare() {
+  initDistanceCache();
+  effectiveHorizon = horizon;
 }
 
 AgentCache HLAgent::makeObstacleAtPoint(CVector2 p, Real r, Real socialMargin) {
@@ -483,49 +503,20 @@ Real HLAgent::staticDistForAngle(AgentCache *agent, CRadians alpha) {
   return -B - sqrt(D);
 }
 
-void HLAgent::updateVelocity(float dt) {
-  // printf("A L %.3f R %.3f\n",leftWheelSpeed,rightWheelSpeed);
-
-  // printf("desired lin speed %.3f, des angle %.3f, optimal speed
-  // %.3f\n",desiredSpeed,desiredAngle.GetValue(),optimalSpeed);
-
-  Agent::updateVelocity(dt);
-
-  //    printf("=> L %.3f -> %.3f R %.3f -> %.3f
-  //    (%.3f)\n",leftWheelSpeed,leftWheelDesiredSpeed,rightWheelSpeed,rightWheelDesiredSpeed,tau);
-
-  if (type == TWO_WHEELED) {
-    setDesiredWheelSpeeds(
-        relax(leftWheelSpeed, leftWheelDesiredSpeed, tau, dt),
-        relax(rightWheelSpeed, rightWheelDesiredSpeed, tau, dt));
-    // Useful to obtain a smoother [footbot] movement
-
-    leftWheelSpeed = leftWheelDesiredSpeed;
-    rightWheelSpeed = rightWheelDesiredSpeed;
-
-    // auto v = velocity_from_wheel_speed(leftWheelSpeed, rightWheelSpeed);
-    // desiredVelocity = CVector2(std::get<0>(v), 0.0);
-    // desiredAngularSpeed = CRadians(std::get<1>(v));
+void HLAgent::update_target_twist(float dt) {
+  if (is_wheeled()) {
+    target_wheel_speeds = relax(target_wheel_speeds, desired_wheel_speeds, tau, dt);
+    target_twist = twist_from_wheel_speeds(target_wheel_speeds);
   } else {
-    desiredVelocity = relax(previousDesiredVelocity, desiredVelocity, tau, dt);
-    previousDesiredVelocity = desiredVelocity;
-    // could also relax the absolute velocity:
-    // - relative is nearer to motor speed
-    // - absolute is nearer to original algorithm
+    // TODO(Jerome): same than before when I relaxed the absolute velocity, not the relative
+    // but different than original paper
+    target_twist = relax(target_twist, desired_twist, tau, dt);
   }
 }
 
 Real *HLAgent::collisionMap() { return &distanceCache[0]; }
 
-HLAgent::HLAgent() : Agent() {
-  aperture = DEFAULT_APERTURE;
-  resolution = DEFAULT_RESOLUTION;
-  tau = DEFAULT_TAU;
-  eta = tau;
-  previousDesiredVelocity = CVector2(0, 0);
-}
 
-HLAgent::~HLAgent() {}
 /*
   void HLAgent::updateVelocityCartesian ()
   {

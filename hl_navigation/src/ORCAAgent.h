@@ -17,31 +17,29 @@ using namespace argos;
 
 class ORCAAgent : public Agent {
 public:
-  virtual void setTimeHorizon(double value);
-  virtual void setAperture(double value){};
-  virtual void setResolution(unsigned int value){};
-  virtual void setTau(double value){};
-  virtual void setEta(double value){};
-
-  virtual void updateDesiredVelocity();
-  virtual void updateVelocity(float);
-  // virtual void Init(TConfigurationNode& t_tree);
-  virtual void clearObstacles();
-
-  virtual void addObstacleAtPoint(CVector2 p, CVector2 v, Real r,
-                                  Real socialMargin);
-  virtual void addObstacleAtPoint(CVector2 p, Real r, Real socialMargin);
-  virtual void updateRepulsiveForce(){};
-
-  ORCAAgent();
-  ~ORCAAgent();
-
   bool useEffectiveCenter;
+  ORCAAgent(agent_type_t type, float radius, float axis_length=0.0) :
+    Agent(type, radius, axis_length), useEffectiveCenter(false), timeHorizon(10.0),
+    _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
+    _RVOAgent->maxNeighbors_ = 1000;
+    _RVOAgent->timeStep_ = TIME_STEP;
+    _RVOAgent->timeHorizon_ = timeHorizon;
+  }
+  ~ORCAAgent() {}
+  virtual void setTimeHorizon(double value);
+
+protected:
+  virtual Twist2D compute_desired_twist() const override;
+  virtual void update_desired_velocity() override;
+  virtual void add_neighbor(const Disc & disc) override;
+  virtual void add_static_obstacle(const Disc & disc) override;
+  virtual void clear() override;
+  virtual void prepare() override;
 
 private:
-  Real timeHorizon;
 
-  Real timeHorizonStatic;
+  Real timeHorizon;
+  // Real timeHorizonStatic;
   std::vector<const RVO::Agent *> agentNeighbors;
 
   // See [1] J. Snape, J. van den Berg, S. J. Guy, and D. Manocha, “Smooth and
@@ -52,8 +50,7 @@ private:
   Real D;
 
   Real rangeSq;
-  virtual void setup();
-  RVO::Agent *_RVOAgent;
+  std::unique_ptr<RVO::Agent> _RVOAgent;
 
   static const char * name;
 };

@@ -3,36 +3,32 @@
  */
 #include "Controller.h"
 
-void Controller::setTargetPoint(float x, float y, float z) {
-  targetType = POINT;
+void Controller::set_target_point(float x, float y, float z) {
+  target_type = POINT;
   agent->targetPosition = CVector2(x, y);
   targetZ = z;
   state = MOVE;
 }
 
-void Controller::setPose(float x, float y, float z_, float theta) {
+void Controller::set_pose(float x, float y, float z_, float theta) {
   z = z_;
   agent->position = CVector2(x, y);
   agent->angle = CRadians(theta);
 }
 
-
-void Controller::setTargetPose(float x, float y, float z, float theta) {
-  targetType = POSE;
+void Controller::set_target_pose(float x, float y, float z, float theta) {
+  target_type = POSE;
   agent->targetPosition = CVector2(x, y);
+  agent->targetAngle = CRadians(theta);
   targetZ = z;
-  targetAngle = theta;
-  agent->desiredAngle = CRadians(targetAngle) - agent->angle;
   state = MOVE;
 }
 
-void Controller::turn() {
-  state = TURN;
-  agent->desiredSpeed = 0.0;
-}
+void Controller::turn() { state = TURN; }
 
 void Controller::brake() {
   if (state != BRAKING) {
+    agent->set_desired_twist(Twist2D(0.0, 0.0, 0.0));
     state = BRAKING;
   }
 }
@@ -40,36 +36,30 @@ void Controller::brake() {
 void Controller::stop() {
   if (state != IDLE) {
     state = IDLE;
-    setMotorVelocity(0, 0, 0);
+    agent->target_twist = Twist2D(0.0, 0.0, 0.0);
+    set_target_twist(agent->target_twist, 0.0);
     aborted();
   }
 }
 
 bool Controller::is_at_target_point() {
   targetDistance = (agent->targetPosition - agent->position).Length();
-  return targetDistance < minDeltaDistance;
+  return targetDistance < distance_tolerance;
 }
 
 bool Controller::is_at_target_angle() {
-  if (targetType == POINT)
+  if (target_type == POINT)
     return true;
-  if (state == MOVE) {
-    return (agent->desiredAngle).GetAbsoluteValue() < minDeltaAngle;
-  } else {
-    double da = (CRadians(targetAngle) - agent->angle).GetAbsoluteValue();
-    return da < minDeltaAngle;
-  }
+  return (agent->targetAngle - agent->angle).GetAbsoluteValue() < angle_tolerance;
 }
 
-void Controller::updateTargetState() {
+void Controller::update_target_state() {
   switch (state) {
   case MOVE:
     if (is_at_target_point()) {
-      if (agent->type == HOLONOMIC) {
-        if (is_at_target_angle()) {
+      if (is_at_target_angle()) {
           arrived();
           brake();
-        }
       } else {
         turn();
       }
@@ -88,7 +78,7 @@ void Controller::updateTargetState() {
   }
 }
 
-void Controller::updateVerticalVelocity() {
+void Controller::update_vertical_velocity() {
   // TODO(old) complete with obstacle avoidance
   double desiredVerticalSpeed = (targetZ - z) / tauZ;
   if (desiredVerticalSpeed > optimalVerticalSpeed)
@@ -98,37 +88,31 @@ void Controller::updateVerticalVelocity() {
   velocityZ = velocityZ + (desiredVerticalSpeed - velocityZ) / tauZ;
 }
 
-void Controller::setMotorVelocity(double newSpeed, double newVelocityZ,
-                                 double newAngularSpeed) {
-  setMotorVelocity(newSpeed, 0, newVelocityZ, newAngularSpeed);
-}
+void Controller::set_target_twist(const Twist2D & twist, float vertical_speed) { }
 
 void Controller::update(float dt) {
-  if (!localized() && state != IDLE && state != BRAKING) {
-    brake();
-    return;
-  }
   if (state == IDLE)
     return;
-  updateTargetState();
-  if (state == BRAKING) {
-    if (agent->velocity.Length() > minimalSpeed) {
-      agent->desiredSpeed = 0.0;
-      agent->desiredVelocity = CVector2(0, 0);
-      agent->desiredAngle = CRadians(targetAngle) - agent->angle;
-    } else {
-      stop();
-      return;
-    }
+  if (!localized() && state != BRAKING) {
+    brake();
+  } else {
+    update_target_state();
+  }
+  if (state == BRAKING && agent->velocity.Length() < speed_tolerance) {
+    stop();
+    return;
   }
   if (state == MOVE) {
-    agent->updateDesiredVelocity();
-    agent->updateRepulsiveForce();
-  }
-  if (state == TURN) {
-    agent->desiredSpeed = 0.0;
-    agent->desiredVelocity = CVector2(0, 0);
-    agent->desiredAngle = CRadians(targetAngle) - agent->angle;
+    agent->update(dt);
+  } else if (state == TURN) {
+    float delta = 0.0;
+    if (target_type == POSE) {
+      delta = (agent->targetAngle - agent->angle).SignedNormalize().GetValue();
+    }
+    agent->set_desired_twist(Twist2D(0.0, 0.0, delta / agent->get_rotation_tau()));
+    agent->update_target_twist(dt);
+  } else {
+    agent->update_target_twist(dt);
   }
 
   //   if(agent->type!=TWO_WHEELED && agent->insideObstacle)
@@ -139,34 +123,11 @@ void Controller::update(float dt) {
   //           exit_from_obstacle()
   //   }
 
-  agent->updateVelocity(dt);
-  updateVerticalVelocity();
-  if (agent->type == TWO_WHEELED || agent->type == HEAD) {
-    setMotorVelocity(agent->desiredLinearSpeed, velocityZ,
-                     (agent->desiredAngularSpeed).GetValue());
-  } else if (agent->type == HOLONOMIC) {
-    CRadians desiredAngularSpeed;
-    if (rotateIfHolo) {
-      CRadians delta, tAngle;
-      if (targetType == POSE) {
-        tAngle = CRadians(targetAngle);
-      } else {
-        CVector2 agentToTarget = agent->targetPosition - agent->position;
-        tAngle = agentToTarget.Angle();
-      }
-      delta = (tAngle - agent->angle).SignedNormalize();
-      desiredAngularSpeed = (1.0 / agent->rotationTau) * delta;
-    } else {
-      desiredAngularSpeed = CRadians(0);
-    }
-    setMotorVelocity(agent->desiredVelocity.GetX(),
-                     agent->desiredVelocity.GetY(), velocityZ,
-                     desiredAngularSpeed.GetValue());
-  }
-  updated();
+  update_vertical_velocity();
+  set_target_twist(agent->target_twist, velocityZ);
+  updated_control();
 }
 
-
-Controller::Controller() : state(IDLE) { }
+Controller::Controller() : state(IDLE) {}
 
 Controller::~Controller() { stop(); }

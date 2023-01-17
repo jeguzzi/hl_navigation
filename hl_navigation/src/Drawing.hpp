@@ -110,7 +110,7 @@ struct Drawing {
     obstacles_marker_pub->publish(marker);
   }
 
-  void drawDesiredVelocity(double desiredSpeed, double desiredAngle) {
+  void drawDesiredVelocity(CVector2 v) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = "base_link";  // ns;//ns+"/base_link";
     marker.header.stamp = node.now();
@@ -120,12 +120,12 @@ struct Drawing {
 
     // ROS_INFO("%.4f %.4f\n",desiredSpeed,desiredAngle);
 
-    marker.scale.x = fmax(0.01, desiredSpeed);
+    marker.scale.x = fmax(0.01, v.Length());
     marker.scale.y = 0.05;
     marker.scale.z = 0.05;
 
     tf2::Quaternion quat_tf;
-    quat_tf.setRPY(0.0, 0.0, desiredAngle);
+    quat_tf.setRPY(0.0, 0.0, v.Angle().GetValue());
     tf2::convert(quat_tf, marker.pose.orientation);
 
     marker.color.r = 1.0f;

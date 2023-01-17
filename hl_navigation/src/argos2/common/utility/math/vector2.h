@@ -39,7 +39,7 @@ namespace argos {
     * It defines a basic bidimensional vector.
     */
    class CVector2 {
-   
+
    friend class CRotationMatrix2;
 
    public:
@@ -347,24 +347,24 @@ namespace argos {
    /****************************************/
    /****************************************/
 
-   /** 
+   /**
     * It computes the square distance between the passed vectors.
-    * 
+    *
     * @param c_v1 The first vector
     * @param c_v2 The second vector
-    * 
+    *
     * @return the square distance between the passed vectors
     */
    inline Real SquareDistance(const CVector2& c_v1, const CVector2& c_v2) {
       return (c_v1 - c_v2).SquareLength();
    }
 
-   /** 
+   /**
     * It computes the distance between the passed vectors.
-    * 
+    *
     * @param c_v1 The first vector
     * @param c_v2 The second vector
-    * 
+    *
     * @return the distance between the passed vectors
     */
    inline Real Distance(const CVector2& c_v1, const CVector2& c_v2) {

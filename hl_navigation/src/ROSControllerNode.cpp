@@ -44,11 +44,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
   ROSControllerNode()
       : Node("controller"), Controller(),
         drawing(*this, get_effective_namespace()) {
-    for (auto const &p : Agent::all_behaviors()) {
-      agents.emplace(p.first, p.second());
-    }
-    agent = agents["HL"].get();
-
+    readStaticParameters();
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     navPublisher = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 1);
@@ -85,7 +81,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
         std::bind(&ROSControllerNode::on_set_parameters, this, _1));
     double rate = declare_parameter("rate", 10.0);
     updatePeriod = 1.0 / rate;
-    readStaticParameters();
+
     init_params();
 
     timer_ = create_wall_timer(
@@ -99,6 +95,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
   std::map<std::string, std::unique_ptr<Agent>> agents;
   double updatePeriod;
   bool publishCmdStamped;
+  HLAgent * hl_agent;
   std::string ns;
   std::string odom_frame;
   rclcpp::Time lastTimeWhenLocalized;
@@ -158,14 +155,12 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
 
   void updated_control() override {
     if (drawing_enabled) {
-      drawing.drawDesiredVelocity(agent->desiredSpeed,
-                                  agent->desiredAngle.GetValue());
-      if (state == MOVE && agent == agents["HL"].get()) {
-        HLAgent * hl_agent = dynamic_cast<HLAgent *>(agents["HL"].get());
+      drawing.drawDesiredVelocity(agent->desiredVelocity);
+      if (state == MOVE && agent == hl_agent) {
         drawing.drawCollisionMap(
             -hl_agent->aperture.GetValue(),
             hl_agent->angleResolution().GetValue(), hl_agent->getDistances(),
-            hl_agent->radius);
+            hl_agent->get_radius());
       }
     }
   }
@@ -213,7 +208,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     }
     // CHANGED: We don't assume anymore that twist and pose are in the same
     // frame!
-    setPose(pose.position.x, pose.position.y, pose.position.z, tf2::getYaw(pose.orientation));
+    set_pose(pose.position.x, pose.position.y, pose.position.z, tf2::getYaw(pose.orientation));
   }
 
   bool setTargetPointFromMsg(const geometry_msgs::msg::PointStamped &msg) {
@@ -230,9 +225,9 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
           odom_frame.c_str());
       return false;
     }
-    setTargetPoint(targetPoint.point.x, targetPoint.point.y, targetPoint.point.z);
+    set_target_point(targetPoint.point.x, targetPoint.point.y, targetPoint.point.z);
     if (drawing_enabled) {
-        drawing.drawTarget(targetPoint.point, targetPoint.header.frame_id, minDeltaDistance);
+        drawing.drawTarget(targetPoint.point, targetPoint.header.frame_id, distance_tolerance);
     }
     return true;
   }
@@ -243,12 +238,12 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     geometry_msgs::msg::PoseStamped targetPose;
     if (!inOdomFrame(msg, targetPose))
       return false;
-    setTargetPose(targetPose.pose.position.x, targetPose.pose.position.y,
+    set_target_pose(targetPose.pose.position.x, targetPose.pose.position.y,
                   targetPose.pose.position.z,
                   tf2::getYaw(targetPose.pose.orientation));
     if (drawing_enabled) {
         drawing.drawTarget(targetPose.pose.position,
-                           targetPose.header.frame_id, minDeltaDistance);
+                           targetPose.header.frame_id, distance_tolerance);
     }
     return true;
   }
@@ -297,16 +292,14 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     }
   }
 
-  void setMotorVelocity(double newVelocityX, double newVelocityY,
-                        double verticalVelocity,
-                        double newAngularSpeed) override {
+  virtual void set_target_twist(const Twist2D & twist, float vertical_speed) override {
     // Desired velocity is in robot frame
     geometry_msgs::msg::Twist base_cmd;
-    base_cmd.linear.x = newVelocityX;
-    base_cmd.linear.y = newVelocityY;
+    base_cmd.linear.x = twist.longitudinal;
+    base_cmd.linear.y = twist.lateral;
     // TODO(Jerome): check ... is nan in
     // base_cmd.linear.z=newVelocityZ;
-    base_cmd.angular.z = newAngularSpeed;
+    base_cmd.angular.z = twist.angular;
     navPublisher->publish(base_cmd);
     // RCLCPP_INFO(this->get_logger(), "navPublisher publish %.3f %.3f %.3f",
     // newVelocityX,
@@ -315,12 +308,12 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       geometry_msgs::msg::TwistStamped msg;
       msg.header.frame_id = odom_frame;
       msg.header.stamp = now();
-      msg.twist.angular.z = newAngularSpeed;
-      CVector2 v = CVector2(newVelocityX, newVelocityY);
+      msg.twist.angular.z = twist.angular;
+      CVector2 v = CVector2(twist.longitudinal, twist.lateral);
       v.Rotate(agent->angle);
       msg.twist.linear.x = v.GetX();
       msg.twist.linear.y = v.GetY();
-      msg.twist.linear.z = verticalVelocity;
+      msg.twist.linear.z = vertical_speed;
       cmdStampedPublisher->publish(msg);
     }
   }
@@ -329,7 +322,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       const hl_navigation_msgs::msg::Obstacles &obstacles_msg) {
     if (odom_frame == "")
       return;
-    agent->clearObstacles();
+    std::vector<Disc> obstacles;
     for (auto msg : obstacles_msg.obstacles) {
       geometry_msgs::msg::PointStamped topPosition;
       geometry_msgs::msg::Vector3Stamped velocity;
@@ -344,7 +337,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
         relevant = true;
         CVector2 p(topPosition.point.x, topPosition.point.y);
         CVector2 v(velocity.vector.x, velocity.vector.y);
-        agent->addObstacleAtPoint(p, v, msg.radius, msg.social_margin);
+        obstacles.emplace_back(p, msg.radius, msg.social_margin, v);
       }
       if (drawing_enabled) {
         drawing.drawObstacle(topPosition, msg.height, msg.radius,
@@ -352,40 +345,51 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
         drawing.drawObstacleVelocity(topPosition, velocity.vector, relevant, updatePeriod);
       }
     }
+    agent->set_neighbors(obstacles);
   }
 
   void readStaticParameters() {
     std::string agent_type_name =
         declare_parameter("type", std::string("TWO_WHEELED"));
-    agentType agent_type = TWO_WHEELED;
+    agent_type_t agent_type = TWO_WHEELED;
     if (agent_type_name == "TWO_WHEELED")
       agent_type = TWO_WHEELED;
     else if (agent_type_name == "HOLONOMIC")
       agent_type = HOLONOMIC;
     else if (agent_type_name == "HEAD")
       agent_type = HEAD;
+    else if (agent_type_name == "FOUR_WHEELED_OMNI")
+      agent_type = HEAD;
 
     double axis_length = declare_parameter("axis_length", 1.0);
     double radius = declare_parameter("radius", 0.3);
+
+    for (auto const &p : Agent::all_behaviors()) {
+      agents.emplace(p.first, p.second(agent_type, radius, axis_length));
+    }
+    agent = agents[agent_type_name].get();
+    hl_agent = dynamic_cast<HLAgent *>(agents["HL"].get());
+
+
     double maximal_angular_speed =
-        declare_parameter("maximal_angular_speed", DEFAULT_MAX_ANGULAR_SPEED);
+        declare_parameter("maximal_angular_speed", 10.0);
     double max_speed = declare_parameter("maximal_speed", 0.3);
     // TODO(Jerome): complete angular vs rotation speed
-    double maximal_rotation_speed =
-        declare_parameter("maximal_rotation_speed", DEFAULT_MAX_ANGULAR_SPEED);
+    // double maximal_rotation_speed =
+    //     declare_parameter("maximal_rotation_speed", DEFAULT_MAX_ANGULAR_SPEED);
 
     for (auto & p : agents) {
-      p.second->axisLength = axis_length;
-      p.second->type = agent_type;
-      p.second->radius = radius;
-      p.second->setMaxSpeed(max_speed);
-      p.second->setMaxAngularSpeed(maximal_angular_speed);
+      // p.second->axisLength = axis_length;
+      // p.second->type = agent_type;
+      // p.second->radius = radius;
+      p.second->set_max_speed(max_speed);
+      p.second->set_max_angular_speed(maximal_angular_speed);
       // TODO(Jerome): reenable after sync angular vs rotation speed
 
-      if (agent_type == TWO_WHEELED) {
-        p.second->setMaxRotationSpeed(maximal_rotation_speed);
-        // agent->setMaxRotationSpeed(maximal_speed);
-      }
+      // if (agent_type == TWO_WHEELED) {
+      //   p.second->setMaxRotationSpeed(maximal_rotation_speed);
+      //   // agent->setMaxRotationSpeed(maximal_speed);
+      // }
     }
     //   pn.param("maximal_vertical_speed",maximalVerticalSpeed, 1.0);
   }
@@ -437,57 +441,41 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       if (param.get_name() == "behavior") {
         setAgentFromString(param.as_string());
       } else if (param.get_name() == "optimal_speed") {
-        agent->setOptimalSpeed(param.as_double());
+        agent->set_optimal_speed(param.as_double());
       } else if (param.get_name() == "optimal_angular_speed") {
-        /// TODO(old): distinguish between these two that are alternative in the
-        /// old code
-        if ((param.as_double() - agent->optimalAngularSpeed.GetValue()) >
-            1e-3) {
-          agent->setOptimalAngularSpeed(param.as_double());
-        }
-        agent->setOptimalSpeed(param.as_double());
-        // TODO(Jerome): replace with set param
-        // config.optimal_rotation_speed = agent->optimalRotationSpeed;
-        // config.optimal_angular_speed = agent->optimalAngularSpeed.GetValue();
-      } else if (param.get_name() == "optimal_rotation_speed") {
-        /// TODO(Jerome): reenable (maybe) after sync angular vs rotation speed
-        if (param.as_double() != agent->optimalRotationSpeed) {
-          agent->setOptimalRotationSpeed(param.as_double());
-        }
-        // agent->setOptimalRotationSpeed(param.as_double());
-        // TODO(Jerome): replace with set param
-        // config.optimal_rotation_speed = agent->optimalRotationSpeed;
-        // config.optimal_angular_speed = agent->optimalAngularSpeed.GetValue();
+        agent->set_optimal_angular_speed(param.as_double());
       } else if (param.get_name() == "tau_z") {
         tauZ = param.as_double();
       } else if (param.get_name() == "optimal_vertical_speed") {
         optimalVerticalSpeed = param.as_double();
       } else if (param.get_name() == "tau") {
-        agent->setTau(param.as_double());
+        hl_agent->setTau(param.as_double());
       } else if (param.get_name() == "eta") {
-        agent->setEta(param.as_double());
+        hl_agent->setEta(param.as_double());
       } else if (param.get_name() == "rotation_tau") {
-        agent->setRotationTau(param.as_double());
+        agent->set_rotation_tau(param.as_double());
       } else if (param.get_name() == "horizon") {
-        agent->setHorizon(param.as_double());
-      } else if (param.get_name() == "time_horizon") {
-        agent->setTimeHorizon(param.as_double());
+        agent->set_horizon(param.as_double());
+      // TODO(Jerome): reenable
+      // } else if (param.get_name() == "time_horizon") {
+      //   agent->setTimeHorizon(param.as_double());
       } else if (param.get_name() == "safety_margin") {
-        agent->setSafetyMargin(param.as_double());
+        agent->set_safety_margin(param.as_double());
       } else if (param.get_name() == "aperture") {
-        agent->setAperture(param.as_double());
+        hl_agent->setAperture(param.as_double());
       } else if (param.get_name() == "resolution") {
-        agent->setResolution(param.as_int());
+        hl_agent->setResolution(param.as_int());
       } else if (param.get_name() == "drawing") {
         drawing_enabled = param.as_bool();
       } else if (param.get_name() == "tol_distance") {
-        minDeltaDistance = param.as_double();
+        distance_tolerance = param.as_double();
       } else if (param.get_name() == "tol_angle") {
-        minDeltaAngle = param.as_double();
-      } else if (param.get_name() == "point_toward_target") {
-        rotateIfHolo = param.as_bool();
+        angle_tolerance = param.as_double();
+      // TODO(Jerome): reenable
+      // else if (param.get_name() == "point_toward_target") {
+      //   rotateIfHolo = param.as_bool();
       } else if (param.get_name() == "minimal_speed") {
-        minimalSpeed = param.as_double();
+        speed_tolerance = param.as_double();
       }
     }
     return result;

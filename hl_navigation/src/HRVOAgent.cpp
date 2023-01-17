@@ -5,7 +5,7 @@
 #include "HRVOAgent.h"
 #include "HRVO/Obstacle.h"
 
-void HRVOAgent::clearObstacles() {
+void HRVOAgent::prepare() {
   _HRVOAgent->velocity_ =
       HRVO::Vector2((float)velocity.GetX(), (float)velocity.GetY());
   _HRVOAgent->orientation_ = angle.SignedNormalize().GetValue();
@@ -14,23 +14,7 @@ void HRVOAgent::clearObstacles() {
 
   _HRVOAgent->neighborDist_ = 2 * horizon;
   _HRVOAgent->isColliding_ = false;
-  _HRVOAgent->neighbors_.clear();
-
-  for (uint i = 0; i < _HRVOAgent->obstacles_.size(); i++) {
-    delete _HRVOAgent->obstacles_[i];
-  }
-
-  for (uint i = 0; i < _HRVOAgent->agents_.size(); i++) {
-    delete _HRVOAgent->agents_[i];
-  }
-
-  _HRVOAgent->obstacles_.clear();
-  _HRVOAgent->agents_.clear();
   rangeSq = (horizon * 2) * (horizon * 2);
-  agentIndex = 0;
-}
-
-void HRVOAgent::setup() {
   HRVO::Vector2 t = HRVO::Vector2((float)targetPosition.GetX(),
                                   (float)targetPosition.GetY()) -
                     _HRVOAgent->position_;
@@ -40,37 +24,37 @@ void HRVOAgent::setup() {
   _HRVOAgent->uncertaintyOffset_ = 0;
 }
 
-void HRVOAgent::updateDesiredVelocity() {
-  setup();
+void HRVOAgent::clear() {
+  _HRVOAgent->neighbors_.clear();
+  for (uint i = 0; i < _HRVOAgent->obstacles_.size(); i++) {
+    delete _HRVOAgent->obstacles_[i];
+  }
+
+  for (uint i = 0; i < _HRVOAgent->agents_.size(); i++) {
+    delete _HRVOAgent->agents_[i];
+  }
+  _HRVOAgent->obstacles_.clear();
+  _HRVOAgent->agents_.clear();
+  agentIndex = 0;
+}
+
+void HRVOAgent::update_desired_velocity() {
   _HRVOAgent->computeNewVelocity();
-  CVector2 newVelocity(_HRVOAgent->newVelocity_.x(),
-                       _HRVOAgent->newVelocity_.y());
-  desiredAngle = (newVelocity.Angle() - angle).SignedNormalize();
-  desiredSpeed = abs(_HRVOAgent->newVelocity_);
+  desiredVelocity = CVector2(_HRVOAgent->newVelocity_.x(), _HRVOAgent->newVelocity_.y());
 }
 
-void HRVOAgent::updateVelocity(float dt) { Agent::updateVelocity(dt); }
-
-HRVOAgent::HRVOAgent() : Agent() {
-  _HRVOAgent = new HRVO::Agent();
-  _HRVOAgent->radius_ = radius;
-  _HRVOAgent->maxNeighbors_ = 1000;
-}
-
-HRVOAgent::~HRVOAgent() { delete _HRVOAgent; }
-
-void HRVOAgent::addObstacleAtPoint(CVector2 p, CVector2 v, Real r,
-                                   Real socialMargin) {
+void HRVOAgent::add_neighbor(const Disc & d) {
   HRVO::Agent *a = new HRVO::Agent();
-  a->velocity_ = HRVO::Vector2((float)v.GetX(), (float)v.GetY());
+  CVector2 p = d.position;
+  a->velocity_ = HRVO::Vector2((float)d.velocity.GetX(), (float)d.velocity.GetY());
   a->position_ = HRVO::Vector2((float)p.GetX(), (float)p.GetY());
 
   Real distance;
-  CVector2 relativePosition = relativePositionOfObstacleAt(p, r, distance);
+  CVector2 relativePosition = relativePositionOfObstacleAt(p, d.radius, distance);
   // a->radius_=r+marginForObstacleAtDistance(distance,r,safetyMargin,socialMargin);
-  a->radius_ = r + fmin(distance - r - _HRVOAgent->radius_ - 0.001,
-                        marginForObstacleAtDistance(distance, r, safetyMargin,
-                                                    socialMargin));
+  a->radius_ = d.radius + fmin(
+      distance - d.radius - _HRVOAgent->radius_ - 0.001,
+      marginForObstacleAtDistance(distance, d.radius, safetyMargin, d.social_margin));
   // printf("Obstacle radius %.3f\n",a->radius_);
 
   // a->radius_=r+marginForObstacleAtDistance(p.Length(),r,safetyMargin,socialMargin);
@@ -80,8 +64,8 @@ void HRVOAgent::addObstacleAtPoint(CVector2 p, CVector2 v, Real r,
   agentIndex++;
 }
 
-void HRVOAgent::addObstacleAtPoint(CVector2 p, Real r, Real socialMargin) {
-  addObstacleAtPoint(p, CVector2(0, 0), r, socialMargin);
+void HRVOAgent::add_static_obstacle(const Disc & d) {
+  add_neighbor(d);
 }
 
 const char * HRVOAgent::name = register_type<HRVOAgent>("HRVO");

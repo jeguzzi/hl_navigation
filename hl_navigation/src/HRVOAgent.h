@@ -13,30 +13,24 @@ using namespace argos;
 
 class HRVOAgent : public Agent {
 public:
-  virtual void setTimeHorizon(double value){};
-  virtual void setAperture(double value){};
-  virtual void setResolution(unsigned int value){};
-  virtual void setTau(double value){};
-  virtual void setEta(double value){};
+  HRVOAgent(agent_type_t type, float radius, float axis_length=0.0) :
+    Agent(type, radius, axis_length),
+    _HRVOAgent(std::make_unique<HRVO::Agent>()) {
+      _HRVOAgent->radius_ = radius;
+      _HRVOAgent->maxNeighbors_ = 1000;
+  }
+  ~HRVOAgent() {}
 
-  virtual void updateDesiredVelocity();
-  virtual void updateRepulsiveForce(){};
-  virtual void updateVelocity(float);
-  // virtual void Init(TConfigurationNode& t_tree);
-  virtual void clearObstacles();
-
-  virtual void addObstacleAtPoint(CVector2 p, CVector2 v, Real r,
-                                  Real socialMargin);
-  virtual void addObstacleAtPoint(CVector2 p, Real r, Real socialMargin);
-
-  HRVOAgent();
-  ~HRVOAgent();
-
+protected:
+  virtual void update_desired_velocity() override;
+  virtual void add_neighbor(const Disc & disc) override;
+  virtual void add_static_obstacle(const Disc & disc) override;
+  virtual void clear() override;
+  virtual void prepare() override;
 private:
   uint agentIndex;
   Real rangeSq;
-  virtual void setup();
-  HRVO::Agent *_HRVOAgent;
+  std::unique_ptr<HRVO::Agent> _HRVOAgent;
   static const char * name;
 };
 

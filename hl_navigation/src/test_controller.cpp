@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
       return 0;
     }
   }
-  auto agent = Agent::agent_with_name(behavior_name);
+  auto agent = Agent::agent_with_name(behavior_name, HOLONOMIC, 0.1);
   if (!agent) {
     printf("No behavior with name %s\n", behavior_name);
     exit(1);
@@ -58,26 +58,23 @@ int main(int argc, char *argv[]) {
   const auto& r = *agent.get();
   printf("Use behavior %s - %s\n", behavior_name, typeid(r).name());
   float dt = 0.1;
-  agent->type = HOLONOMIC;
-  agent->radius = 0.1;
-  agent->setMaxSpeed(1.0);
-  agent->setOptimalSpeed(1.0);
-  agent->setMaxAngularSpeed(1.0);
-  agent->setHorizon(1.0);
+  agent->set_max_speed(1.0);
+  agent->set_optimal_speed(1.0);
+  agent->set_horizon(1.0);
   agent->position = CVector2(0.0f, 0.0f);
   agent->velocity = CVector2(0.0f, 0.0f);
   // Go to 1, 0
   controller.agent = agent.get();
-  controller.setTargetPoint(1.0, 0.0, 0.0);
-  controller.minDeltaDistance = 0.1;
-  controller.minimalSpeed = 0.05;
+  controller.set_target_point(1.0, 0.0, 0.0);
+  controller.distance_tolerance = 0.1;
+  controller.speed_tolerance = 0.05;
   float t = 0.0;
   printf("Controller state %d\n", controller.state);
   printf("Start loop @ (%.3f, %.3f)\n", agent->position.GetX(), agent->position.GetY());
   while (controller.state != Controller::IDLE) {
-    agent->clearObstacles();
     controller.update(dt);
-    agent->velocity = agent->desiredVelocity;
+    agent->velocity = agent->get_target_velocity();
+    agent->angle += CRadians(agent->target_twist.angular) * dt;
     agent->position += agent->velocity * dt;
     t += dt;
   }

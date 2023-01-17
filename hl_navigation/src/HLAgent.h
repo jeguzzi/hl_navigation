@@ -11,7 +11,7 @@
 
 #define UNKNOWN_DIST -2
 #define MAX_RESOLUTION 301
-
+#define NO_COLLISION -1
 // configuration
 
 #define DEFAULT_APERTURE CRadians::PI
@@ -44,44 +44,45 @@ class HLAgent : public Agent {
 public:
   // Mobility
   // Navigation
-
-  virtual void addObstacleAtPoint(CVector2 point, Real radius,
-                                  Real socialMargin);
-  virtual void addObstacleAtPoint(CVector2 point, CVector2 velocity,
-                                  Real radius, Real socialMargin);
-
-  virtual void clearObstacles();
-  virtual void updateDesiredVelocity();
-  virtual void updateRepulsiveForce();
-  virtual void updateVelocity(float);
   // virtual void Init(TConfigurationNode& t_tree);
 
   Real *collisionMap();
   unsigned int resolution;
 
-  HLAgent();
-  ~HLAgent();
+  HLAgent(agent_type_t type, float radius, float axis_length=0.0) :
+    Agent(type, radius, axis_length),
+    resolution(DEFAULT_RESOLUTION), aperture(DEFAULT_APERTURE), tau(DEFAULT_TAU),
+    eta(tau) {}
+  ~HLAgent() {}
+
 
   std::vector<Real> getDistances();
 
-  virtual void setTau(double value);
-  virtual void setEta(double value);
-  virtual void setAperture(double value);
-  virtual void setResolution(unsigned int value);
-  virtual void setTimeHorizon(double value){};
+  void setTau(double value);
+  void setEta(double value);
+  void setAperture(double value);
+  void setResolution(unsigned int value);
 
   CRadians angleResolution();
   CRadians aperture;
 
+  virtual void update_target_twist(float dt) override;
+
+protected:
+  virtual void update_desired_velocity() override;
+  virtual void update_repulsive_force() override;
+  virtual void add_neighbor(const Disc & disc) override;
+  virtual void add_static_obstacle(const Disc & disc) override;
+  virtual void clear() override;
+  virtual void prepare() override;
+
 private:
-  virtual void setup();
 
   Real effectiveHorizon;
 
   Real tau;
   Real eta;
 
-  CVector2 previousDesiredVelocity;
   void prepareAgents();
   Real distanceCache[MAX_RESOLUTION];
   Real staticDistanceCache[MAX_RESOLUTION];
@@ -101,7 +102,7 @@ private:
   agentList_t nearAgents;
   obstacleList_t staticObstacles;
 
-  void updateVelocityCartesian();
+  // void updateVelocityCartesian();
   void debugAgents();
   void debugStaticObstacles();
 
