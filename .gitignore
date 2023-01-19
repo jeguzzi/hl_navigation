@@ -43,7 +43,9 @@ qtcreator-*
 /planning/src
 
 *~
-
+*.old.*
+*/test/*.png
+*/test/*.pdf
 # Emacs
 .#*
 
