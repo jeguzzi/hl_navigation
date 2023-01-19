@@ -20,7 +20,8 @@ public:
   bool useEffectiveCenter;
   ORCAAgent(agent_type_t type, float radius, float axis_length=0.0);
   ~ORCAAgent();
-  virtual void setTimeHorizon(double value);
+  void setTimeHorizon(double value);
+  float getTimeHorizon(double value) const;
 
 protected:
   virtual Twist2D compute_desired_twist() const override;

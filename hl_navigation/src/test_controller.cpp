@@ -70,16 +70,17 @@ int main(int argc, char *argv[]) {
   controller.speed_tolerance = 0.05;
   float t = 0.0;
   printf("Controller state %d\n", controller.state);
-  printf("Start loop @ (%.3f, %.3f)\n", agent->position.GetX(), agent->position.GetY());
+  printf("Start loop @ (%.3f, %.3f)\n", agent->position.x(), agent->position.y());
   while (controller.state != Controller::IDLE) {
     controller.update(dt);
+    // TODO(J): expose absolute and relative
     agent->velocity = agent->get_target_velocity();
     agent->angle += CRadians(agent->target_twist.angular) * dt;
     agent->position += agent->velocity * dt;
     t += dt;
   }
   printf("\nEnd loop after %.1f s @ (%.3f, %.3f), (%.3f %.3f)\n", t,
-         agent->position.GetX(), agent->position.GetY(),
-         agent->velocity.GetX(), agent->velocity.GetY());
+         agent->position.x(), agent->position.y(),
+         agent->velocity.x(), agent->velocity.y());
   return 0;
 }

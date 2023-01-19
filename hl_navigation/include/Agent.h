@@ -10,8 +10,9 @@
 #include <list>
 #include <map>
 #include <tuple>
+#include <vector>
 
-using namespace argos;
+// using namespace argos;
 
 #define DEFAULT_ROTATION_TAU 0.5
 
@@ -62,6 +63,7 @@ public:
   WheelSpeeds target_wheel_speeds;
 
   Agent(agent_type_t type, float radius, float axis_length=0.0) :
+    position(0.0, 0.0), angle(0.0), velocity(0.0, 0.0), angularSpeed(0.0),
     desiredVelocity(0.0, 0.0), desired_twist(0.0, 0.0, 0.0), target_twist(0.0, 0.0, 0.0),
     type(type), axisLength(axis_length), radius(radius), maxSpeed(10000.0),
     horizon(0.0), safetyMargin(0.0), rotationTau(DEFAULT_ROTATION_TAU), optimalSpeed(0.0),

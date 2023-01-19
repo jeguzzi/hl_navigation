@@ -1,12 +1,13 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
+#include <pybind11/eigen.h>
 
-#include "Agent.h"
-#include "HLAgent.h"
-#include "ORCAAgent.h"
-#include "HRVOAgent.h"
-#include "Controller.h"
+#include "hl_navigation/Agent.h"
+#include "hl_navigation/HLAgent.h"
+#include "hl_navigation/ORCAAgent.h"
+#include "hl_navigation/HRVOAgent.h"
+#include "hl_navigation/Controller.h"
 
 namespace py = pybind11;
 PYBIND11_MODULE(_hl_navigation, m) {
@@ -37,6 +38,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
                       &Agent::set_heading_behavior)
         .def_property("rotation_tau", &Agent::get_rotation_tau,
                       &Agent::set_rotation_tau)
+        .def_property("radius", &Agent::get_radius, nullptr)
         .def_property("is_wheeled", &Agent::is_wheeled, nullptr)
         .def_property("is_omnidirectional", &Agent::is_omnidirectional, nullptr)
         .def_property("target_velocity", &Agent::get_target_velocity, nullptr)
@@ -52,39 +54,17 @@ PYBIND11_MODULE(_hl_navigation, m) {
 
     py::class_<HLAgent, Agent>(m, "HLAgent")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
-             py::arg("wheel_axis") = 0.0);
+             py::arg("wheel_axis") = 0.0)
+        .def("set_tau", &HLAgent::setTau);
 
     py::class_<ORCAAgent, Agent>(m, "ORCAAgent")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
              py::arg("wheel_axis") = 0.0)
-        .def("set_time_horizon", &ORCAAgent::setTimeHorizon);
+        .def_property("time_horizon", &ORCAAgent::getTimeHorizon, &ORCAAgent::setTimeHorizon);
 
     py::class_<HRVOAgent, Agent>(m, "HRVOAgent")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
              py::arg("wheel_axis") = 0.0);
-
-    py::class_<CVector2>(m, "CVector2")
-        .def(py::init<float, float>())
-        .def_property("x", &CVector2::GetX, nullptr)
-        .def_property("y", &CVector2::GetY, nullptr)
-        .def(py::self + py::self)
-        .def(py::self += py::self)
-        .def(py::self *= float())
-        .def(float() * py::self)
-        .def(py::self * float())
-        .def(-py::self)
-        .def("__repr__", [](const CVector2 &v) {
-            return "(" + std::to_string(v.GetX()) + ", " + std::to_string(v.GetY()) + ")";});
-
-    py::class_<CRadians>(m, "CRadians")
-        .def(py::init<float>())
-        .def(py::self + py::self)
-        .def(py::self += py::self)
-        .def(py::self * float())
-        .def(py::self *= float())
-        .def(float() * py::self)
-        .def(-py::self)
-        .def("value", &CRadians::GetValue);
 
     py::class_<Twist2D>(m, "Twist2D")
         .def(py::init<float, float, float>())

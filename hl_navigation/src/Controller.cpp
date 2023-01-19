@@ -43,14 +43,14 @@ void Controller::stop() {
 }
 
 bool Controller::is_at_target_point() {
-  targetDistance = (agent->targetPosition - agent->position).Length();
+  targetDistance = (agent->targetPosition - agent->position).norm();
   return targetDistance < distance_tolerance;
 }
 
 bool Controller::is_at_target_angle() {
   if (target_type == POINT)
     return true;
-  return (agent->targetAngle - agent->angle).GetAbsoluteValue() < angle_tolerance;
+  return abs(normalize(agent->targetAngle - agent->angle)) < angle_tolerance;
 }
 
 void Controller::update_target_state() {
@@ -98,7 +98,7 @@ void Controller::update(float dt) {
   } else {
     update_target_state();
   }
-  if (state == BRAKING && agent->velocity.Length() < speed_tolerance) {
+  if (state == BRAKING && agent->velocity.norm() < speed_tolerance) {
     stop();
     return;
   }
@@ -107,7 +107,7 @@ void Controller::update(float dt) {
   } else if (state == TURN) {
     float delta = 0.0;
     if (target_type == POSE) {
-      delta = (agent->targetAngle - agent->angle).SignedNormalize().GetValue();
+      delta = normalize(agent->targetAngle - agent->angle);
     }
     agent->set_desired_twist(Twist2D(0.0, 0.0, delta / agent->get_rotation_tau()));
     agent->update_target_twist(dt);

@@ -7,6 +7,8 @@
 
 #include "Agent.h"
 
+// TODO(J): verify if behavior for tau < step is correct (non smooth)
+
 // trajectory planning
 
 #define UNKNOWN_DIST -2
@@ -14,7 +16,7 @@
 #define NO_COLLISION -1
 // configuration
 
-#define DEFAULT_APERTURE CRadians::PI
+#define DEFAULT_APERTURE M_PI
 #define DEFAULT_RESOLUTION 40
 #define DEFAULT_TAU 0.1
 #define MIN_TAU 0.1

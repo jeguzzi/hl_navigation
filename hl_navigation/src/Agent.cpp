@@ -77,35 +77,32 @@ WheelSpeeds Agent::wheel_speeds_from_twist(const Twist2D & twist) const {
 
 CVector2 Agent::get_target_velocity() const {
   CVector2 v = CVector2(target_twist.longitudinal, target_twist.lateral);
-  v.Rotate(angle);
-  return v;
+  return rotate(v, angle);
 }
 
 void Agent::set_wheel_speeds(const WheelSpeeds & speeds) {
   Twist2D twist = twist_from_wheel_speeds(speeds);
   CVector2 v = CVector2(twist.longitudinal, twist.lateral);
-  v.Rotate(angle);
-  velocity = v;
+  velocity = rotate(v, angle);
   angularSpeed = CRadians(twist.angular);
 }
 
 Twist2D Agent::compute_desired_twist() const {
   float delta_angle = 0.0;
   if (heading_behavior == DESIRED_ANGLE) {
-    delta_angle = (desiredVelocity.Angle() - angle).SignedNormalize().GetValue();
+    delta_angle = normalize((polar_angle(desiredVelocity)- angle));
   } else if (heading_behavior == TARGET_ANGLE) {
-    delta_angle = (targetAngle - angle).SignedNormalize().GetValue();
+    delta_angle = normalize(targetAngle - angle);
   } else if (heading_behavior == TARGET_POINT) {
-    delta_angle = ((targetPosition - position).Angle() - angle).SignedNormalize().GetValue();
+    delta_angle = normalize(polar_angle(targetPosition - position) - angle);
   }
   float angular_speed = (1.0 / rotationTau) * delta_angle;
   if (is_omnidirectional()) {
-    auto v = desiredVelocity;
-    v.Rotate(-angle);
-    return Twist2D(v.GetX(), v.GetY(), angular_speed);
+    auto v = rotate(desiredVelocity, -angle);
+    return Twist2D(v.x(), v.y(), angular_speed);
   }
   // TODO(Jerome): wrong!!! ... check how it was before
-  return Twist2D(desiredVelocity.Length(), 0.0, angular_speed);
+  return Twist2D(desiredVelocity.norm(), 0.0, angular_speed);
 }
 
 bool Agent::is_wheeled() const {
@@ -140,7 +137,7 @@ void Agent::set_optimal_speed(double value) {
 }
 CRadians Agent::get_optimal_angular_speed() const { return optimalAngularSpeed;}
 void Agent::set_optimal_angular_speed(double value) {
-  optimalAngularSpeed = CRadians(clamp<double>(value, 0.0, maxAngularSpeed.GetAbsoluteValue()));
+  optimalAngularSpeed = CRadians(clamp<double>(value, 0.0, maxAngularSpeed));
 }
 
 void Agent::update(float dt) {
@@ -176,7 +173,7 @@ CVector2 Agent::relativePositionOfObstacleAt(CVector2 &obstaclePosition,
                                              Real obstacleRadius,
                                              Real &distance) {
   CVector2 relativePosition = obstaclePosition - position;
-  distance = relativePosition.Length();
+  distance = relativePosition.norm();
   Real minDistance = (radius + obstacleRadius) + 0.002;
   if (distance < minDistance) {
     // too near,  cannot penetrate in an obstacle (footbot or human)

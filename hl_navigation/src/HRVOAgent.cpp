@@ -19,16 +19,16 @@ HRVOAgent::~HRVOAgent() = default;
 
 void HRVOAgent::prepare() {
   _HRVOAgent->velocity_ =
-      HRVO::Vector2((float)velocity.GetX(), (float)velocity.GetY());
-  _HRVOAgent->orientation_ = angle.SignedNormalize().GetValue();
+      HRVO::Vector2((float)velocity.x(), (float)velocity.y());
+  _HRVOAgent->orientation_ = normalize(angle);
   _HRVOAgent->position_ =
-      HRVO::Vector2((float)position.GetX(), (float)position.GetY());
+      HRVO::Vector2((float)position.x(), (float)position.y());
 
   _HRVOAgent->neighborDist_ = 2 * horizon;
   _HRVOAgent->isColliding_ = false;
   rangeSq = (horizon * 2) * (horizon * 2);
-  HRVO::Vector2 t = HRVO::Vector2((float)targetPosition.GetX(),
-                                  (float)targetPosition.GetY()) -
+  HRVO::Vector2 t = HRVO::Vector2((float)targetPosition.x(),
+                                  (float)targetPosition.y()) -
                     _HRVOAgent->position_;
   _HRVOAgent->prefVelocity_ = t * optimalSpeed / abs(t);
   _HRVOAgent->prefSpeed_ = optimalSpeed;
@@ -58,8 +58,8 @@ void HRVOAgent::update_desired_velocity() {
 void HRVOAgent::add_neighbor(const Disc & d) {
   HRVO::Agent *a = new HRVO::Agent();
   CVector2 p = d.position;
-  a->velocity_ = HRVO::Vector2((float)d.velocity.GetX(), (float)d.velocity.GetY());
-  a->position_ = HRVO::Vector2((float)p.GetX(), (float)p.GetY());
+  a->velocity_ = HRVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
+  a->position_ = HRVO::Vector2((float)p.x(), (float)p.y());
 
   Real distance;
   CVector2 relativePosition = relativePositionOfObstacleAt(p, d.radius, distance);
@@ -69,7 +69,7 @@ void HRVOAgent::add_neighbor(const Disc & d) {
       marginForObstacleAtDistance(distance, d.radius, safetyMargin, d.social_margin));
   // printf("Obstacle radius %.3f\n",a->radius_);
 
-  // a->radius_=r+marginForObstacleAtDistance(p.Length(),r,safetyMargin,socialMargin);
+  // a->radius_=r+marginForObstacleAtDistance(p.norm(),r,safetyMargin,socialMargin);
   a->prefVelocity_ = a->velocity_;
   _HRVOAgent->agents_.push_back(a);
   _HRVOAgent->insertAgentNeighbor(agentIndex, rangeSq);

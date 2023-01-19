@@ -16,11 +16,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(ament_cmake_python REQUIRED)
-
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-find_package(pybind11_vendor REQUIRED)
-find_package(pybind11 REQUIRED)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 set(orca_IMPLEMENTATIONS
   src/RVO/Agent.cpp
@@ -48,14 +44,15 @@ add_library(hl_navigation SHARED
   src/HLAgent.cpp
   src/ORCAAgent.cpp
   src/HRVOAgent.cpp
-  src/argos2/common/utility/math/angles.cpp
   ${orca_IMPLEMENTATIONS}
   ${hrvo_IMPLEMENTATIONS}
 )
 
-ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
+target_link_libraries(hl_navigation Eigen3::Eigen)
 
-ament_python_install_package(hl_navigation)
+ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
+ament_export_dependencies(Eigen3)
+
 
 add_executable(test_behavior src/test_behavior.cpp)
 target_link_libraries(test_behavior hl_navigation)
@@ -65,11 +62,6 @@ add_executable(test_controller src/test_controller.cpp)
 target_link_libraries(test_controller hl_navigation)
 add_dependencies(test_controller hl_navigation)
 
-find_package(pybind11 REQUIRED)
-find_package(Python3 COMPONENTS Interpreter Development)
-pybind11_add_module(_hl_navigation src/python.cpp)
-target_link_libraries(_hl_navigation PRIVATE hl_navigation)
-add_dependencies(_hl_navigation hl_navigation)
 
 install(TARGETS
   test_behavior test_controller
@@ -88,8 +80,6 @@ install(
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
 )
-
-install(TARGETS _hl_navigation DESTINATION "${PYTHON_INSTALL_DIR}/${PROJECT_NAME}")
 
 ament_package()
 

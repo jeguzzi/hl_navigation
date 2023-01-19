@@ -19,32 +19,35 @@ ORCAAgent::ORCAAgent(agent_type_t type, float radius, float axis_length) :
 ORCAAgent::~ORCAAgent() = default;
 
 void ORCAAgent::setTimeHorizon(double value) { timeHorizon = value; }
+float ORCAAgent::getTimeHorizon(double value) const { return timeHorizon; }
 
+// TODO(J): still need the float casting?
 void ORCAAgent::prepare() {
   if (useEffectiveCenter) {
     D = axisLength * 0.5;
-    RVO::Vector2 delta = RVO::Vector2((float)Cos(angle), (float)Sin(angle)) * D;
+    RVO::Vector2 delta = RVO::Vector2((float)cos(angle), (float)sin(angle)) * D;
     _RVOAgent->position_ =
-        RVO::Vector2((float)position.GetX(), (float)position.GetY()) + delta;
+        RVO::Vector2((float)position.x(), (float)position.y()) + delta;
     _RVOAgent->radius_ = radius + D;
     _RVOAgent->velocity_ = RVO::Vector2(
-        (float)(velocity.GetX() - Sin(angle) * D * angularSpeed.GetValue()),
-        (float)(velocity.GetY() + Cos(angle) * D * angularSpeed.GetValue()));
+        (float)(velocity.x() - sin(angle) * D * angularSpeed),
+        (float)(velocity.y() + cos(angle) * D * angularSpeed));
     _RVOAgent->maxSpeed_ =
         optimalSpeed / sqrt(1 + RVO::sqr(0.5 * axisLength / D));
   } else {
     _RVOAgent->radius_ = radius;
     _RVOAgent->velocity_ =
-        RVO::Vector2((float)velocity.GetX(), (float)velocity.GetY());
+        RVO::Vector2((float)velocity.x(), (float)velocity.y());
     _RVOAgent->position_ =
-        RVO::Vector2((float)position.GetX(), (float)position.GetY());
+        RVO::Vector2((float)position.x(), (float)position.y());
     _RVOAgent->maxSpeed_ = optimalSpeed;
   }
   _RVOAgent->timeHorizon_ = timeHorizon;
+  // TODO(Jerome): why 2 * ... verify
   _RVOAgent->neighborDist_ = 2 * horizon;
 
   RVO::Vector2 t = RVO::Vector2(
-      targetPosition.GetX(), targetPosition.GetY()) - _RVOAgent->position_;
+      targetPosition.x(), targetPosition.y()) - _RVOAgent->position_;
   _RVOAgent->prefVelocity_ = t * _RVOAgent->maxSpeed_ / abs(t);
 
   rangeSq = (horizon * 2) * (horizon * 2);
@@ -70,14 +73,14 @@ void ORCAAgent::update_desired_velocity() {
 
 Twist2D ORCAAgent::compute_desired_twist() const {
   if (type == TWO_WHEELED && useEffectiveCenter) {
-    CRadians desiredAngle = desiredVelocity.Angle() - angle;
-    double desiredSpeed = desiredVelocity.Length();
+    CRadians desiredAngle = polar_angle(desiredVelocity) - angle;
+    double desiredSpeed = desiredVelocity.norm();
     if (desiredSpeed) {
       WheelSpeeds speeds = {
         static_cast<float>(
-            desiredSpeed * (Cos(desiredAngle) - axisLength * 0.5 / D * Sin(desiredAngle))),
+            desiredSpeed * (cos(desiredAngle) - axisLength * 0.5 / D * sin(desiredAngle))),
         static_cast<float>(
-            desiredSpeed * (Cos(desiredAngle) + axisLength * 0.5 / D * Sin(desiredAngle)))};
+            desiredSpeed * (cos(desiredAngle) + axisLength * 0.5 / D * sin(desiredAngle)))};
       return twist_from_wheel_speeds(speeds);
     }
   }
@@ -91,9 +94,9 @@ Twist2D ORCAAgent::compute_desired_twist() const {
 void ORCAAgent::add_neighbor(const Disc & d) {
   RVO::Agent *a = new RVO::Agent(NULL);
   CVector2 p = d.position;
-  a->velocity_ = RVO::Vector2((float)d.velocity.GetX(), (float)d.velocity.GetY());
+  a->velocity_ = RVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
 
-  a->position_ = RVO::Vector2((float)p.GetX(), (float)p.GetY());
+  a->position_ = RVO::Vector2((float)p.x(), (float)p.y());
   Real distance;
 
   CVector2 relativePosition = relativePositionOfObstacleAt(p, d.radius, distance);
@@ -102,7 +105,7 @@ void ORCAAgent::add_neighbor(const Disc & d) {
                                                     d.social_margin));
 
   // printf("Obstacle (%.3f,%.3f) (%.3f,%.3f) %.5f -> radius
-  // %.3f\n",p.GetX(),p.GetY(),v.GetX(),v.GetY(),r,a->radius_);
+  // %.3f\n",p.x(),p.y(),v.x(),v.y(),r,a->radius_);
 
   a->prefVelocity_ = a->velocity_;
   agentNeighbors.push_back(a);

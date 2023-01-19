@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
       return 0;
     }
   }
-  auto agent = Agent::agent_with_name(behavior_name, TWO_WHEELED, 0.1, 0.1);
+  auto agent = Agent::agent_with_name(behavior_name, HOLONOMIC, 0.1, 0.1);
   if (!agent) {
     printf("No behavior with name %s\n", behavior_name);
     exit(1);
@@ -53,14 +53,14 @@ int main(int argc, char *argv[]) {
   agent->targetPosition = CVector2(3.0f, 0.0f);
   agent->set_static_obstacles({Disc(CVector2(1.5f, 0.0f), 0.5f)});
   // This should be in init
-  printf("Start loop @ (%.3f, %.3f)\n", agent->position.GetX(), agent->position.GetY());
+  printf("Start loop @ (%.3f, %.3f)\n", agent->position.x(), agent->position.y());
   for (size_t i = 0; i < 30; i++) {
     // printf("P (%.3f, %.3f, %.3f)\n",
     //   agent->position.GetX(), agent->position.GetY(), agent->angle.GetValue());
     // TODO(Jerome): rivedere tutte le cache.
     // Per esempio, qui mi obbliga a ricreare gli ostacoli ogni volta
 
-    printf("%.3f, %.3f,", agent->position.GetX(), agent->position.GetY());
+    printf("%.3f, %.3f,", agent->position.x(), agent->position.y());
     //       agent->velocity.GetX(), agent->velocity.GetY());
     // printf("%zu (%.3f, %.3f), (%.3f, %.3f)\n", i, agent->position.GetX(), agent->position.GetY(),
     //       agent->velocity.GetX(), agent->velocity.GetY());
@@ -76,11 +76,11 @@ int main(int argc, char *argv[]) {
     // agent->velocity = agent->desiredVelocity;
 
     agent->velocity = agent->get_target_velocity();
-    agent->angle += CRadians(agent->target_twist.angular) * dt;
+    agent->angle += agent->target_twist.angular * dt;
     agent->position += agent->velocity * dt;
   }
   printf("\nEnd loop @ (%.3f, %.3f), (%.3f %.3f)\n",
-         agent->position.GetX(), agent->position.GetY(),
-         agent->velocity.GetX(), agent->velocity.GetY());
+         agent->position.x(), agent->position.y(),
+         agent->velocity.x(), agent->velocity.y());
   return 0;
 }

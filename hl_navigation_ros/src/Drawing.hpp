@@ -120,12 +120,12 @@ struct Drawing {
 
     // ROS_INFO("%.4f %.4f\n",desiredSpeed,desiredAngle);
 
-    marker.scale.x = fmax(0.01, v.Length());
+    marker.scale.x = fmax(0.01, v.norm());
     marker.scale.y = 0.05;
     marker.scale.z = 0.05;
 
     tf2::Quaternion quat_tf;
-    quat_tf.setRPY(0.0, 0.0, v.Angle().GetValue());
+    quat_tf.setRPY(0.0, 0.0, polar_angle(v));
     tf2::convert(quat_tf, marker.pose.orientation);
 
     marker.color.r = 1.0f;

@@ -15,9 +15,16 @@ def main(behavior_name: str = "HL") -> None:
     agent.max_angular_speed = 1.0
     agent.optimal_angular_speed = 1.0
     agent.horizon = 1.0
+    try:
+        agent.set_time_horizon(1.0)
+    except AttributeError as e:
+        print(e)
+        pass
+    print(agent)
     # Start in 0, 0
-    agent.position = hl_navigation.CVector2(0.0, 0.05)
-    agent.velocity = hl_navigation.CVector2(0.0, 0.0)
+    agent.position = (0.0, 0.05)
+    agent.velocity = (0.0, 0.0)
+    agent.angle = 0.0
     # agent.set_static_obstacles(
     #     [hl_navigation.Disc(position=hl_navigation.CVector2(0.5, 0.0), radius=0.1)])
     controller = hl_navigation.Controller()
@@ -29,9 +36,9 @@ def main(behavior_name: str = "HL") -> None:
     while controller.state != hl_navigation.ControllerState.IDLE and t < 2:
         controller.update(dt)
         agent.velocity = agent.target_velocity
-        agent.position += agent.velocity * dt
-        agent.angle += hl_navigation.CRadians(agent.target_twist.angular * dt)
-        print(agent.position, agent.angle.value(), agent.desired_velocity, agent.target_twist)
+        agent.position = agent.position + agent.velocity * dt
+        agent.angle += agent.target_twist.angular * dt
+        print(agent.position, agent.angle, agent.desired_velocity, agent.target_twist)
         t += dt
     print(f'Arrived at {agent.position} after {t:.1f} s')
 

@@ -10,6 +10,7 @@
 #include "hl_navigation/HRVOAgent.h"
 #include "hl_navigation/ORCAAgent.h"
 #include "hl_navigation/Controller.h"
+#include "hl_navigation/common.h"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "std_msgs/msg/empty.hpp"
@@ -155,8 +156,8 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       drawing.drawDesiredVelocity(agent->desiredVelocity);
       if (state == MOVE && agent == hl_agent) {
         drawing.drawCollisionMap(
-            -hl_agent->aperture.GetValue(),
-            hl_agent->angleResolution().GetValue(), hl_agent->getDistances(),
+            -hl_agent->aperture,
+            hl_agent->angleResolution(), hl_agent->getDistances(),
             hl_agent->get_radius());
       }
     }
@@ -307,13 +308,15 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       msg.header.stamp = now();
       msg.twist.angular.z = twist.angular;
       CVector2 v = CVector2(twist.longitudinal, twist.lateral);
-      v.Rotate(agent->angle);
-      msg.twist.linear.x = v.GetX();
-      msg.twist.linear.y = v.GetY();
+      v = rotate(v, agent->angle);
+      msg.twist.linear.x = v.x();
+      msg.twist.linear.y = v.y();
       msg.twist.linear.z = vertical_speed;
       cmdStampedPublisher->publish(msg);
     }
   }
+
+// TODO(J): move 3D obstacle logic to
 
   void setObstaclesFromMessage(
       const hl_navigation_msgs::msg::Obstacles &obstacles_msg) {
