@@ -24,7 +24,7 @@ find_package(hl_navigation REQUIRED)
 
 ament_python_install_package(hl_navigation)
 
-pybind11_add_module(_hl_navigation src/python.cpp)
+pybind11_add_module(_hl_navigation src/_hl_navigation.cpp)
 target_link_libraries(_hl_navigation PRIVATE hl_navigation::hl_navigation)
 add_dependencies(_hl_navigation hl_navigation::hl_navigation)
 
