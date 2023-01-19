@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<?xml-stylesheet type="text/xsl" href="callbacks.xsl"?>
+
+<plugin name="HLNavigation" author="jerome.guzzi@idsia.ch">
+    <description>A plugin for [human-like] navigation in CoppeliaSim</description>
+
+    <command name="Human">
+        <description>Instantiate a human controller
+        </description>
+        <params>
+        </params>
+        <return>
+          <param name="handle" type="int">
+              <description>An handle that identifies the controller</description>
+          </param>
+        </return>
+    </command>
+
+    <command name="set_target_position">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="position" type="table" item-type="float">
+            <description>The target position</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+
+    <command name="set_pose">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="pose" type="table" item-type="float">
+            <description>The pose {x, y, z, yaw}</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+
+    <command name="set_velocity">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="velocity" type="table" item-type="float">
+            <description>The 2d or 3d velocity</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+
+    <command name="update">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="time_step" type="float">
+            <description>The time step</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+
+    <command name="get_target_twist">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+        </params>
+        <return>
+          <param name="twist" type="table" item-type="float">
+              <description>A 2d twist {v_x, v_y, w_z}</description>
+          </param>
+        </return>
+    </command>
+
+    <command name="set_static_obstacles">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="obstacles" type="table" item-type="obstacle_t">
+            <description>The controller handle</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="set_neighbors">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="obstacles" type="table" item-type="obstacle_t">
+            <description>The controller handle</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <struct name="obstacle_t">
+        <description>TODO</description>
+        <param name="position" type="table" item-type="float">
+            <description>The 3d position</description>
+        </param>
+        <param name="velocity" type="table" item-type="float">
+            <description>The 2d or 3d velocity</description>
+        </param>
+        <param name="radius" type="float">
+            <description>The radius</description>
+        </param>
+        <param name="social_margin" type="float" default="0.0">
+            <description>The social margin</description>
+        </param>
+    </struct>
+
+</plugin>
