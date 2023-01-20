@@ -3,11 +3,22 @@
 
 <plugin name="HLNavigation" author="jerome.guzzi@idsia.ch">
     <description>A plugin for [human-like] navigation in CoppeliaSim</description>
-
-    <command name="Human">
-        <description>Instantiate a human controller
+    <command name="controller">
+        <description>Instantiate a navigation controller
         </description>
         <params>
+          <param name="behavior" type="string" default='"HL"'>
+            <description>The obstacle avoidance behavior</description>
+          </param>
+          <param name="kinematics" type="int" default="2">
+            <description>The type of kinematics</description>
+          </param>
+          <param name="radius" type="float" default="0.5">
+            <description>The radius</description>
+          </param>
+          <param name="axis_length" type="float" default="0.0">
+            <description>The axis length</description>
+          </param>
         </params>
         <return>
           <param name="handle" type="int">
@@ -15,7 +26,6 @@
           </param>
         </return>
     </command>
-
     <command name="set_target_position">
         <description>TODO
         </description>
@@ -30,7 +40,6 @@
         <return>
         </return>
     </command>
-
     <command name="set_pose">
         <description>TODO
         </description>
@@ -45,7 +54,6 @@
         <return>
         </return>
     </command>
-
     <command name="set_velocity">
         <description>TODO
         </description>
@@ -60,7 +68,6 @@
         <return>
         </return>
     </command>
-
     <command name="update">
         <description>TODO
         </description>
@@ -75,7 +82,6 @@
         <return>
         </return>
     </command>
-
     <command name="get_target_twist">
         <description>TODO
         </description>
@@ -90,7 +96,6 @@
           </param>
         </return>
     </command>
-
     <command name="set_static_obstacles">
         <description>TODO
         </description>
@@ -119,6 +124,20 @@
         <return>
         </return>
     </command>
+    <command name="get_status">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+        </params>
+        <return>
+          <param name="status" type="int">
+              <description>TODO</description>
+          </param>
+        </return>
+    </command>
     <struct name="obstacle_t">
         <description>TODO</description>
         <param name="position" type="table" item-type="float">
@@ -134,5 +153,16 @@
             <description>The social margin</description>
         </param>
     </struct>
-
+    <enum name="Status" item-prefix="" base="0">
+      <item name="MOVE" />
+      <item name="TURN" />
+      <item name="IDLE" />
+      <item name="BRAKING" />
+    </enum>
+    <enum name="Kinematics" item-prefix="" base="0">
+      <item name="HOLONOMIC" />
+      <item name="TWO_WHEELED" />
+      <item name="HEAD" />
+      <item name="FOUR_WHEELED_OMNI" />
+    </enum>
 </plugin>
