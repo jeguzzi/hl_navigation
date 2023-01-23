@@ -48,19 +48,25 @@ PYBIND11_MODULE(_hl_navigation, m) {
         .def("twist_from_wheel_speeds", &Agent::twist_from_wheel_speeds)
         .def("wheel_speeds_from_twist", &Agent::wheel_speeds_from_twist)
         .def("set_neighbors", &Agent::set_neighbors)
-        .def("set_static_obstacles", &Agent::set_static_obstacles);
+        .def("set_static_obstacles", &Agent::set_static_obstacles)
+        .def("set_line_obstacles", &Agent::set_line_obstacles);
 
     m.def("agent_with_name",  &Agent::agent_with_name);
 
     py::class_<HLAgent, Agent>(m, "HLAgent")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
              py::arg("wheel_axis") = 0.0)
+        .def("get_distances", &HLAgent::getDistances)
+        .def("distance_to_segment", &HLAgent::distance_to_segment)
+        .def_readwrite("resolution", &HLAgent::resolution)
+        .def_readwrite("aperture", &HLAgent::aperture)
         .def("set_tau", &HLAgent::setTau);
 
     py::class_<ORCAAgent, Agent>(m, "ORCAAgent")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
              py::arg("wheel_axis") = 0.0)
-        .def_property("time_horizon", &ORCAAgent::getTimeHorizon, &ORCAAgent::setTimeHorizon);
+        .def_property("time_horizon", &ORCAAgent::getTimeHorizon, &ORCAAgent::setTimeHorizon)
+        .def_property("control_step", &ORCAAgent::getTimeStep, &ORCAAgent::setTimeStep);
 
     py::class_<HRVOAgent, Agent>(m, "HRVOAgent")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
@@ -77,8 +83,21 @@ PYBIND11_MODULE(_hl_navigation, m) {
 
     py::class_<Disc>(m, "Disc")
         .def(py::init<CVector2, float, float, CVector2>(),
-             py::arg("position"), py::arg("radius"),
-             py::arg("social_margin") = 0.0, py::arg("velocity") = CVector2(0.0, 0.0));
+             py::arg("center"), py::arg("radius"),
+             py::arg("social_margin") = 0.0, py::arg("velocity") = CVector2(0.0, 0.0))
+        .def_readonly("center", &Disc::position)
+        .def_readonly("radius", &Disc::radius)
+        .def_readonly("social_margin", &Disc::social_margin)
+        .def_readonly("velocity", &Disc::velocity);
+
+    py::class_<LineSegment>(m, "LineSegment")
+        .def(py::init<CVector2, CVector2>(),
+             py::arg("p1"), py::arg("p2"))
+        .def_readonly("p1", &LineSegment::p1)
+        .def_readonly("p2", &LineSegment::p2)
+        .def_readonly("e1", &LineSegment::e1)
+        .def_readonly("e2", &LineSegment::e2)
+        .def_readonly("length", &LineSegment::length);
 
     py::enum_<agent_type_t>(m, "AgentType")
         .value("HOLONOMIC", agent_type_t::HOLONOMIC)

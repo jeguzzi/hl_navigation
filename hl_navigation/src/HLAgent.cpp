@@ -93,7 +93,7 @@ Real HLAgent::fearedDistanceToCollisionAtRelativeAngle(CRadians relativeAngle) {
 }
 
 unsigned int HLAgent::indexOfRelativeAngle(CRadians relativeAngle) {
-  int k = floor((relativeAngle + aperture) / (2 * aperture) * resolution);
+  int k = floor((normalize(relativeAngle) + aperture) / (2 * aperture) * resolution);
 
   k = k % resolution;
   if (k < 0)
@@ -112,20 +112,62 @@ Real HLAgent::distanceToCollisionAtRelativeAngle(CRadians relativeAngle) {
   return distanceCache[k];
 }
 
+
+
+Real HLAgent::distance_to_segment(const LineSegment & line, CRadians absolute_angle) {
+  CVector2 delta = position - line.p1;
+  double r = radius + safetyMargin;
+  double y = delta.dot(line.e2);
+  double x = delta.dot(line.e1);
+  CVector2 e = unit(absolute_angle);
+  double d = line.e2.dot(e);
+  if (y * d >= 0) {
+    // moving away
+    return NO_COLLISION;
+  }
+  if (abs(y) < r && x > -r && x < line.length + r) {
+    // already colliding
+    return 0.0;
+  }
+  double distance = -y / d - r;
+  x = line.e1.dot(distance * e + delta);
+  if (x < -r || x > line.length + r) {
+    // will not collide
+    return NO_COLLISION;
+  }
+  return distance;
+}
+
+// TODO(J:revision2023): check why we need effectiveHorizon
+
 Real HLAgent::computeDistanceToCollisionAtRelativeAngle(CRadians relativeAngle,
                                                         Real *staticCache) {
   CRadians vangle = relativeAngle + angle;
 
   //!!! Change horizon -> effectiveHorizon !!!
 
+  // HACK(J): disabled effectiveHorizon to test function in python
+  effectiveHorizon = horizon;
   Real minDistance = effectiveHorizon - radius;
 
   ////
   Real distance;
-  *staticCache = 0;
-
-  *staticCache = minDistance;
   double staticDistance;
+  *staticCache = minDistance;
+
+  for (auto & segment : line_obstacles) {
+      staticDistance = distance_to_segment(segment, vangle);
+      // printf("staticDistance %.4f\n", staticDistance);
+      if (staticDistance >= 0) {
+        *staticCache = fmin(*staticCache, staticDistance);
+      }
+      distance = staticDistance;
+      if (distance < 0)
+        continue;
+      minDistance = fmin(minDistance, distance);
+      if (minDistance == 0)
+        return 0;
+  }
 
   for (obstacleIterator_t it = staticObstacles.begin();
        it != staticObstacles.end(); it++) {

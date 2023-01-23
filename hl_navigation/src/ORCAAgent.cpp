@@ -8,6 +8,8 @@
 #include "RVO/Obstacle.h"
 #include "RVO/Vector2.h"
 
+// TODO(J:revision2023): TIME_STEP (should pass/set) and timeHorizon (should not duplicate)
+
 ORCAAgent::ORCAAgent(agent_type_t type, float radius, float axis_length) :
   Agent(type, radius, axis_length), useEffectiveCenter(false), timeHorizon(10.0),
   _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
@@ -16,10 +18,49 @@ ORCAAgent::ORCAAgent(agent_type_t type, float radius, float axis_length) :
   _RVOAgent->timeHorizon_ = timeHorizon;
 }
 
+// TODO(J: revision): why do I need agentNeighbors. It is not enught to use
+// _RVOAgent->agentNeighbors_? No, because insertObstacleNeighbor may remove some entry
+
 ORCAAgent::~ORCAAgent() = default;
 
 void ORCAAgent::setTimeHorizon(double value) { timeHorizon = value; }
 float ORCAAgent::getTimeHorizon(double value) const { return timeHorizon; }
+
+void ORCAAgent::setTimeStep(double value) { _RVOAgent->timeStep_  = value; }
+float ORCAAgent::getTimeStep(double value) const { return _RVOAgent->timeStep_; }
+
+void ORCAAgent::prepare_line_obstacles() {
+  for (auto & obstacle : obstacleNeighbors) {
+    _RVOAgent->insertObstacleNeighbor(obstacle.get(), rangeSq);
+  }
+}
+
+void ORCAAgent::set_line_obstacles(const std::vector<LineSegment> & value) {
+  Agent::set_line_obstacles(value);
+  obstacleNeighbors.clear();
+  for (auto & line : line_obstacles) {
+    add_line_obstacle(line);
+  }
+}
+
+void ORCAAgent::add_line_obstacle(const LineSegment & line) {
+  CVector2 pa = line.p1;  // - line.e1 * safetyMargin - line.e2 * safetyMargin;
+  CVector2 pb = line.p2;  // + line.e1 * safetyMargin + line.e2 * safetyMargin;
+  auto a = std::make_unique<RVO::Obstacle>();
+  auto b = std::make_unique<RVO::Obstacle>();
+  a->point_ = RVO::Vector2(pa[0], pa[1]);
+  a->prevObstacle = b.get();
+  a->nextObstacle = b.get();
+  a->isConvex_ = true;
+  a->unitDir_ = RVO::Vector2(line.e1[0], line.e1[1]);
+  b->point_ = RVO::Vector2(pb[0], pb[1]);
+  b->prevObstacle = a.get();
+  b->nextObstacle = a.get();
+  b->isConvex_ = true;
+  b->unitDir_ = -a->unitDir_;
+  obstacleNeighbors.push_back(std::move(a));
+  obstacleNeighbors.push_back(std::move(b));
+}
 
 // TODO(J): still need the float casting?
 void ORCAAgent::prepare() {
@@ -51,19 +92,14 @@ void ORCAAgent::prepare() {
   _RVOAgent->prefVelocity_ = t * _RVOAgent->maxSpeed_ / abs(t);
 
   rangeSq = (horizon * 2) * (horizon * 2);
+
+  prepare_line_obstacles();
 }
 
 void ORCAAgent::clear() {
-  for (uint i = 0; i < _RVOAgent->obstacleNeighbors_.size(); i++) {
-    delete _RVOAgent->obstacleNeighbors_[i].second;
-  }
-  for (uint i = 0; i < agentNeighbors.size(); i++) {
-    delete agentNeighbors[i];
-  }
-
-  agentNeighbors.clear();
-  _RVOAgent->agentNeighbors_.clear();
   _RVOAgent->obstacleNeighbors_.clear();
+  _RVOAgent->agentNeighbors_.clear();
+  agentNeighbors.clear();
 }
 
 void ORCAAgent::update_desired_velocity() {
@@ -92,7 +128,7 @@ Twist2D ORCAAgent::compute_desired_twist() const {
 
 
 void ORCAAgent::add_neighbor(const Disc & d) {
-  RVO::Agent *a = new RVO::Agent(NULL);
+  auto a = std::make_unique<RVO::Agent>(nullptr);
   CVector2 p = d.position;
   a->velocity_ = RVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
 
@@ -108,8 +144,8 @@ void ORCAAgent::add_neighbor(const Disc & d) {
   // %.3f\n",p.x(),p.y(),v.x(),v.y(),r,a->radius_);
 
   a->prefVelocity_ = a->velocity_;
-  agentNeighbors.push_back(a);
-  _RVOAgent->insertAgentNeighbor(a, rangeSq);
+  _RVOAgent->insertAgentNeighbor(a.get(), rangeSq);
+  agentNeighbors.push_back(std::move(a));
 }
 
 void ORCAAgent::add_static_obstacle(const Disc & d) {

@@ -141,8 +141,8 @@ void Agent::set_optimal_angular_speed(double value) {
 }
 
 void Agent::update(float dt) {
-  prepare();
   clear();
+  prepare();
   for (auto const & d : static_obstacles) {
     add_static_obstacle(d);
   }

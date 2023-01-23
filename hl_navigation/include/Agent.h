@@ -35,6 +35,19 @@ struct Disc {
     position(p), velocity(v), radius(r), social_margin(s) { }
 };
 
+struct LineSegment {
+  CVector2 p1;
+  CVector2 p2;
+  CVector2 e1;
+  CVector2 e2;
+  float length;
+
+  LineSegment(const CVector2 p1, const CVector2 p2) :
+    p1(p1), p2(p2), e1((p2-p1).normalized()), e2(-e1[1], e1[0]), length((p2-p1).norm()) { }
+
+  LineSegment(const LineSegment & s) : LineSegment(s.p1, s.p2) { }
+};
+
 
 using WheelSpeeds = std::vector<float>;
 
@@ -110,6 +123,10 @@ public:
     static_obstacles = value;
   }
 
+  virtual void set_line_obstacles(const std::vector<LineSegment> & value) {
+    line_obstacles = value;
+  }
+
 protected:
 
   agent_type_t type;
@@ -130,6 +147,7 @@ protected:
 
   std::vector<Disc> static_obstacles;
   std::vector<Disc> neighbors;
+  std::vector<LineSegment> line_obstacles;
 
   virtual void update_desired_velocity() = 0;
   virtual void update_repulsive_force() { };

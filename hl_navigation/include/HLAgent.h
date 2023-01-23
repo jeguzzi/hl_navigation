@@ -17,7 +17,7 @@
 // configuration
 
 #define DEFAULT_APERTURE M_PI
-#define DEFAULT_RESOLUTION 40
+#define DEFAULT_RESOLUTION 360
 #define DEFAULT_TAU 0.1
 #define MIN_TAU 0.1
 
@@ -70,6 +70,8 @@ public:
 
   virtual void update_target_twist(float dt) override;
 
+  Real distance_to_segment(const LineSegment & line, CRadians absolute_angle);
+
 protected:
   virtual void update_desired_velocity() override;
   virtual void update_repulsive_force() override;
@@ -96,6 +98,7 @@ private:
   Real distForAngle(AgentCache *agent, CRadians angle);
   Real staticDistForAngle(AgentCache *agent, CRadians angle);
   Real distanceToCollisionAtRelativeAngle(CRadians angle);
+
 
   AgentCache makeObstacleAtPoint(CVector2 p, CVector2 v, Real r,
                                  Real socialMargin);
