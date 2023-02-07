@@ -1,32 +1,34 @@
 /**
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
-#include "Controller.h"
+#include "controller.h"
+
+namespace hl_navigation {
 
 void Controller::set_target_point(float x, float y, float z) {
   target_type = POINT;
-  agent->targetPosition = CVector2(x, y);
+  behavior->targetPosition = Vector2(x, y);
   targetZ = z;
   state = MOVE;
 }
 
 // TODO(J 2023): Complete 2D and 3D. Ignore 3D if setting target point 2D
-void Controller::set_target_point(const CVector2 & point) {
+void Controller::set_target_point(const Vector2 & point) {
   target_type = POINT;
-  agent->targetPosition = point;
+  behavior->targetPosition = point;
   state = MOVE;
 }
 
-void Controller::set_pose(float x, float y, float z_, float theta) {
+void Controller::set_pose(float x, float y, float z_, Radians theta) {
   z = z_;
-  agent->position = CVector2(x, y);
-  agent->angle = CRadians(theta);
+  behavior->position = Vector2(x, y);
+  behavior->angle = theta;
 }
 
-void Controller::set_target_pose(float x, float y, float z, float theta) {
+void Controller::set_target_pose(float x, float y, float z, Radians theta) {
   target_type = POSE;
-  agent->targetPosition = CVector2(x, y);
-  agent->targetAngle = CRadians(theta);
+  behavior->targetPosition = Vector2(x, y);
+  behavior->targetAngle = theta;
   targetZ = z;
   state = MOVE;
 }
@@ -35,7 +37,7 @@ void Controller::turn() { state = TURN; }
 
 void Controller::brake() {
   if (state != BRAKING) {
-    agent->set_desired_twist(Twist2D(0.0, 0.0, 0.0));
+    behavior->set_desired_twist(Twist2D(0.0, 0.0, 0.0));
     state = BRAKING;
   }
 }
@@ -43,21 +45,21 @@ void Controller::brake() {
 void Controller::stop() {
   if (state != IDLE) {
     state = IDLE;
-    agent->target_twist = Twist2D(0.0, 0.0, 0.0);
-    set_target_twist(agent->target_twist, 0.0);
+    behavior->target_twist = Twist2D(0.0, 0.0, 0.0);
+    set_target_twist(behavior->target_twist, 0.0);
     aborted();
   }
 }
 
 bool Controller::is_at_target_point() {
-  targetDistance = (agent->targetPosition - agent->position).norm();
+  targetDistance = (behavior->targetPosition - behavior->position).norm();
   return targetDistance < distance_tolerance;
 }
 
 bool Controller::is_at_target_angle() {
   if (target_type == POINT)
     return true;
-  return abs(normalize(agent->targetAngle - agent->angle)) < angle_tolerance;
+  return abs(normalize(behavior->targetAngle - behavior->angle)) < angle_tolerance;
 }
 
 void Controller::update_target_state() {
@@ -87,7 +89,7 @@ void Controller::update_target_state() {
 
 void Controller::update_vertical_velocity() {
   // TODO(old) complete with obstacle avoidance
-  double desiredVerticalSpeed = (targetZ - z) / tauZ;
+  float desiredVerticalSpeed = (targetZ - z) / tauZ;
   if (desiredVerticalSpeed > optimalVerticalSpeed)
     desiredVerticalSpeed = optimalVerticalSpeed;
   else if (desiredVerticalSpeed < -optimalVerticalSpeed)
@@ -105,24 +107,24 @@ void Controller::update(float dt) {
   } else {
     update_target_state();
   }
-  if (state == BRAKING && agent->velocity.norm() < speed_tolerance) {
+  if (state == BRAKING && behavior->velocity.norm() < speed_tolerance) {
     stop();
     return;
   }
   if (state == MOVE) {
-    agent->update(dt);
+    behavior->update(dt);
   } else if (state == TURN) {
     float delta = 0.0;
     if (target_type == POSE) {
-      delta = normalize(agent->targetAngle - agent->angle);
+      delta = normalize(behavior->targetAngle - behavior->angle);
     }
-    agent->set_desired_twist(Twist2D(0.0, 0.0, delta / agent->get_rotation_tau()));
-    agent->update_target_twist(dt);
+    behavior->set_desired_twist(Twist2D(0.0, 0.0, delta / behavior->get_rotation_tau()));
+    behavior->update_target_twist(dt);
   } else {
-    agent->update_target_twist(dt);
+    behavior->update_target_twist(dt);
   }
 
-  //   if(agent->type!=TWO_WHEELED && agent->insideObstacle)
+  //   if(behavior->type!=TWO_WHEELED && behavior->insideObstacle)
   //   {
   //           //TODO move away from penetrated obstacles, non so easy to avoid
   //           livelocks. This is far more relevant in 2.5 D because top/bottom
@@ -131,10 +133,12 @@ void Controller::update(float dt) {
   //   }
 
   update_vertical_velocity();
-  set_target_twist(agent->target_twist, velocityZ);
+  set_target_twist(behavior->target_twist, velocityZ);
   updated_control();
 }
 
 Controller::Controller() : state(IDLE) {}
 
 Controller::~Controller() { stop(); }
+
+}  // namespace hl_navigation

@@ -12,38 +12,38 @@ class Thymio(pyenki.Thymio2):
     def __init__(self, behavior_name: str = "HL",
                  obstacles: List[pyenki.CircularObject] = []):
         super().__init__(use_aseba_units=False)
-        self.agent = hl_navigation.agent_with_name(
+        self.behavior = hl_navigation.behavior_with_name(
             behavior_name, hl_navigation.AgentType.TWO_WHEELED, 0.08, 0.01 * self.wheel_axis)
-        if not self.agent:
+        if not self.behavior:
             print(f"No behavior with name {behavior_name}")
             sys.exit(1)
-        self.agent.safety_margin = 0.02
-        self.agent.max_speed = 0.01 * self.max_wheel_speed
-        self.agent.optimal_speed = 0.1
-        self.agent.optimal_angular_speed = self.agent.max_angular_speed
-        self.agent.horizon = 1.0
+        self.behavior.safety_margin = 0.02
+        self.behavior.max_speed = 0.01 * self.max_wheel_speed
+        self.behavior.optimal_speed = 0.1
+        self.behavior.optimal_angular_speed = self.behavior.max_angular_speed
+        self.behavior.horizon = 1.0
         self.controller = hl_navigation.Controller()
-        self.controller.agent = self.agent
+        self.controller.behavior = self.behavior
         self.controller.distance_tolerance = 0.6
         self.controller.speed_tolerance = 0.01
 
         os = []
         for obstacle in obstacles:
             x, y = obstacle.position
-            p = hl_navigation.CVector2(x * 0.01, y * 0.01)
+            p = hl_navigation.Vector2(x * 0.01, y * 0.01)
             o = hl_navigation.Disc(position=p, radius=0.01 * obstacle.radius)
             os.append(o)
-        self.agent.set_static_obstacles(os)
+        self.behavior.set_static_obstacles(os)
 
     def controlStep(self, dt: float) -> None:
         x, y = self.position
-        self.agent.angle = self.angle
-        self.agent.position = (x * 0.01, y * 0.01)
+        self.behavior.angle = self.angle
+        self.behavior.position = (x * 0.01, y * 0.01)
         x, y = self.velocity
         v = (x * 0.01, y * 0.01)
-        self.agent.velocity = v
-        # self.agent.set_wheel_speeds([0.01 * self.motor_left_speed, 0.01 * self.motor_right_speed])
-        # self.agent.velocity = hl_navigation.CVector2(*self.agent.velocity_from_wheel_speed(
+        self.behavior.velocity = v
+        # self.behavior.set_wheel_speeds([0.01 * self.motor_left_speed, 0.01 * self.motor_right_speed])
+        # self.behavior.velocity = hl_navigation.Vector2(*self.behavior.velocity_from_wheel_speed(
         #     0.01 * self.motor_left_speed, 0.01 * self.motor_right_speed))
         ns = []
         for thymio in self.thymios:
@@ -52,15 +52,15 @@ class Thymio(pyenki.Thymio2):
             x, y = thymio.velocity
             v = (x * 0.01, y * 0.01)
             ns.append(hl_navigation.Disc(p, 0.08, 0.05, v))
-        self.agent.set_neighbors(ns)
+        self.behavior.set_neighbors(ns)
         self.controller.update(dt)
-        # print('D', self.agent.desiredVelocity)
+        # print('D', self.behavior.desiredVelocity)
         # TODO(Jerome): sono gia' dei memeber (leftSpeed,...)
-        left_speed, right_speed = self.agent.target_wheel_speeds
-        # print(left_speed, right_speed, self.agent.desiredLinearSpeed, self.agent.desiredAngularSpeed.value())
+        left_speed, right_speed = self.behavior.target_wheel_speeds
+        # print(left_speed, right_speed, self.behavior.desiredLinearSpeed, self.behavior.desiredAngularSpeed.value())
         self.motor_left_target = 100 * left_speed
         self.motor_right_target = 100 * right_speed
-        # print(self.motor_left_speed, self.motor_right_speed, self.controller.state, self.agent.velocity)
+        # print(self.motor_left_speed, self.motor_right_speed, self.controller.state, self.behavior.velocity)
         if self.controller.state == hl_navigation.ControllerState.IDLE:
             color, target = next(self.targets)
             self.controller.set_target_point(*target)

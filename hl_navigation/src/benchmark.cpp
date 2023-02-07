@@ -2,15 +2,17 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "Agent.h"
+#include "behavior.h"
 #include <chrono>
 #include <iostream>
 #include <memory>
 #include <tuple>
 #include <vector>
 
+using namespace hl_navigation;
+
 static void show_usage(std::string name) {
-  std::vector<std::string> keys = Agent::behavior_names();
+  std::vector<std::string> keys = Behavior::behavior_names();
   std::ostringstream behaviors;
   // Dump all keys
   std::copy(keys.begin(), keys.end(), std::ostream_iterator<std::string>(behaviors, ", "));
@@ -25,28 +27,28 @@ static void show_usage(std::string name) {
 
 void run(const char * behavior = "HL", float radius = 4, unsigned number = 5,
          float margin = 1.0, float dt = 0.1) {
-  std::vector<std::unique_ptr<Agent>> agents;
+  std::vector<std::unique_ptr<Behavior>> agents;
   float x = radius - margin;
-  std::vector<std::tuple<CVector2, std::function<CVector2(int)>>> task = {
-      {CVector2(x, 0.0),
-       [x, number](int i) {return CVector2(-x + 2 * x * i / (number  - 1), 0.5  );}},
-      {CVector2(-x, 0.0),
-       [x, number](int i) {return CVector2(-x + 2 * x * i / (number  - 1), -0.5 );}},
-      {CVector2(0.0, x),
-       [x, number](int i) {return CVector2(0.5, -x + 2 * x * i / (number  - 1)  );}},
-      {CVector2(0.0, -x),
-       [x, number](int i) {return CVector2(-0.5, -x + 2 * x * i / (number  - 1) );}}
+  std::vector<std::tuple<Vector2, std::function<Vector2(int)>>> task = {
+      {Vector2(x, 0.0),
+       [x, number](int i) {return Vector2(-x + 2 * x * i / (number  - 1), 0.5  );}},
+      {Vector2(-x, 0.0),
+       [x, number](int i) {return Vector2(-x + 2 * x * i / (number  - 1), -0.5 );}},
+      {Vector2(0.0, x),
+       [x, number](int i) {return Vector2(0.5, -x + 2 * x * i / (number  - 1)  );}},
+      {Vector2(0.0, -x),
+       [x, number](int i) {return Vector2(-0.5, -x + 2 * x * i / (number  - 1) );}}
   };
 
   for (auto & [target, position] : task) {
     for (size_t i = 0; i < number; i++) {
-      auto agent = Agent::agent_with_name(behavior, HOLONOMIC, 0.1, 0.1);
+      auto agent = Behavior::behavior_with_name(behavior, HOLONOMIC, 0.1, 0.1);
       agent->set_max_speed(1.0);
       agent->set_max_angular_speed(1.0);
       agent->set_optimal_speed(1.0);
       agent->set_optimal_angular_speed(1.0);
       agent->set_horizon(1.0);
-      agent->velocity = CVector2(0.0f, 0.0f);
+      agent->velocity = Vector2(0.0f, 0.0f);
       agent->position = position(i);
       agent->targetPosition = target;
       agents.push_back(std::move(agent));

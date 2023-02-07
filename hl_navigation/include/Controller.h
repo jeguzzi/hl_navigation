@@ -5,7 +5,9 @@
 #ifndef _CONTROLLER_H_
 #define _CONTROLLER_H_
 
-#include "Agent.h"
+#include "behavior.h"
+
+namespace hl_navigation {
 
 class Controller {
  public:
@@ -25,12 +27,12 @@ private:
   // Navigation parameters
 
 protected:
-  double z;
-  double targetZ;
-  double targetDistance;
-  double velocityZ;
-  double tauZ;
-  double optimalVerticalSpeed;
+  float z;
+  float targetZ;
+  float targetDistance;
+  float velocityZ;
+  float tauZ;
+  float optimalVerticalSpeed;
 
   bool rotateIfHolo;
   virtual void arrived() {};
@@ -40,20 +42,22 @@ protected:
   virtual void set_target_twist(const Twist2D & twist, float vertical_speed);
   virtual bool localized() {return true;}
 public:
-  double angle_tolerance;
-  double distance_tolerance;
-  double speed_tolerance;
+  Radians angle_tolerance;
+  float distance_tolerance;
+  float speed_tolerance;
   void stop();
   void set_pose(float x, float y, float z, float theta);
   void set_target_point(float x, float y, float z);
   void set_target_pose(float x, float y, float z, float theta);
-  void set_target_point(const CVector2 & point);
+  void set_target_point(const Vector2 & point);
 
   State state;
-  Agent *agent;
+  Behavior *behavior;
   void update(float dt);
   Controller();
   ~Controller();
 };
+
+}
 
 #endif /* _CONTROLLER_H_ */

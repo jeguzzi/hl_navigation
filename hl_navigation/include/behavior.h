@@ -12,9 +12,10 @@
 #include <tuple>
 #include <vector>
 
-// using namespace argos;
 
 #define DEFAULT_ROTATION_TAU 0.5
+
+namespace hl_navigation {
 
 struct Twist2D {
   float longitudinal;
@@ -26,23 +27,23 @@ struct Twist2D {
 };
 
 struct Disc {
-  CVector2 position;
-  CVector2 velocity;
+  Vector2 position;
+  Vector2 velocity;
   float radius;
   float social_margin;
 
-  Disc(const CVector2 p, float r,float s = 0.0, CVector2 v = CVector2(0, 0)) :
+  Disc(const Vector2 p, float r,float s = 0.0, Vector2 v = Vector2(0, 0)) :
     position(p), velocity(v), radius(r), social_margin(s) { }
 };
 
 struct LineSegment {
-  CVector2 p1;
-  CVector2 p2;
-  CVector2 e1;
-  CVector2 e2;
+  Vector2 p1;
+  Vector2 p2;
+  Vector2 e1;
+  Vector2 e2;
   float length;
 
-  LineSegment(const CVector2 p1, const CVector2 p2) :
+  LineSegment(const Vector2 p1, const Vector2 p2) :
     p1(p1), p2(p2), e1((p2-p1).normalized()), e2(-e1[1], e1[0]), length((p2-p1).norm()) { }
 
   LineSegment(const LineSegment & s) : LineSegment(s.p1, s.p2) { }
@@ -55,27 +56,27 @@ typedef enum { HOLONOMIC, TWO_WHEELED, HEAD, FOUR_WHEELED_OMNI } agent_type_t;
 
 typedef enum {IDLE, TARGET_POINT, TARGET_ANGLE, DESIRED_ANGLE} heading_t;
 
-class Agent {
+class Behavior {
 
-  using CreateMethod = std::function<std::unique_ptr<Agent>(agent_type_t, float, float)>;
+  using CreateMethod = std::function<std::unique_ptr<Behavior>(agent_type_t, float, float)>;
 
 public:
 
-  CVector2 position;
-  CRadians angle;
-  CVector2 velocity;
-  CRadians angularSpeed;
-  CVector2 targetPosition;
-  CRadians targetAngle;
+  Vector2 position;
+  Radians angle;
+  Vector2 velocity;
+  Radians angularSpeed;
+  Vector2 targetPosition;
+  Radians targetAngle;
   // absolute
-  CVector2 desiredVelocity;
+  Vector2 desiredVelocity;
   // relative
   Twist2D desired_twist;
   Twist2D target_twist;
   WheelSpeeds desired_wheel_speeds;
   WheelSpeeds target_wheel_speeds;
 
-  Agent(agent_type_t type, float radius, float axis_length=0.0) :
+  Behavior(agent_type_t type, float radius, float axis_length=0.0) :
     position(0.0, 0.0), angle(0.0), velocity(0.0, 0.0), angularSpeed(0.0),
     desiredVelocity(0.0, 0.0), desired_twist(0.0, 0.0, 0.0), target_twist(0.0, 0.0, 0.0),
     type(type), axisLength(axis_length), radius(radius), maxSpeed(10000.0),
@@ -87,24 +88,24 @@ public:
         target_wheel_speeds = std::vector<float>(4, 0.0);
     }
 
-  virtual ~Agent() = default;
+  virtual ~Behavior() = default;
 
-  CRadians get_max_angular_speed() const;
-  double get_optimal_speed() const;
-  CRadians get_optimal_angular_speed() const;
-  double get_max_speed() const;
-  double get_rotation_tau() const;
-  double get_safety_margin() const;
-  double get_horizon() const;
-  double get_radius() const { return radius; }
+  Radians get_max_angular_speed() const;
+  float get_optimal_speed() const;
+  Radians get_optimal_angular_speed() const;
+  float get_max_speed() const;
+  float get_rotation_tau() const;
+  float get_safety_margin() const;
+  float get_horizon() const;
+  float get_radius() const { return radius; }
   heading_t get_heading_behavior() const { return heading_behavior; }
-  void set_max_angular_speed(double value);
-  void set_optimal_speed(double value);
-  void set_optimal_angular_speed(double value);
-  void set_max_speed(double value);
-  void set_rotation_tau(double value);
-  void set_safety_margin(double value);
-  void set_horizon(double value);
+  void set_max_angular_speed(Radians value);
+  void set_optimal_speed(float value);
+  void set_optimal_angular_speed(Radians value);
+  void set_max_speed(float value);
+  void set_rotation_tau(float value);
+  void set_safety_margin(float value);
+  void set_horizon(float value);
   void set_desired_twist(const Twist2D & twist);
   void set_heading_behavior(heading_t value) {
     if (is_omnidirectional()) {
@@ -130,19 +131,19 @@ public:
 protected:
 
   agent_type_t type;
-  Real axisLength;
-  Real radius;
-  CRadians maxAngularSpeed;
-  Real maxSpeed;
+  float axisLength;
+  float radius;
+  Radians maxAngularSpeed;
+  float maxSpeed;
 
-  Real horizon;
-  Real safetyMargin;
-  Real rotationTau;
-  Real optimalSpeed;
+  float horizon;
+  float safetyMargin;
+  float rotationTau;
+  float optimalSpeed;
 
-  CRadians optimalAngularSpeed;
+  Radians optimalAngularSpeed;
   heading_t heading_behavior;
-  CVector2 repulsiveForce;
+  Vector2 repulsiveForce;
   bool insideObstacle;
 
   std::vector<Disc> static_obstacles;
@@ -160,11 +161,11 @@ protected:
 
   virtual Twist2D compute_desired_twist() const;
 
-  Real marginForObstacleAtDistance(Real distance, Real obstacleRadius,
-                                   Real safetyMargin, Real socialMargin);
-  CVector2 relativePositionOfObstacleAt(CVector2 &position, Real obstacleRadius,
-                                        Real &distance);
-  void setDesiredWheelSpeeds(double left, double right);
+  float marginForObstacleAtDistance(float distance, float obstacleRadius,
+                                   float safetyMargin, float socialMargin);
+  Vector2 relativePositionOfObstacleAt(Vector2 &position, float obstacleRadius,
+                                        float &distance);
+  void setDesiredWheelSpeeds(float left, float right);
 
   static std::map<std::string, CreateMethod> _agent_create_functions;
   template <typename T> static const char *register_type(const char *name) {
@@ -176,11 +177,11 @@ protected:
 public:
   Twist2D twist_from_wheel_speeds(const WheelSpeeds & speeds) const;
   WheelSpeeds wheel_speeds_from_twist(const Twist2D &) const;
-  CVector2 get_target_velocity() const;
+  Vector2 get_target_velocity() const;
   void set_wheel_speeds(const WheelSpeeds & speeds);
   bool is_wheeled() const;
   bool is_omnidirectional() const;
-  static std::unique_ptr<Agent> agent_with_name(
+  static std::unique_ptr<Behavior> behavior_with_name(
       const std::string &name, agent_type_t type, float radius, float axis_length=0.0) {
     if (_agent_create_functions.count(name)) {
       return _agent_create_functions[name](type, radius, axis_length);
@@ -201,5 +202,7 @@ public:
     return keys;
   }
 };
+
+}
 
 #endif

@@ -2,10 +2,10 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#ifndef _ORCAAGENT_H_
-#define _ORCAAGENT_H_
+#ifndef _ORCA_H_
+#define _ORCA_H_
 
-#include "Agent.h"
+#include "../behavior.h"
 #include <memory>
 
 #define TIME_STEP 0.1
@@ -16,16 +16,18 @@ namespace RVO
     class Obstacle;
 }
 
-class ORCAAgent : public Agent {
+namespace hl_navigation {
+
+class ORCABehavior : public Behavior {
 public:
   bool useEffectiveCenter;
-  ORCAAgent(agent_type_t type, float radius, float axis_length=0.0);
-  ~ORCAAgent();
-  void setTimeHorizon(double value);
-  float getTimeHorizon(double value) const;
+  ORCABehavior(agent_type_t type, float radius, float axis_length=0.0);
+  ~ORCABehavior();
+  void setTimeHorizon(float value);
+  float getTimeHorizon(float value) const;
 
-  void setTimeStep(double value);
-  float getTimeStep(double value) const;
+  void setTimeStep(float value);
+  float getTimeStep(float value) const;
 
   void set_line_obstacles(const std::vector<LineSegment> & value) override;
 
@@ -39,8 +41,8 @@ protected:
 
 private:
 
-  Real timeHorizon;
-  // Real timeHorizonStatic;
+  float timeHorizon;
+  // float timeHorizonStatic;
   std::vector<std::unique_ptr<const RVO::Agent>> agentNeighbors;
   std::vector<std::unique_ptr<const RVO::Obstacle>> obstacleNeighbors;
 
@@ -52,12 +54,14 @@ private:
   // constraints,” in 2010 IEEE/RSJ International Conference on Intelligent
   // Robots and Systems, 2010, pp. 4584–4589. with D=L/2
 
-  Real D;
+  float D;
 
-  Real rangeSq;
+  float rangeSq;
   std::unique_ptr<RVO::Agent> _RVOAgent;
 
   static const char * name;
 };
+
+}
 
 #endif

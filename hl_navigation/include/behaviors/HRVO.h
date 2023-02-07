@@ -2,22 +2,24 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#ifndef _HRVOAGENT_H_
-#define _HRVOAGENT_H_
+#ifndef _HRVO_H_
+#define _HRVO_H_
 
-#include "Agent.h"
+#include "../behavior.h"
 
 namespace HRVO
 {
-    class Agent;
+  class Agent;
 }
+
+namespace hl_navigation {
 
 // TODO(J:revision2023): verify DIFFERENTIAL_DRIVE
 
-class HRVOAgent : public Agent {
+class HRVOBehavior : public Behavior {
 public:
-  HRVOAgent(agent_type_t type, float radius, float axis_length=0.0);
-  ~HRVOAgent();
+  HRVOBehavior(agent_type_t type, float radius, float axis_length=0.0);
+  ~HRVOBehavior();
 
 protected:
   virtual void update_desired_velocity() override;
@@ -27,9 +29,11 @@ protected:
   virtual void prepare() override;
 private:
   uint agentIndex;
-  Real rangeSq;
+  float rangeSq;
   std::unique_ptr<HRVO::Agent> _HRVOAgent;
   static const char * name;
 };
+
+}
 
 #endif

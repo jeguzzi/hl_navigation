@@ -21,44 +21,43 @@ endif()
 
 # set(CMAKE_CXX_CLANG_TIDY "/usr/local/opt/llvm/bin/clang-tidy;-checks=*")
 
-# find_package(ament_cmake REQUIRED)
+find_package(ament_cmake REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
-set(orca_IMPLEMENTATIONS
-  src/RVO/Agent.cpp
-  src/RVO/Obstacle.cpp
-  src/RVO/RVOSimulator.cpp
-  src/RVO/KdTree.cpp
+set(ORCA
+  src/behaviors/ORCA/RVO/Agent.cpp
+  src/behaviors/ORCA/RVO/Obstacle.cpp
+  src/behaviors/ORCA/RVO/RVOSimulator.cpp
+  src/behaviors/ORCA/RVO/KdTree.cpp
   )
 
-set(hrvo_IMPLEMENTATIONS
-  src/HRVO/Agent.cpp
-  src/HRVO/Goal.cpp
-  src/HRVO/HRVOSimulator.cpp
-  src/HRVO/KdTree.cpp
-  src/HRVO/Obstacle.cpp
-  src/HRVO/RoadmapVertex.cpp
-  src/HRVO/Vector2.cpp
+set(HRVO
+  src/behaviors/HRVO/HRVO/Agent.cpp
+  src/behaviors/HRVO/HRVO/Goal.cpp
+  src/behaviors/HRVO/HRVO/HRVOSimulator.cpp
+  src/behaviors/HRVO/HRVO/KdTree.cpp
+  src/behaviors/HRVO/HRVO/Obstacle.cpp
+  src/behaviors/HRVO/HRVO/RoadmapVertex.cpp
+  src/behaviors/HRVO/HRVO/Vector2.cpp
   )
 
 include_directories(include)
 
-
 add_library(hl_navigation SHARED
-  src/Controller.cpp
-  src/Agent.cpp
-  src/Dummy.cpp
-  src/HLAgent.cpp
-  src/ORCAAgent.cpp
-  src/HRVOAgent.cpp
-  ${orca_IMPLEMENTATIONS}
-  ${hrvo_IMPLEMENTATIONS}
+  src/controller.cpp
+  src/behavior.cpp
+  src/behaviors/dummy.cpp
+  src/behaviors/HL.cpp
+  src/behaviors/ORCA/ORCA.cpp
+  ${ORCA}
+  src/behaviors/HRVO/HRVO.cpp
+  ${HRVO}
 )
 
 target_link_libraries(hl_navigation Eigen3::Eigen)
 
-# ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
-# ament_export_dependencies(Eigen3)
+ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
+ament_export_dependencies(Eigen3)
 
 
 add_executable(test_behavior src/test_behavior.cpp)
@@ -91,7 +90,7 @@ install(
   INCLUDES DESTINATION include
 )
 
-# ament_package()
+ament_package()
 
 # See https://www.foonathan.net/2016/03/cmake-install/
 # meglio fare uno step intermedio che separa i package (ROS/non ROS) ma che usa ament_cmake.

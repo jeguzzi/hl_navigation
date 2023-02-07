@@ -2,15 +2,17 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "Agent.h"
+#include "behavior.h"
 #include <iostream>
 #include <iterator>
 #include <vector>
 
 // Should also add the wheels
 
+using namespace hl_navigation;
+
 static void show_usage(std::string name) {
-  std::vector<std::string> keys = Agent::behavior_names();
+  std::vector<std::string> keys = Behavior::behavior_names();
   std::ostringstream behaviors;
   // Dump all keys
   std::copy(keys.begin(), keys.end(), std::ostream_iterator<std::string>(behaviors, ", "));
@@ -33,54 +35,54 @@ int main(int argc, char *argv[]) {
       return 0;
     }
   }
-  auto agent = Agent::agent_with_name(behavior_name, HOLONOMIC, 0.1, 0.1);
-  if (!agent) {
+  auto behavior = Behavior::behavior_with_name(behavior_name, HOLONOMIC, 0.1, 0.1);
+  if (!behavior) {
     printf("No behavior with name %s\n", behavior_name);
     exit(1);
   }
-  const auto& r = *agent.get();
+  const auto& r = *behavior.get();
   printf("Use behavior %s - %s\n", behavior_name, typeid(r).name());
   float dt = 0.1;
-  agent->set_max_speed(1.0);
-  agent->set_max_angular_speed(1.0);
-  agent->set_optimal_speed(1.0);
-  agent->set_optimal_angular_speed(1.0);
-  agent->set_horizon(1.0);
+  behavior->set_max_speed(1.0);
+  behavior->set_max_angular_speed(1.0);
+  behavior->set_optimal_speed(1.0);
+  behavior->set_optimal_angular_speed(1.0);
+  behavior->set_horizon(1.0);
 
-  agent->position = CVector2(0.0f, 0.05f);
-  agent->velocity = CVector2(0.0f, 0.0f);
+  behavior->position = Vector2(0.0f, 0.05f);
+  behavior->velocity = Vector2(0.0f, 0.0f);
   // Go to 1, 0
-  agent->targetPosition = CVector2(3.0f, 0.0f);
-  agent->set_static_obstacles({Disc(CVector2(1.5f, 0.0f), 0.5f)});
+  behavior->targetPosition = Vector2(3.0f, 0.0f);
+  behavior->set_static_obstacles({Disc(Vector2(1.5f, 0.0f), 0.5f)});
   // This should be in init
-  printf("Start loop @ (%.3f, %.3f)\n", agent->position.x(), agent->position.y());
+  printf("Start loop @ (%.3f, %.3f)\n", behavior->position.x(), behavior->position.y());
   for (size_t i = 0; i < 30; i++) {
     // printf("P (%.3f, %.3f, %.3f)\n",
-    //   agent->position.GetX(), agent->position.GetY(), agent->angle.GetValue());
+    //   behavior->position.GetX(), behavior->position.GetY(), behavior->angle.GetValue());
     // TODO(Jerome): rivedere tutte le cache.
     // Per esempio, qui mi obbliga a ricreare gli ostacoli ogni volta
 
-    printf("%.3f, %.3f,", agent->position.x(), agent->position.y());
-    //       agent->velocity.GetX(), agent->velocity.GetY());
-    // printf("%zu (%.3f, %.3f), (%.3f, %.3f)\n", i, agent->position.GetX(), agent->position.GetY(),
-    //       agent->velocity.GetX(), agent->velocity.GetY());
-    // agent->updateDesiredVelocity();
-    // printf("V (%.3f, %.3f)\n", agent->desiredVelocity.GetX(), agent->desiredVelocity.GetY());
-    agent->update(dt);
-    // std::cout << agent->desiredVelocity << std::endl;
-    // std::cout << agent->get_target_velocity() << std::endl;
+    printf("%.3f, %.3f,", behavior->position.x(), behavior->position.y());
+    //       behavior->velocity.GetX(), behavior->velocity.GetY());
+    // printf("%zu (%.3f, %.3f), (%.3f, %.3f)\n", i, behavior->position.GetX(), behavior->position.GetY(),
+    //       behavior->velocity.GetX(), behavior->velocity.GetY());
+    // behavior->updateDesiredVelocity();
+    // printf("V (%.3f, %.3f)\n", behavior->desiredVelocity.GetX(), behavior->desiredVelocity.GetY());
+    behavior->update(dt);
+    // std::cout << behavior->desiredVelocity << std::endl;
+    // std::cout << behavior->get_target_velocity() << std::endl;
     // printf("V1 (%.3f, %.3f, %.3f. %.3f)\n",
-    //   agent->desiredLinearSpeed, agent->desiredVelocity.GetX(), agent->desiredVelocity.GetY(),
-    //   agent->desiredAngularSpeed.GetValue());
+    //   behavior->desiredLinearSpeed, behavior->desiredVelocity.GetX(), behavior->desiredVelocity.GetY(),
+    //   behavior->desiredAngularSpeed.GetValue());
 
-    // agent->velocity = agent->desiredVelocity;
+    // behavior->velocity = behavior->desiredVelocity;
 
-    agent->velocity = agent->get_target_velocity();
-    agent->angle += agent->target_twist.angular * dt;
-    agent->position += agent->velocity * dt;
+    behavior->velocity = behavior->get_target_velocity();
+    behavior->angle += behavior->target_twist.angular * dt;
+    behavior->position += behavior->velocity * dt;
   }
   printf("\nEnd loop @ (%.3f, %.3f), (%.3f %.3f)\n",
-         agent->position.x(), agent->position.y(),
-         agent->velocity.x(), agent->velocity.y());
+         behavior->position.x(), behavior->position.y(),
+         behavior->velocity.x(), behavior->velocity.y());
   return 0;
 }

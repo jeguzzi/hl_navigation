@@ -19,30 +19,30 @@ class CrossExperiment : public Experiment {
  protected:
   void init(World & world, int seed) override {
     float x = radius - margin;
-    std::vector<std::tuple<CVector2, std::function<CVector2(int, int)>>> task = {
-        {CVector2(radius, 0.0),
-         [x](int i, unsigned number) {return CVector2(-x + 2 * x * i / (number  - 1), 0.49  );}},
-        {CVector2(-radius, 0.0),
-         [x](int i, unsigned number) {return CVector2(-x + 2 * x * i / (number  - 1), -0.51 );}},
-        {CVector2(0.0, radius),
-         [x](int i, unsigned number) {return CVector2(0.52, -x + 2 * x * i / (number  - 1)  );}},
-        {CVector2(0.0, -radius),
-         [x](int i, unsigned number) {return CVector2(-0.53, -x + 2 * x * i / (number  - 1) );}}};
+    std::vector<std::tuple<Vector2, std::function<Vector2(int, int)>>> task = {
+        {Vector2(radius, 0.0),
+         [x](int i, unsigned number) {return Vector2(-x + 2 * x * i / (number  - 1), 0.49  );}},
+        {Vector2(-radius, 0.0),
+         [x](int i, unsigned number) {return Vector2(-x + 2 * x * i / (number  - 1), -0.51 );}},
+        {Vector2(0.0, radius),
+         [x](int i, unsigned number) {return Vector2(0.52, -x + 2 * x * i / (number  - 1)  );}},
+        {Vector2(0.0, -radius),
+         [x](int i, unsigned number) {return Vector2(-0.53, -x + 2 * x * i / (number  - 1) );}}};
 
 
-//      std::vector<std::tuple<CVector2, std::function<CVector2(int, int)>>> task = {
-//          {CVector2(radius, 0.00), [this](int i, unsigned number) {return CVector2(-radius, 0.6 * i);}},
-//          {CVector2(-radius, 0.00), [this](int i, unsigned number) {return CVector2(radius, 0.6 * i + 0.01);}},
+//      std::vector<std::tuple<Vector2, std::function<Vector2(int, int)>>> task = {
+//          {Vector2(radius, 0.00), [this](int i, unsigned number) {return Vector2(-radius, 0.6 * i);}},
+//          {Vector2(-radius, 0.00), [this](int i, unsigned number) {return Vector2(radius, 0.6 * i + 0.01);}},
 //      };
 
 
 
      for (auto & [target, position] : task) {
        for (size_t i = 0; i < number; i++) {
-          auto task = std::make_unique<WayPointsTask>(std::vector<CVector2>{target, -target}, true);
+          auto task = std::make_unique<WayPointsTask>(std::vector<Vector2>{target, -target}, true);
           auto se = std::make_unique<BoundedStateEstimation>(&world, 1.0, 1.0);
           auto & agent = world.agents.emplace_back(
-                                                   behavior, 0.1, 0.1, std::move(task), std::move(se), dt);
+            behavior, 0.1, 0.1, std::move(task), std::move(se), dt);
           agent.nav_behavior->set_max_speed(1.0);
           agent.nav_behavior->set_max_angular_speed(1.0);
           agent.nav_behavior->set_optimal_speed(1.0);

@@ -5,20 +5,15 @@
 #include <chrono>
 #include <memory>
 
-#include "hl_navigation/Agent.h"
-#include "hl_navigation/HLAgent.h"
-#include "hl_navigation/HRVOAgent.h"
-#include "hl_navigation/ORCAAgent.h"
-#include "hl_navigation/Controller.h"
-#include "hl_navigation/common.h"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
-#include "std_msgs/msg/empty.hpp"
+
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 #include "tf2/exceptions.h"
 #include "tf2/utils.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+
 #include "geometry_msgs/msg/point_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -29,6 +24,13 @@
 #include "hl_navigation_msgs/msg/obstacles.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rcl_interfaces/msg/set_parameters_result.hpp"
+#include "std_msgs/msg/empty.hpp"
+
+#include "hl_navigation/behavior.h"
+#include "hl_navigation/controller.h"
+#include "hl_navigation/behaviors/HL.h"
+#include "hl_navigation/behaviors/HRVO.h"
+#include "hl_navigation/behaviors/ORCA.h"
 
 #include "Drawing.hpp"
 
@@ -36,6 +38,9 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 using GoToTarget = hl_navigation_msgs::action::GoToTarget;
 using GoalHandleGoToTarget = rclcpp_action::ServerGoalHandle<GoToTarget>;
+
+
+namespace hl_navigation {
 
 class ROSControllerNode : public Controller, public rclcpp::Node {
  public:
@@ -90,10 +95,10 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
  private:
   bool drawing_enabled;
   Drawing drawing;
-  std::map<std::string, std::unique_ptr<Agent>> agents;
+  std::map<std::string, std::unique_ptr<Behavior>> behaviors;
   double updatePeriod;
   bool publishCmdStamped;
-  HLAgent * hl_agent;
+  HLBehavior * hl_behavior;
   std::string ns;
   std::string odom_frame;
   rclcpp::Time lastTimeWhenLocalized;
@@ -153,12 +158,12 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
 
   void updated_control() override {
     if (drawing_enabled) {
-      drawing.drawDesiredVelocity(agent->desiredVelocity);
-      if (state == MOVE && agent == hl_agent) {
+      drawing.drawDesiredVelocity(behavior->desiredVelocity);
+      if (state == MOVE && behavior == hl_behavior) {
         drawing.drawCollisionMap(
-            -hl_agent->aperture,
-            hl_agent->angleResolution(), hl_agent->getDistances(),
-            hl_agent->get_radius());
+            -hl_behavior->aperture,
+            hl_behavior->angleResolution(), hl_behavior->getDistances(),
+            hl_behavior->get_radius());
       }
     }
   }
@@ -190,8 +195,8 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       angular.vector = msg.twist.twist.angular;
       if (inOdomFrame(linear, linear_odom) &&
           inOdomFrame(angular, angular_odom)) {
-        agent->velocity = CVector2(linear_odom.vector.x, linear_odom.vector.y);
-        agent->angularSpeed = CRadians(angular_odom.vector.z);
+        behavior->velocity = Vector2(linear_odom.vector.x, linear_odom.vector.y);
+        behavior->angularSpeed = angular_odom.vector.z;
       } else {
         RCLCPP_INFO(
             get_logger(),
@@ -201,8 +206,8 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       }
     } else {
       const geometry_msgs::msg::Twist &twist = msg.twist.twist;
-      agent->velocity = CVector2(twist.linear.x, twist.linear.y);
-      agent->angularSpeed = CRadians(twist.angular.z);
+      behavior->velocity = Vector2(twist.linear.x, twist.linear.y);
+      behavior->angularSpeed = twist.angular.z;
     }
     // CHANGED: We don't assume anymore that twist and pose are in the same
     // frame!
@@ -307,8 +312,8 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       msg.header.frame_id = odom_frame;
       msg.header.stamp = now();
       msg.twist.angular.z = twist.angular;
-      CVector2 v = CVector2(twist.longitudinal, twist.lateral);
-      v = rotate(v, agent->angle);
+      Vector2 v = Vector2(twist.longitudinal, twist.lateral);
+      v = rotate(v, behavior->angle);
       msg.twist.linear.x = v.x();
       msg.twist.linear.y = v.y();
       msg.twist.linear.z = vertical_speed;
@@ -335,8 +340,8 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
       // Consider the cylindric obstacles iff it intersects the strip z-targetZ
       if (!((z < minZ && targetZ < minZ) || (z > maxZ && targetZ > maxZ))) {
         relevant = true;
-        CVector2 p(topPosition.point.x, topPosition.point.y);
-        CVector2 v(velocity.vector.x, velocity.vector.y);
+        Vector2 p(topPosition.point.x, topPosition.point.y);
+        Vector2 v(velocity.vector.x, velocity.vector.y);
         obstacles.emplace_back(p, msg.radius, msg.social_margin, v);
       }
       if (drawing_enabled) {
@@ -345,7 +350,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
         drawing.drawObstacleVelocity(topPosition, velocity.vector, relevant, updatePeriod);
       }
     }
-    agent->set_neighbors(obstacles);
+    behavior->set_neighbors(obstacles);
   }
 
   void readStaticParameters() {
@@ -364,11 +369,11 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     double axis_length = declare_parameter("axis_length", 1.0);
     double radius = declare_parameter("radius", 0.3);
 
-    for (auto const &p : Agent::all_behaviors()) {
-      agents.emplace(p.first, p.second(agent_type, radius, axis_length));
+    for (auto const &p : Behavior::all_behaviors()) {
+      behaviors.emplace(p.first, p.second(agent_type, radius, axis_length));
     }
-    agent = agents[agent_type_name].get();
-    hl_agent = dynamic_cast<HLAgent *>(agents["HL"].get());
+
+    hl_behavior = dynamic_cast<HLBehavior *>(behaviors["HL"].get());
 
 
     double maximal_angular_speed =
@@ -378,9 +383,9 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     // double maximal_rotation_speed =
     //     declare_parameter("maximal_rotation_speed", DEFAULT_MAX_ANGULAR_SPEED);
 
-    for (auto & p : agents) {
+    for (auto & p : behaviors) {
       // p.second->axisLength = axis_length;
-      // p.second->type = agent_type;
+      // p.second->type = behavior_type;
       // p.second->radius = radius;
       p.second->set_max_speed(max_speed);
       p.second->set_max_angular_speed(maximal_angular_speed);
@@ -388,7 +393,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
 
       // if (agent_type == TWO_WHEELED) {
       //   p.second->setMaxRotationSpeed(maximal_rotation_speed);
-      //   // agent->setMaxRotationSpeed(maximal_speed);
+      //   // behavior->setMaxRotationSpeed(maximal_speed);
       // }
     }
     //   pn.param("maximal_vertical_speed",maximalVerticalSpeed, 1.0);
@@ -416,19 +421,21 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     declare_parameter("minimal_speed", 0.05);
   }
 
-  void setAgentFromString(std::string behaviorName) {
+  void setBehaviorFromString(std::string behaviorName) {
     if (behaviorName == "HL") {
-      agent = agents["HL"].get();
+      behavior = behaviors["HL"].get();
     } else if (behaviorName == "ORCA") {
-      agent = agents["ORCA"].get();
-      dynamic_cast<ORCAAgent *>(agent)->useEffectiveCenter = false;
+      behavior = behaviors["ORCA"].get();
+      dynamic_cast<ORCABehavior *>(behavior)->useEffectiveCenter = false;
     } else if (behaviorName == "ORCA-NH") {
-      agent = agents["ORCA"].get();
-      dynamic_cast<ORCAAgent *>(agent)->useEffectiveCenter = true;
+      behavior = behaviors["ORCA"].get();
+      dynamic_cast<ORCABehavior *>(behavior)->useEffectiveCenter = true;
     } else if (behaviorName == "HRVO") {
-      agent = agents["HRVO"].get();
+      behavior = behaviors["HRVO"].get();
+    } else if (behaviorName == "Dummy") {
+      behavior = behaviors["Dummy"].get();
     } else {
-      agent = agents["HL"].get();
+      behavior = behaviors["HL"].get();
     }
   }
 
@@ -439,32 +446,32 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     for (const auto &param : parameters) {
       RCLCPP_INFO(this->get_logger(), "param %s", param.get_name().c_str());
       if (param.get_name() == "behavior") {
-        setAgentFromString(param.as_string());
+        setBehaviorFromString(param.as_string());
       } else if (param.get_name() == "optimal_speed") {
-        agent->set_optimal_speed(param.as_double());
+        behavior->set_optimal_speed(param.as_double());
       } else if (param.get_name() == "optimal_angular_speed") {
-        agent->set_optimal_angular_speed(param.as_double());
+        behavior->set_optimal_angular_speed(param.as_double());
       } else if (param.get_name() == "tau_z") {
         tauZ = param.as_double();
       } else if (param.get_name() == "optimal_vertical_speed") {
         optimalVerticalSpeed = param.as_double();
       } else if (param.get_name() == "tau") {
-        hl_agent->setTau(param.as_double());
+        hl_behavior->setTau(param.as_double());
       } else if (param.get_name() == "eta") {
-        hl_agent->setEta(param.as_double());
+        hl_behavior->setEta(param.as_double());
       } else if (param.get_name() == "rotation_tau") {
-        agent->set_rotation_tau(param.as_double());
+        behavior->set_rotation_tau(param.as_double());
       } else if (param.get_name() == "horizon") {
-        agent->set_horizon(param.as_double());
+        behavior->set_horizon(param.as_double());
       // TODO(Jerome): reenable
       // } else if (param.get_name() == "time_horizon") {
-      //   agent->setTimeHorizon(param.as_double());
+      //   behavior->setTimeHorizon(param.as_double());
       } else if (param.get_name() == "safety_margin") {
-        agent->set_safety_margin(param.as_double());
+        behavior->set_safety_margin(param.as_double());
       } else if (param.get_name() == "aperture") {
-        hl_agent->setAperture(param.as_double());
+        hl_behavior->setAperture(param.as_double());
       } else if (param.get_name() == "resolution") {
-        hl_agent->setResolution(param.as_int());
+        hl_behavior->setResolution(param.as_int());
       } else if (param.get_name() == "drawing") {
         drawing_enabled = param.as_bool();
       } else if (param.get_name() == "tol_distance") {
@@ -482,9 +489,11 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
   }
 };
 
+}  // namespace hl_navigation
+
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<ROSControllerNode>();
+  auto node = std::make_shared<hl_navigation::ROSControllerNode>();
   rclcpp::spin(node);
   RCLCPP_INFO(rclcpp::get_logger("hl_navigation"), "Shutting down");
   rclcpp::shutdown();

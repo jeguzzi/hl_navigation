@@ -3,72 +3,73 @@
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
 
-#include "hl_navigation/Agent.h"
-#include "hl_navigation/HLAgent.h"
-#include "hl_navigation/ORCAAgent.h"
-#include "hl_navigation/HRVOAgent.h"
+#include "hl_navigation/behavior.h"
+#include "hl_navigation/behaviors/HL.h"
+#include "hl_navigation/behaviors/ORCA.h"
+#include "hl_navigation/behaviors/HRVO.h"
 #include "hl_navigation/Controller.h"
 
+using namespace hl_navigation;
 namespace py = pybind11;
 PYBIND11_MODULE(_hl_navigation, m) {
-    py::class_<Agent>(m, "Agent")
-        // .def_readwrite("type", &Agent::type)
-        // .def_readwrite("radius", &Agent::radius)
-        .def_readwrite("position", &Agent::position)
-        .def_readwrite("angle", &Agent::angle)
-        .def_readwrite("velocity", &Agent::velocity)
-        .def_readwrite("angularSpeed", &Agent::angularSpeed)
-        .def_readwrite("target_position", &Agent::targetPosition)
-        .def_readwrite("target_angle", &Agent::targetPosition)
-        .def_property("target_velocity", &Agent::get_target_velocity, nullptr)
-        .def_readwrite("desired_velocity", &Agent::desiredVelocity)
-        .def_readwrite("desired_twist", &Agent::desired_twist)
-        .def_readwrite("target_twist", &Agent::target_twist)
-        .def_readwrite("desired_wheel_speeds", &Agent::desired_wheel_speeds)
-        .def_readwrite("target_wheel_speeds", &Agent::target_wheel_speeds)
-        .def_property("max_speed", &Agent::get_max_speed, &Agent::set_max_speed)
-        .def_property("max_angular_speed", &Agent::get_max_angular_speed,
-                      &Agent::set_max_angular_speed)
-        .def_property("horizon", &Agent::get_horizon, &Agent::set_horizon)
-        .def_property("safety_margin", &Agent::get_safety_margin, &Agent::set_safety_margin)
-        .def_property("optimal_speed", &Agent::get_optimal_speed, &Agent::set_optimal_speed)
-        .def_property("optimal_angular_speed", &Agent::get_optimal_angular_speed,
-                      &Agent::set_optimal_angular_speed)
-        .def_property("heading_behavior", &Agent::get_heading_behavior,
-                      &Agent::set_heading_behavior)
-        .def_property("rotation_tau", &Agent::get_rotation_tau,
-                      &Agent::set_rotation_tau)
-        .def_property("radius", &Agent::get_radius, nullptr)
-        .def_property("is_wheeled", &Agent::is_wheeled, nullptr)
-        .def_property("is_omnidirectional", &Agent::is_omnidirectional, nullptr)
-        .def_property("target_velocity", &Agent::get_target_velocity, nullptr)
-        .def("update", &Agent::update)
-        .def("set_desired_twist", &Agent::set_desired_twist)
-        .def("set_wheel_speeds", &Agent::set_wheel_speeds)
-        .def("twist_from_wheel_speeds", &Agent::twist_from_wheel_speeds)
-        .def("wheel_speeds_from_twist", &Agent::wheel_speeds_from_twist)
-        .def("set_neighbors", &Agent::set_neighbors)
-        .def("set_static_obstacles", &Agent::set_static_obstacles)
-        .def("set_line_obstacles", &Agent::set_line_obstacles);
+    py::class_<Behavior>(m, "Behavior")
+        // .def_readwrite("type", &Behavior::type)
+        // .def_readwrite("radius", &Behavior::radius)
+        .def_readwrite("position", &Behavior::position)
+        .def_readwrite("angle", &Behavior::angle)
+        .def_readwrite("velocity", &Behavior::velocity)
+        .def_readwrite("angularSpeed", &Behavior::angularSpeed)
+        .def_readwrite("target_position", &Behavior::targetPosition)
+        .def_readwrite("target_angle", &Behavior::targetPosition)
+        .def_property("target_velocity", &Behavior::get_target_velocity, nullptr)
+        .def_readwrite("desired_velocity", &Behavior::desiredVelocity)
+        .def_readwrite("desired_twist", &Behavior::desired_twist)
+        .def_readwrite("target_twist", &Behavior::target_twist)
+        .def_readwrite("desired_wheel_speeds", &Behavior::desired_wheel_speeds)
+        .def_readwrite("target_wheel_speeds", &Behavior::target_wheel_speeds)
+        .def_property("max_speed", &Behavior::get_max_speed, &Behavior::set_max_speed)
+        .def_property("max_angular_speed", &Behavior::get_max_angular_speed,
+                      &Behavior::set_max_angular_speed)
+        .def_property("horizon", &Behavior::get_horizon, &Behavior::set_horizon)
+        .def_property("safety_margin", &Behavior::get_safety_margin, &Behavior::set_safety_margin)
+        .def_property("optimal_speed", &Behavior::get_optimal_speed, &Behavior::set_optimal_speed)
+        .def_property("optimal_angular_speed", &Behavior::get_optimal_angular_speed,
+                      &Behavior::set_optimal_angular_speed)
+        .def_property("heading_behavior", &Behavior::get_heading_behavior,
+                      &Behavior::set_heading_behavior)
+        .def_property("rotation_tau", &Behavior::get_rotation_tau,
+                      &Behavior::set_rotation_tau)
+        .def_property("radius", &Behavior::get_radius, nullptr)
+        .def_property("is_wheeled", &Behavior::is_wheeled, nullptr)
+        .def_property("is_omnidirectional", &Behavior::is_omnidirectional, nullptr)
+        .def_property("target_velocity", &Behavior::get_target_velocity, nullptr)
+        .def("update", &Behavior::update)
+        .def("set_desired_twist", &Behavior::set_desired_twist)
+        .def("set_wheel_speeds", &Behavior::set_wheel_speeds)
+        .def("twist_from_wheel_speeds", &Behavior::twist_from_wheel_speeds)
+        .def("wheel_speeds_from_twist", &Behavior::wheel_speeds_from_twist)
+        .def("set_neighbors", &Behavior::set_neighbors)
+        .def("set_static_obstacles", &Behavior::set_static_obstacles)
+        .def("set_line_obstacles", &Behavior::set_line_obstacles);
 
-    m.def("agent_with_name",  &Agent::agent_with_name);
+    m.def("behavior_with_name",  &Behavior::behavior_with_name);
 
-    py::class_<HLAgent, Agent>(m, "HLAgent")
+    py::class_<HLBehavior, Behavior>(m, "HLBehavior")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
              py::arg("wheel_axis") = 0.0)
-        .def("get_distances", &HLAgent::getDistances)
-        .def("distance_to_segment", &HLAgent::distance_to_segment)
-        .def_readwrite("resolution", &HLAgent::resolution)
-        .def_readwrite("aperture", &HLAgent::aperture)
-        .def("set_tau", &HLAgent::setTau);
+        .def("get_distances", &HLBehavior::getDistances)
+        .def("distance_to_segment", &HLBehavior::distance_to_segment)
+        .def_readwrite("resolution", &HLBehavior::resolution)
+        .def_readwrite("aperture", &HLBehavior::aperture)
+        .def("set_tau", &HLBehavior::setTau);
 
-    py::class_<ORCAAgent, Agent>(m, "ORCAAgent")
+    py::class_<ORCABehavior, Behavior>(m, "ORCABehavior")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
              py::arg("wheel_axis") = 0.0)
-        .def_property("time_horizon", &ORCAAgent::getTimeHorizon, &ORCAAgent::setTimeHorizon)
-        .def_property("control_step", &ORCAAgent::getTimeStep, &ORCAAgent::setTimeStep);
+        .def_property("time_horizon", &ORCABehavior::getTimeHorizon, &ORCABehavior::setTimeHorizon)
+        .def_property("control_step", &ORCABehavior::getTimeStep, &ORCABehavior::setTimeStep);
 
-    py::class_<HRVOAgent, Agent>(m, "HRVOAgent")
+    py::class_<HRVOBehavior, Behavior>(m, "HRVOBehavior")
         .def(py::init<agent_type_t, float, float>(), py::arg("type"), py::arg("radius"),
              py::arg("wheel_axis") = 0.0);
 
@@ -82,16 +83,16 @@ PYBIND11_MODULE(_hl_navigation, m) {
                    ", " + std::to_string(v.angular) + ")";});
 
     py::class_<Disc>(m, "Disc")
-        .def(py::init<CVector2, float, float, CVector2>(),
+        .def(py::init<Vector2, float, float, Vector2>(),
              py::arg("center"), py::arg("radius"),
-             py::arg("social_margin") = 0.0, py::arg("velocity") = CVector2(0.0, 0.0))
+             py::arg("social_margin") = 0.0, py::arg("velocity") = Vector2(0.0, 0.0))
         .def_readonly("center", &Disc::position)
         .def_readonly("radius", &Disc::radius)
         .def_readonly("social_margin", &Disc::social_margin)
         .def_readonly("velocity", &Disc::velocity);
 
     py::class_<LineSegment>(m, "LineSegment")
-        .def(py::init<CVector2, CVector2>(),
+        .def(py::init<Vector2, Vector2>(),
              py::arg("p1"), py::arg("p2"))
         .def_readonly("p1", &LineSegment::p1)
         .def_readonly("p2", &LineSegment::p2)
@@ -123,9 +124,12 @@ PYBIND11_MODULE(_hl_navigation, m) {
     py::class_<Controller>(m, "Controller")
         .def(py::init<>())
         .def_readwrite("state", &Controller::state)
-        .def_readwrite("agent", &Controller::agent)
-        .def("set_target_point", &Controller::set_target_point)
-        .def("set_target_pose", &Controller::set_target_point)
+        .def_readwrite("behavior", &Controller::behavior)
+        .def("set_target_point",
+             py::overload_cast<float, float, float>(&Controller::set_target_point))
+        .def("set_target_point",
+             py::overload_cast<const Vector2 &>(&Controller::set_target_point))
+        .def("set_target_pose", &Controller::set_target_pose)
         .def("update", &Controller::update)
         .def("stop", &Controller::stop)
         .def_readwrite("speed_tolerance", &Controller::speed_tolerance)

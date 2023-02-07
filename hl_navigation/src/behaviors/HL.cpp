@@ -2,36 +2,37 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "HLAgent.h"
+#include "behaviors/HL.h"
 #include <algorithm>
 
+namespace hl_navigation {
 
-void HLAgent::setTau(double value) { tau = value; }
-void HLAgent::setEta(double value) { eta = value; }
-void HLAgent::setAperture(double value) { aperture = CRadians(value); }
+void HLBehavior::setTau(float value) { tau = value; }
+void HLBehavior::setEta(float value) { eta = value; }
+void HLBehavior::setAperture(Radians value) { aperture = value; }
 
-void HLAgent::setResolution(unsigned int value) {
+void HLBehavior::setResolution(unsigned int value) {
   resolution = std::min((int)value, MAX_RESOLUTION);
 }
 
-static Real relax(Real x0, Real x1, Real tau, Real dt) {
+static float relax(float x0, float x1, float tau, float dt) {
   if (tau == 0)
     return x1;
-  // Real dt=0.1;
+  // float dt=0.1;
   return exp(-dt / tau) * (x0 - x1) + x1;
 }
 
 #if 0
-static CVector2 relax(CVector2 x0, CVector2 x1, Real tau, Real dt) {
+static Vector2 relax(Vector2 x0, Vector2 x1, float tau, float dt) {
   if (tau == 0)
     return x1;
-  // Real dt=0.1;
+  // float dt=0.1;
   return exp(-dt / tau) * (x0 - x1) + x1;
 }
 #endif
 
 static std::vector<float> relax(const std::vector<float> & v0, const std::vector<float> & v1,
-                                Real tau, Real dt) {
+                                float tau, float dt) {
   if (tau == 0)
     return v1;
   auto v2 = std::vector<float>(v0.size());
@@ -41,7 +42,7 @@ static std::vector<float> relax(const std::vector<float> & v0, const std::vector
   return v2;
 }
 
-static Twist2D relax(const Twist2D & v0, const Twist2D & v1, Real tau, Real dt) {
+static Twist2D relax(const Twist2D & v0, const Twist2D & v1, float tau, float dt) {
   if (tau == 0)
     return v1;
   return Twist2D(
@@ -51,7 +52,7 @@ static Twist2D relax(const Twist2D & v0, const Twist2D & v1, Real tau, Real dt) 
 }
 
 
-static void setDx(AgentCache &agent, CVector2 p) {
+static void setDx(AgentCache &agent, Vector2 p) {
   agent.dx = p;
   agent.centerDistance = p.norm();
 
@@ -61,16 +62,16 @@ static void setDx(AgentCache &agent, CVector2 p) {
   agent.C = p.squaredNorm() - agent.sensingMargin * agent.sensingMargin;
   agent.gamma = polar_angle(-p);
   agent.visibleAngle = M_PI_2;
-  // CRadians alpha=ASin(agent.agentSensingMargin/agent.centerDistance);
+  // Radians alpha=ASin(agent.agentSensingMargin/agent.centerDistance);
   // agent.beta1=agent.gamma-alpha;
   // agent.beta2=agent.gamma+alpha;
 }
 
 
 
-CRadians HLAgent::angleResolution() { return 2 * aperture / resolution; }
+Radians HLBehavior::angleResolution() { return 2 * aperture / resolution; }
 
-void HLAgent::debugAgents() {
+void HLBehavior::debugNeigbors() {
   printf("--------------------- AGENTS -------------------\n");
   for (agentIterator_t it = nearAgents.begin(); it != nearAgents.end(); it++) {
     printf("dx=(%.2f,%.2f), va=(%.2f, %.2f), C=%.2f\r\n", it->dx.x(),
@@ -79,20 +80,20 @@ void HLAgent::debugAgents() {
   printf("--------------------- ****** -------------------\n");
 }
 
-void HLAgent::initDistanceCache() {
+void HLBehavior::initDistanceCache() {
   unsigned int k = 0;
   for (; k < resolution; k++)
     distanceCache[k] = UNKNOWN_DIST;
 }
 
-Real HLAgent::fearedDistanceToCollisionAtRelativeAngle(CRadians relativeAngle) {
+float HLBehavior::fearedDistanceToCollisionAtRelativeAngle(Radians relativeAngle) {
   if (abs(normalize(relativeAngle)) >= aperture)
     return UNKNOWN_DIST;
   int k = indexOfRelativeAngle(relativeAngle);
   return staticDistanceCache[k];
 }
 
-unsigned int HLAgent::indexOfRelativeAngle(CRadians relativeAngle) {
+unsigned int HLBehavior::indexOfRelativeAngle(Radians relativeAngle) {
   int k = floor((normalize(relativeAngle) + aperture) / (2 * aperture) * resolution);
 
   k = k % resolution;
@@ -101,7 +102,7 @@ unsigned int HLAgent::indexOfRelativeAngle(CRadians relativeAngle) {
   return k;
 }
 
-Real HLAgent::distanceToCollisionAtRelativeAngle(CRadians relativeAngle) {
+float HLBehavior::distanceToCollisionAtRelativeAngle(Radians relativeAngle) {
   if (abs(normalize(relativeAngle)) >= aperture)
     return UNKNOWN_DIST;
   int k = indexOfRelativeAngle(relativeAngle);
@@ -114,13 +115,13 @@ Real HLAgent::distanceToCollisionAtRelativeAngle(CRadians relativeAngle) {
 
 
 
-Real HLAgent::distance_to_segment(const LineSegment & line, CRadians absolute_angle) {
-  CVector2 delta = position - line.p1;
-  double r = radius + safetyMargin;
-  double y = delta.dot(line.e2);
-  double x = delta.dot(line.e1);
-  CVector2 e = unit(absolute_angle);
-  double d = line.e2.dot(e);
+float HLBehavior::distance_to_segment(const LineSegment & line, Radians absolute_angle) {
+  Vector2 delta = position - line.p1;
+  float r = radius + safetyMargin;
+  float y = delta.dot(line.e2);
+  float x = delta.dot(line.e1);
+  Vector2 e = unit(absolute_angle);
+  float d = line.e2.dot(e);
   if (y * d >= 0) {
     // moving away
     return NO_COLLISION;
@@ -129,7 +130,7 @@ Real HLAgent::distance_to_segment(const LineSegment & line, CRadians absolute_an
     // already colliding
     return 0.0;
   }
-  double distance = -y / d - r;
+  float distance = -y / d - r;
   x = line.e1.dot(distance * e + delta);
   if (x < -r || x > line.length + r) {
     // will not collide
@@ -140,19 +141,19 @@ Real HLAgent::distance_to_segment(const LineSegment & line, CRadians absolute_an
 
 // TODO(J:revision2023): check why we need effectiveHorizon
 
-Real HLAgent::computeDistanceToCollisionAtRelativeAngle(CRadians relativeAngle,
-                                                        Real *staticCache) {
-  CRadians vangle = relativeAngle + angle;
+float HLBehavior::computeDistanceToCollisionAtRelativeAngle(Radians relativeAngle,
+                                                        float *staticCache) {
+  Radians vangle = relativeAngle + angle;
 
   //!!! Change horizon -> effectiveHorizon !!!
 
   // HACK(J): disabled effectiveHorizon to test function in python
   effectiveHorizon = horizon;
-  Real minDistance = effectiveHorizon - radius;
+  float minDistance = effectiveHorizon - radius;
 
   ////
-  Real distance;
-  double staticDistance;
+  float distance;
+  float staticDistance;
   *staticCache = minDistance;
 
   for (auto & segment : line_obstacles) {
@@ -203,10 +204,10 @@ Real HLAgent::computeDistanceToCollisionAtRelativeAngle(CRadians relativeAngle,
   return minDistance;
 }
 
-std::vector<Real> HLAgent::getDistances() {
-  std::vector<Real> d;
-  CRadians a = -aperture;
-  CRadians da = 2 * aperture / (Real)resolution;
+std::vector<float> HLBehavior::getDistances() {
+  std::vector<float> d;
+  Radians a = -aperture;
+  Radians da = 2 * aperture / (float)resolution;
   while (a < aperture) {
     d.push_back(distanceToCollisionAtRelativeAngle(a));
     a += da;
@@ -214,7 +215,7 @@ std::vector<Real> HLAgent::getDistances() {
   return d;
 }
 
-static Real penetration(AgentCache *agent) {
+static float penetration(AgentCache *agent) {
   if (agent->C > 0) {
     return 0;
   } else {
@@ -222,14 +223,14 @@ static Real penetration(AgentCache *agent) {
   }
 }
 
-void HLAgent::update_repulsive_force() {
-  repulsiveForce = CVector2(0, 0);
+void HLBehavior::update_repulsive_force() {
+  repulsiveForce = Vector2(0, 0);
   insideObstacle = false;
 
   for (obstacleIterator_t it = staticObstacles.begin();
        it != staticObstacles.end(); it++) {
     AgentCache *a = &(*it);
-    double d = penetration(a);
+    float d = penetration(a);
     if (d) {
       repulsiveForce += d * unit(a->gamma);
       insideObstacle = true;
@@ -237,7 +238,7 @@ void HLAgent::update_repulsive_force() {
   }
   for (agentIterator_t it = nearAgents.begin(); it != nearAgents.end(); it++) {
     AgentCache *a = &(*it);
-    double d = penetration(a);
+    float d = penetration(a);
     if (d) {
       repulsiveForce += d * unit(a->gamma);
       insideObstacle = true;
@@ -245,41 +246,41 @@ void HLAgent::update_repulsive_force() {
   }
 }
 
-void HLAgent::update_desired_velocity() {
+void HLBehavior::update_desired_velocity() {
   // setup();
 
-  // debugAgents();
+  // debugBehaviors();
   // debugStaticObstacles();
 
-  CVector2 agentToTarget = targetPosition - position;
-  CRadians a0 = polar_angle(agentToTarget) - angle;
-  CRadians da = angleResolution();
-  Real D = agentToTarget.norm();
+  Vector2 agentToTarget = targetPosition - position;
+  Radians a0 = polar_angle(agentToTarget) - angle;
+  Radians da = angleResolution();
+  float D = agentToTarget.norm();
   effectiveHorizon = horizon;
   // effectiveHorizon=fmin(horizon,D);
 
-  // CVector2 effectiveTarget = agentToTarget / D * effectiveHorizon;
+  // Vector2 effectiveTarget = agentToTarget / D * effectiveHorizon;
 
 
-  // printf("HLAgent: updateDesiredVelocity to %.2f, h = %.2f
+  // printf("HLBehavior: updateDesiredVelocity to %.2f, h = %.2f
   // \r\n",a0.GetValue(),horizon);
 
   // initDistanceCache();
 
-  CRadians searchAngle = 0.0;
+  Radians searchAngle = 0.0;
 
-  Real minPossibleDistanceToTarget;
+  float minPossibleDistanceToTarget;
   D = effectiveHorizon;
-  Real minDistanceToTarget = D;
-  Real d;
-  Real distanceToTarget;
-  CRadians nearestAngle = a0;
+  float minDistanceToTarget = D;
+  float d;
+  float distanceToTarget;
+  Radians nearestAngle = a0;
 
   int leftOut = 0;
   int rightOut = 0;
 
-  CRadians maxAngle(1.6);
-  // CRadians::PI_OVER_TW0;
+  Radians maxAngle(1.6);
+  // Radians::PI_OVER_TW0;
 
   while (searchAngle < maxAngle && !(leftOut == 2 && rightOut == 2)) {
     // new in paper
@@ -342,12 +343,12 @@ void HLAgent::update_desired_velocity() {
     searchAngle += da;
   }
 
-  Real nearestCollision =
+  float nearestCollision =
       fearedDistanceToCollisionAtRelativeAngle(nearestAngle);
 
   // printf("nearearest %.2f\n",nearestCollision);
 
-  double newTargetSpeed;
+  float newTargetSpeed;
   if (nearestCollision > 0) {
     newTargetSpeed = fmin(optimalSpeed, nearestCollision / eta);
   } else {
@@ -366,18 +367,18 @@ void HLAgent::update_desired_velocity() {
   //    \n",desiredSpeed,desiredAngle.GetValue());
 }
 
-void HLAgent::clear() {
+void HLBehavior::clear() {
   nearAgents.clear();
   staticObstacles.clear();
 }
 
 
-void HLAgent::add_static_obstacle(const Disc & d) {
+void HLBehavior::add_static_obstacle(const Disc & d) {
   AgentCache obstacle = makeObstacleAtPoint(d.position, d.radius, d.social_margin);
   staticObstacles.push_back(obstacle);
 }
 
-void HLAgent::add_neighbor(const Disc & d) {
+void HLBehavior::add_neighbor(const Disc & d) {
   // printf("Add obstacle at (%.2f %.2f) with v (%.2f %.2f) and r %.2f
   // \n",p.x(),p.y(),v.x(),v.y(),r);
   AgentCache agent = makeObstacleAtPoint(d.position, d.velocity, d.radius, d.social_margin);
@@ -385,7 +386,7 @@ void HLAgent::add_neighbor(const Disc & d) {
 }
 
 /*
-void HLAgent::addObstacleWithHuman(Human *human)
+void HLBehavior::addObstacleWithHuman(Human *human)
 {
   AgentCache agent=makeAgentCacheWithHuman(human);
   nearAgents.push_back(agent);
@@ -397,16 +398,16 @@ static bool compare(AgentCache first, AgentCache second) {
 }
 #endif
 
-void HLAgent::prepare() {
+void HLBehavior::prepare() {
   initDistanceCache();
   effectiveHorizon = horizon;
 }
 
-AgentCache HLAgent::makeObstacleAtPoint(CVector2 p, Real r, Real socialMargin) {
+AgentCache HLBehavior::makeObstacleAtPoint(Vector2 p, float r, float socialMargin) {
   AgentCache obstacle = AgentCache();
   obstacle.radius = r;
-  Real distance;
-  CVector2 relativePosition = relativePositionOfObstacleAt(p, r, distance);
+  float distance;
+  Vector2 relativePosition = relativePositionOfObstacleAt(p, r, distance);
   obstacle.agentSensingMargin = r;
   obstacle.sensingMargin = safetyMargin + radius + r;
   obstacle.position = p;
@@ -415,19 +416,19 @@ AgentCache HLAgent::makeObstacleAtPoint(CVector2 p, Real r, Real socialMargin) {
 }
 
 /*
-AgentCache HLAgent::makeObstacleWithHuman(Human* human)
+AgentCache HLBehavior::makeObstacleWithHuman(Human* human)
 {
   //printf("Add human agent cache ");
 
    AgentCache agent=AgentCache();
     agent.radius=radius;
 
-    CVector2 relativePosition=human->position-position;
+    Vector2 relativePosition=human->position-position;
 
 
 
-    Real distance=relativePosition.norm();
-    Real minDistance=radius+0.01+HUMAN_RADIUS;
+    float distance=relativePosition.norm();
+    float minDistance=radius+0.01+HUMAN_RADIUS;
     if(distance<minDistance)
       {
         relativePosition=relativePosition/distance*minDistance;
@@ -469,16 +470,16 @@ distanceToBeSeparated ) * (distance - distanceToBeSeparated)+ safetyMargin;
     return agent;
     }*/
 
-AgentCache HLAgent::makeObstacleAtPoint(CVector2 obstaclePosition,
-                                        CVector2 obstacleVelocity,
-                                        Real obstacleRadius,
-                                        Real socialMargin) {
+AgentCache HLBehavior::makeObstacleAtPoint(Vector2 obstaclePosition,
+                                        Vector2 obstacleVelocity,
+                                        float obstacleRadius,
+                                        float socialMargin) {
   /// TODO: eliminare radius (non lo uso)
 
   AgentCache agent = AgentCache();
   agent.radius = radius;
-  Real distance;
-  CVector2 relativePosition =
+  float distance;
+  Vector2 relativePosition =
       relativePositionOfObstacleAt(obstaclePosition, obstacleRadius, distance);
   agent.sensingMargin = (radius + obstacleRadius) +
                         marginForObstacleAtDistance(distance, obstacleRadius,
@@ -493,7 +494,7 @@ AgentCache HLAgent::makeObstacleAtPoint(CVector2 obstaclePosition,
   return agent;
 }
 
-void HLAgent::debugStaticObstacles() {
+void HLBehavior::debugStaticObstacles() {
   // if(!consoleDebugging) return;
   printf("---------------------------- Static Obstacles "
          "----------------------------\r\n");
@@ -507,17 +508,17 @@ void HLAgent::debugStaticObstacles() {
          "----------------------------\r\n");
 }
 
-Real HLAgent::distForAngle(AgentCache *agent, CRadians alpha) {
+float HLBehavior::distForAngle(AgentCache *agent, Radians alpha) {
   if (agent->C < 0) {
     if (abs(normalize(alpha - agent->gamma)) < agent->visibleAngle)
       return 0;
     return NO_COLLISION;
   }
 
-  CVector2 dv = optimalSpeed * unit(alpha) - agent->va;
-  Real A = dv.squaredNorm();
+  Vector2 dv = optimalSpeed * unit(alpha) - agent->va;
+  float A = dv.squaredNorm();
   // TODO(J): use dot prod
-  // TODO(J 2023): maybe precompute minimal distance 
+  // TODO(J 2023): maybe precompute minimal distance
   // a = optimalSpeed + agent_speed
   // A = a * a
   // B = -dist * a
@@ -525,11 +526,11 @@ Real HLAgent::distForAngle(AgentCache *agent, CRadians alpha) {
   // D = dist * dist * A - dist * dist * A + r * r * A = r * r * a * a
   // min_dist = optimalSpeed * (-B - sqrt(D)) / A = optimalSpeed * (dist * a - r * a) (a * a)
   //          = optimalSpeed * (dist - r) / (optimalSpeed + agent_speed)
-  Real B = agent->dx.x() * dv.x() + agent->dx.y() * dv.y();
+  float B = agent->dx.x() * dv.x() + agent->dx.y() * dv.y();
 
   if (B > 0)
     return NO_COLLISION;
-  Real D = B * B - A * agent->C;
+  float D = B * B - A * agent->C;
 
   if (D < 0)
     return NO_COLLISION;
@@ -537,22 +538,22 @@ Real HLAgent::distForAngle(AgentCache *agent, CRadians alpha) {
   return optimalSpeed * (-B - sqrt(D)) / A;
 }
 
-Real HLAgent::staticDistForAngle(const AgentCache *agent, CRadians alpha) {
+float HLBehavior::staticDistForAngle(const AgentCache *agent, Radians alpha) {
   if (agent->C < 0) {
     if (abs(normalize(alpha - agent->gamma)) < agent->visibleAngle)
       return 0;
     return NO_COLLISION;
   }
-  Real B = agent->dx.x() * cos(alpha) + agent->dx.y() * sin(alpha);
+  float B = agent->dx.x() * cos(alpha) + agent->dx.y() * sin(alpha);
   if (B > 0)
     return NO_COLLISION;
-  Real D = B * B - agent->C;
+  float D = B * B - agent->C;
   if (D < 0)
     return NO_COLLISION;
   return -B - sqrt(D);
 }
 
-void HLAgent::update_target_twist(float dt) {
+void HLBehavior::update_target_twist(float dt) {
   if (is_wheeled()) {
     target_wheel_speeds = relax(target_wheel_speeds, desired_wheel_speeds, tau, dt);
     target_twist = twist_from_wheel_speeds(target_wheel_speeds);
@@ -563,11 +564,11 @@ void HLAgent::update_target_twist(float dt) {
   }
 }
 
-Real *HLAgent::collisionMap() { return &distanceCache[0]; }
+float *HLBehavior::collisionMap() { return &distanceCache[0]; }
 
 
 /*
-  void HLAgent::updateVelocityCartesian ()
+  void HLBehavior::updateVelocityCartesian ()
   {
     //DEBUG_CONTROLLER("updateVelocityCartesian()\r\n");
 
@@ -581,17 +582,17 @@ speed->exp(...), angle->angle(...)
 
 
 
-    CRadians delta;
+    Radians delta;
 
-    Real v=fabs(desiredVelocity.norm()/0.05);
+    float v=fabs(desiredVelocity.norm()/0.05);
 
     if(v>1) delta=desiredVelocity.Angle();
     else
-delta=(CVector2(v,desiredVelocity.Angle())+CVector2(1-v,desiredAngle)).Angle();
+delta=(Vector2(v,desiredVelocity.Angle())+Vector2(1-v,desiredAngle)).Angle();
 
     delta=delta.SignedNormalize();
-    Real angularSpeed;
-    Real linearSpeed=0;
+    float angularSpeed;
+    float linearSpeed=0;
 
     angularSpeed=1.0/rotationTau*delta.SignedNormalize().GetValue()*0.5*axisLength;
     if(angularSpeed>maxRotationSpeed)
@@ -613,4 +614,7 @@ delta=(CVector2(v,desiredVelocity.Angle())+CVector2(1-v,desiredAngle)).Angle();
   }
 */
 
-const char * HLAgent::name = register_type<HLAgent>("HL");
+const char * HLBehavior::name = register_type<HLBehavior>("HL");
+
+
+}  // namespace hl_navigation

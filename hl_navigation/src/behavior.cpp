@@ -2,14 +2,16 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "Agent.h"
+#include "behavior.h"
+
+namespace hl_navigation {
 
 template<typename T>
 static T clamp(T value, T min, T max) {
   return std::min(std::max(value, min), max);
 }
 
-Twist2D Agent::twist_from_wheel_speeds(const WheelSpeeds & speeds) const {
+Twist2D Behavior::twist_from_wheel_speeds(const WheelSpeeds & speeds) const {
   if (type == TWO_WHEELED && speeds.size() == 2) {
     // {left, right}
     return Twist2D(0.5 * (speeds[0] + speeds[1]), 0.0, (speeds[1] - speeds[0]) / axisLength);
@@ -24,7 +26,7 @@ Twist2D Agent::twist_from_wheel_speeds(const WheelSpeeds & speeds) const {
   return Twist2D(0, 0, 0);
 }
 
-WheelSpeeds Agent::wheel_speeds_from_twist(const Twist2D & twist) const {
+WheelSpeeds Behavior::wheel_speeds_from_twist(const Twist2D & twist) const {
   if (type == TWO_WHEELED) {
      // {left, right}
      const float rotation = clamp(0.5f * twist.angular * axisLength, -maxSpeed, maxSpeed);
@@ -75,19 +77,19 @@ WheelSpeeds Agent::wheel_speeds_from_twist(const Twist2D & twist) const {
   return {};
 }
 
-CVector2 Agent::get_target_velocity() const {
-  CVector2 v = CVector2(target_twist.longitudinal, target_twist.lateral);
+Vector2 Behavior::get_target_velocity() const {
+  Vector2 v = Vector2(target_twist.longitudinal, target_twist.lateral);
   return rotate(v, angle);
 }
 
-void Agent::set_wheel_speeds(const WheelSpeeds & speeds) {
+void Behavior::set_wheel_speeds(const WheelSpeeds & speeds) {
   Twist2D twist = twist_from_wheel_speeds(speeds);
-  CVector2 v = CVector2(twist.longitudinal, twist.lateral);
+  Vector2 v = Vector2(twist.longitudinal, twist.lateral);
   velocity = rotate(v, angle);
-  angularSpeed = CRadians(twist.angular);
+  angularSpeed = twist.angular;
 }
 
-Twist2D Agent::compute_desired_twist() const {
+Twist2D Behavior::compute_desired_twist() const {
   float delta_angle = 0.0;
   if (heading_behavior == DESIRED_ANGLE) {
     delta_angle = normalize((polar_angle(desiredVelocity)- angle));
@@ -105,42 +107,42 @@ Twist2D Agent::compute_desired_twist() const {
   return Twist2D(desiredVelocity.norm(), 0.0, angular_speed);
 }
 
-bool Agent::is_wheeled() const {
+bool Behavior::is_wheeled() const {
   return type == TWO_WHEELED || type == FOUR_WHEELED_OMNI;
 }
 
-bool Agent::is_omnidirectional() const {
+bool Behavior::is_omnidirectional() const {
   return type == HOLONOMIC || type == FOUR_WHEELED_OMNI;
 }
 
-double Agent::get_rotation_tau() const { return rotationTau; }
-void Agent::set_rotation_tau(double value) { rotationTau = value; }
-double Agent::get_safety_margin() const { return safetyMargin; }
-void Agent::set_safety_margin(double value) { safetyMargin = std::max(0.0, value); }
-double Agent::get_horizon() const { return horizon; }
-void Agent::set_horizon(double value) { horizon = std::max(0.0, value); }
-double Agent::get_max_speed() const { return maxSpeed; }
-void Agent::set_max_speed(double value) {
+float Behavior::get_rotation_tau() const { return rotationTau; }
+void Behavior::set_rotation_tau(float value) { rotationTau = value; }
+float Behavior::get_safety_margin() const { return safetyMargin; }
+void Behavior::set_safety_margin(float value) { safetyMargin = std::max(0.0f, value); }
+float Behavior::get_horizon() const { return horizon; }
+void Behavior::set_horizon(float value) { horizon = std::max(0.0f, value); }
+float Behavior::get_max_speed() const { return maxSpeed; }
+void Behavior::set_max_speed(float value) {
   maxSpeed = value;
   if (is_wheeled()) {
-    maxAngularSpeed = CRadians(maxSpeed / axisLength);
+    maxAngularSpeed = maxSpeed / axisLength;
   }
 }
-CRadians Agent::get_max_angular_speed() const { return maxAngularSpeed; }
-void Agent::set_max_angular_speed(double value) {
+Radians Behavior::get_max_angular_speed() const { return maxAngularSpeed; }
+void Behavior::set_max_angular_speed(Radians value) {
   if (is_wheeled()) return;
-  maxAngularSpeed = CRadians(value);
+  maxAngularSpeed = value;
 }
-double Agent::get_optimal_speed() const { return optimalSpeed;}
-void Agent::set_optimal_speed(double value) {
-  optimalSpeed = clamp<double>(value, 0.0, maxSpeed);
+float Behavior::get_optimal_speed() const { return optimalSpeed;}
+void Behavior::set_optimal_speed(float value) {
+  optimalSpeed = clamp<float>(value, 0.0, maxSpeed);
 }
-CRadians Agent::get_optimal_angular_speed() const { return optimalAngularSpeed;}
-void Agent::set_optimal_angular_speed(double value) {
-  optimalAngularSpeed = CRadians(clamp<double>(value, 0.0, maxAngularSpeed));
+Radians Behavior::get_optimal_angular_speed() const { return optimalAngularSpeed;}
+void Behavior::set_optimal_angular_speed(Radians value) {
+  optimalAngularSpeed = clamp<Radians>(value, 0.0, maxAngularSpeed);
 }
 
-void Agent::update(float dt) {
+void Behavior::update(float dt) {
   clear();
   prepare();
   for (auto const & d : static_obstacles) {
@@ -154,7 +156,7 @@ void Agent::update(float dt) {
   update_target_twist(dt);
 }
 
-void Agent::set_desired_twist(const Twist2D & twist) {
+void Behavior::set_desired_twist(const Twist2D & twist) {
   if (is_wheeled()) {
     desired_wheel_speeds = wheel_speeds_from_twist(twist);
     desired_twist = twist_from_wheel_speeds(desired_wheel_speeds);
@@ -164,17 +166,17 @@ void Agent::set_desired_twist(const Twist2D & twist) {
   }
 }
 
-void Agent::update_target_twist(float dt) {
+void Behavior::update_target_twist(float dt) {
   target_wheel_speeds = desired_wheel_speeds;
   target_twist = desired_twist;
 }
 
-CVector2 Agent::relativePositionOfObstacleAt(CVector2 &obstaclePosition,
-                                             Real obstacleRadius,
-                                             Real &distance) {
-  CVector2 relativePosition = obstaclePosition - position;
+Vector2 Behavior::relativePositionOfObstacleAt(Vector2 &obstaclePosition,
+                                             float obstacleRadius,
+                                             float &distance) {
+  Vector2 relativePosition = obstaclePosition - position;
   distance = relativePosition.norm();
-  Real minDistance = (radius + obstacleRadius) + 0.002;
+  float minDistance = (radius + obstacleRadius) + 0.002;
   if (distance < minDistance) {
     // too near,  cannot penetrate in an obstacle (footbot or human)
     relativePosition = relativePosition / distance * minDistance;
@@ -184,8 +186,8 @@ CVector2 Agent::relativePositionOfObstacleAt(CVector2 &obstaclePosition,
   return relativePosition;
 }
 
-Real Agent::marginForObstacleAtDistance(Real distance, Real obstacleRadius,
-                                        Real safetyMargin, Real socialMargin) {
+float Behavior::marginForObstacleAtDistance(float distance, float obstacleRadius,
+                                        float safetyMargin, float socialMargin) {
   //      printf("margin: dist %.2f or %.2f sM %.2f SM
   //      %.2f\n",distance,obstacleRadius,safetyMargin,socialMargin);
 
@@ -193,9 +195,9 @@ Real Agent::marginForObstacleAtDistance(Real distance, Real obstacleRadius,
   // safety margin
   socialMargin = std::max(socialMargin, safetyMargin);
 
-  double farMargin = 1;
-  double distanceToBeSeparated = safetyMargin + radius + obstacleRadius;
-  double distanceToBeFar = farMargin + radius + obstacleRadius;
+  float farMargin = 1;
+  float distanceToBeSeparated = safetyMargin + radius + obstacleRadius;
+  float distanceToBeFar = farMargin + radius + obstacleRadius;
 
   if (distance < distanceToBeSeparated) {
     return safetyMargin;
@@ -209,4 +211,6 @@ Real Agent::marginForObstacleAtDistance(Real distance, Real obstacleRadius,
   }
 }
 
-std::map<std::string, Agent::CreateMethod> Agent::_agent_create_functions = {};
+std::map<std::string, Behavior::CreateMethod> Behavior::_agent_create_functions = {};
+
+}  // namespace hl_navigation

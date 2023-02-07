@@ -1,9 +1,9 @@
 from ._hl_navigation import (
-    Agent,
-    agent_with_name,
-    HLAgent,
-    ORCAAgent,
-    HRVOAgent,
+    Behavior,
+    behavior_with_name,
+    HLBehavior,
+    ORCABehavior,
+    HRVOBehavior,
     Twist2D,
     Disc,
     LineSegment,
@@ -14,11 +14,11 @@ from ._hl_navigation import (
 )
 
 __all__ = [
-    'Agent',
-    'agent_with_name',
-    'HLAgent',
-    'ORCAAgent',
-    'HRVOAgent',
+    'Behavior',
+    'behavior_with_name',
+    'HLBehavior',
+    'ORCABehavior',
+    'HRVOBehavior',
     'Twist2D',
     'Disc',
     'LineSegment',

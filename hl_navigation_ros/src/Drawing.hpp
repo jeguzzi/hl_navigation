@@ -38,8 +38,8 @@ struct Drawing {
             "visualization_marker/desired_velocity", 1);
   }
 
-  void drawObstacleVelocity(geometry_msgs::msg::PointStamped &p,
-                            geometry_msgs::msg::Vector3 velocity,
+  void drawObstacleVelocity(const geometry_msgs::msg::PointStamped & p,
+                            const geometry_msgs::msg::Vector3 & velocity,
                             bool relevant, float updatePeriod) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = p.header.frame_id;
@@ -75,7 +75,7 @@ struct Drawing {
     obstacles_marker_pub->publish(marker);
   }
 
-  void drawObstacle(geometry_msgs::msg::PointStamped &p, double height,
+  void drawObstacle(const geometry_msgs::msg::PointStamped &p, double height,
                     double radius, double socialMargin, bool relevant, float updatePeriod) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = p.header.frame_id;
@@ -110,7 +110,7 @@ struct Drawing {
     obstacles_marker_pub->publish(marker);
   }
 
-  void drawDesiredVelocity(CVector2 v) {
+  void drawDesiredVelocity(const hl_navigation::Vector2 & v) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = "base_link";  // ns;//ns+"/base_link";
     marker.header.stamp = node.now();
@@ -125,7 +125,7 @@ struct Drawing {
     marker.scale.z = 0.05;
 
     tf2::Quaternion quat_tf;
-    quat_tf.setRPY(0.0, 0.0, polar_angle(v));
+    quat_tf.setRPY(0.0, 0.0, hl_navigation::polar_angle(v));
     tf2::convert(quat_tf, marker.pose.orientation);
 
     marker.color.r = 1.0f;
@@ -167,7 +167,7 @@ struct Drawing {
     collision_marker_pub->publish(lines);
   }
 
-  void drawTarget(const geometry_msgs::msg::Point &msg, std::string frame_id, float minDeltaDistance) {
+  void drawTarget(const geometry_msgs::msg::Point &msg, const std::string & frame_id, float minDeltaDistance) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = frame_id;
     marker.header.stamp = node.now();

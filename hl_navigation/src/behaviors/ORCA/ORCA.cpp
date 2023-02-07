@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "ORCAAgent.h"
+#include "behaviors/ORCA.h"
 #include "RVO/Agent.h"
 #include "RVO/Definitions.h"
 #include "RVO/Obstacle.h"
@@ -10,8 +10,10 @@
 
 // TODO(J:revision2023): TIME_STEP (should pass/set) and timeHorizon (should not duplicate)
 
-ORCAAgent::ORCAAgent(agent_type_t type, float radius, float axis_length) :
-  Agent(type, radius, axis_length), useEffectiveCenter(false), timeHorizon(10.0),
+namespace hl_navigation {
+
+ORCABehavior::ORCABehavior(agent_type_t type, float radius, float axis_length) :
+  Behavior(type, radius, axis_length), useEffectiveCenter(false), timeHorizon(10.0),
   _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
   _RVOAgent->maxNeighbors_ = 1000;
   _RVOAgent->timeStep_ = TIME_STEP;
@@ -21,31 +23,31 @@ ORCAAgent::ORCAAgent(agent_type_t type, float radius, float axis_length) :
 // TODO(J: revision): why do I need agentNeighbors. It is not enught to use
 // _RVOAgent->agentNeighbors_? No, because insertObstacleNeighbor may remove some entry
 
-ORCAAgent::~ORCAAgent() = default;
+ORCABehavior::~ORCABehavior() = default;
 
-void ORCAAgent::setTimeHorizon(double value) { timeHorizon = value; }
-float ORCAAgent::getTimeHorizon(double value) const { return timeHorizon; }
+void ORCABehavior::setTimeHorizon(float value) { timeHorizon = value; }
+float ORCABehavior::getTimeHorizon(float value) const { return timeHorizon; }
 
-void ORCAAgent::setTimeStep(double value) { _RVOAgent->timeStep_  = value; }
-float ORCAAgent::getTimeStep(double value) const { return _RVOAgent->timeStep_; }
+void ORCABehavior::setTimeStep(float value) { _RVOAgent->timeStep_  = value; }
+float ORCABehavior::getTimeStep(float value) const { return _RVOAgent->timeStep_; }
 
-void ORCAAgent::prepare_line_obstacles() {
+void ORCABehavior::prepare_line_obstacles() {
   for (auto & obstacle : obstacleNeighbors) {
     _RVOAgent->insertObstacleNeighbor(obstacle.get(), rangeSq);
   }
 }
 
-void ORCAAgent::set_line_obstacles(const std::vector<LineSegment> & value) {
-  Agent::set_line_obstacles(value);
+void ORCABehavior::set_line_obstacles(const std::vector<LineSegment> & value) {
+  Behavior::set_line_obstacles(value);
   obstacleNeighbors.clear();
   for (auto & line : line_obstacles) {
     add_line_obstacle(line);
   }
 }
 
-void ORCAAgent::add_line_obstacle(const LineSegment & line) {
-  CVector2 pa = line.p1;  // - line.e1 * safetyMargin - line.e2 * safetyMargin;
-  CVector2 pb = line.p2;  // + line.e1 * safetyMargin + line.e2 * safetyMargin;
+void ORCABehavior::add_line_obstacle(const LineSegment & line) {
+  Vector2 pa = line.p1;  // - line.e1 * safetyMargin - line.e2 * safetyMargin;
+  Vector2 pb = line.p2;  // + line.e1 * safetyMargin + line.e2 * safetyMargin;
   auto a = std::make_unique<RVO::Obstacle>();
   auto b = std::make_unique<RVO::Obstacle>();
   a->point_ = RVO::Vector2(pa[0], pa[1]);
@@ -63,7 +65,7 @@ void ORCAAgent::add_line_obstacle(const LineSegment & line) {
 }
 
 // TODO(J): still need the float casting?
-void ORCAAgent::prepare() {
+void ORCABehavior::prepare() {
   if (useEffectiveCenter) {
     D = axisLength * 0.5;
     RVO::Vector2 delta = RVO::Vector2((float)cos(angle), (float)sin(angle)) * D;
@@ -96,21 +98,21 @@ void ORCAAgent::prepare() {
   prepare_line_obstacles();
 }
 
-void ORCAAgent::clear() {
+void ORCABehavior::clear() {
   _RVOAgent->obstacleNeighbors_.clear();
   _RVOAgent->agentNeighbors_.clear();
   agentNeighbors.clear();
 }
 
-void ORCAAgent::update_desired_velocity() {
+void ORCABehavior::update_desired_velocity() {
   _RVOAgent->computeNewVelocity();
-  desiredVelocity = CVector2(_RVOAgent->newVelocity_.x(), _RVOAgent->newVelocity_.y());
+  desiredVelocity = Vector2(_RVOAgent->newVelocity_.x(), _RVOAgent->newVelocity_.y());
 }
 
-Twist2D ORCAAgent::compute_desired_twist() const {
+Twist2D ORCABehavior::compute_desired_twist() const {
   if (type == TWO_WHEELED && useEffectiveCenter) {
-    CRadians desiredAngle = polar_angle(desiredVelocity) - angle;
-    double desiredSpeed = desiredVelocity.norm();
+    Radians desiredAngle = polar_angle(desiredVelocity) - angle;
+    float desiredSpeed = desiredVelocity.norm();
     if (desiredSpeed) {
       WheelSpeeds speeds = {
         static_cast<float>(
@@ -120,22 +122,22 @@ Twist2D ORCAAgent::compute_desired_twist() const {
       return twist_from_wheel_speeds(speeds);
     }
   }
-  return Agent::compute_desired_twist();
+  return Behavior::compute_desired_twist();
 }
 
 
 // TODO(old) add non penetration check!
 
 
-void ORCAAgent::add_neighbor(const Disc & d) {
+void ORCABehavior::add_neighbor(const Disc & d) {
   auto a = std::make_unique<RVO::Agent>(nullptr);
-  CVector2 p = d.position;
+  Vector2 p = d.position;
   a->velocity_ = RVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
 
   a->position_ = RVO::Vector2((float)p.x(), (float)p.y());
-  Real distance;
+  float distance;
 
-  CVector2 relativePosition = relativePositionOfObstacleAt(p, d.radius, distance);
+  Vector2 relativePosition = relativePositionOfObstacleAt(p, d.radius, distance);
   a->radius_ = d.radius + fmin(distance - d.radius - _RVOAgent->radius_ - 0.001,
                         marginForObstacleAtDistance(distance, d.radius, safetyMargin,
                                                     d.social_margin));
@@ -148,8 +150,10 @@ void ORCAAgent::add_neighbor(const Disc & d) {
   agentNeighbors.push_back(std::move(a));
 }
 
-void ORCAAgent::add_static_obstacle(const Disc & d) {
+void ORCABehavior::add_static_obstacle(const Disc & d) {
   add_neighbor(d);
 }
 
-const char * ORCAAgent::name = register_type<ORCAAgent>("ORCA");
+const char * ORCABehavior::name = register_type<ORCABehavior>("ORCA");
+
+}  // namespace hl_navigation

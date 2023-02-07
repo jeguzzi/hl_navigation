@@ -14,11 +14,12 @@
 
 typedef unsigned int uint;
 
-using CVector2 = Eigen::Vector2f;
-using CRadians = float;
-using Real = float;
+namespace hl_navigation {
 
-CRadians inline polar_angle(const CVector2 & v) {
+using Vector2 = Eigen::Vector2f;
+using Radians = float;
+
+Radians inline polar_angle(const Vector2 & v) {
   return std::atan2(v.y(), v.x());
 }
 
@@ -32,13 +33,15 @@ float inline normalize(float v) {
   return v;
 }
 
-inline CVector2 unit(float angle) {
+inline Vector2 unit(float angle) {
   return {cos(angle), sin(angle)};
 }
 
-inline CVector2 rotate(const CVector2 v, float angle) {
+inline Vector2 rotate(const Vector2 v, float angle) {
   Eigen::Rotation2D<float> rot(angle);
   return rot * v;
+}
+
 }
 
 #endif

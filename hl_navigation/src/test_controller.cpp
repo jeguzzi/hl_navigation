@@ -2,16 +2,18 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "Agent.h"
-#include "Controller.h"
+#include "behavior.h"
+#include "controller.h"
 #include <iostream>
 #include <iterator>
 #include <vector>
 
 // Should also add the wheels
 
+using namespace hl_navigation;
+
 static void show_usage(std::string name) {
-  std::vector<std::string> keys = Agent::behavior_names();
+  std::vector<std::string> keys = Behavior::behavior_names();
   std::ostringstream behaviors;
   // Dump all keys
   std::copy(keys.begin(), keys.end(), std::ostream_iterator<std::string>(behaviors, ", "));
@@ -50,37 +52,37 @@ int main(int argc, char *argv[]) {
       return 0;
     }
   }
-  auto agent = Agent::agent_with_name(behavior_name, HOLONOMIC, 0.1);
-  if (!agent) {
+  auto behavior = Behavior::behavior_with_name(behavior_name, HOLONOMIC, 0.1);
+  if (!behavior) {
     printf("No behavior with name %s\n", behavior_name);
     exit(1);
   }
-  const auto& r = *agent.get();
+  const auto& r = *behavior.get();
   printf("Use behavior %s - %s\n", behavior_name, typeid(r).name());
   float dt = 0.1;
-  agent->set_max_speed(1.0);
-  agent->set_optimal_speed(1.0);
-  agent->set_horizon(1.0);
-  agent->position = CVector2(0.0f, 0.0f);
-  agent->velocity = CVector2(0.0f, 0.0f);
+  behavior->set_max_speed(1.0);
+  behavior->set_optimal_speed(1.0);
+  behavior->set_horizon(1.0);
+  behavior->position = Vector2(0.0f, 0.0f);
+  behavior->velocity = Vector2(0.0f, 0.0f);
   // Go to 1, 0
-  controller.agent = agent.get();
+  controller.behavior = behavior.get();
   controller.set_target_point(1.0, 0.0, 0.0);
   controller.distance_tolerance = 0.1;
   controller.speed_tolerance = 0.05;
   float t = 0.0;
   printf("Controller state %d\n", controller.state);
-  printf("Start loop @ (%.3f, %.3f)\n", agent->position.x(), agent->position.y());
+  printf("Start loop @ (%.3f, %.3f)\n", behavior->position.x(), behavior->position.y());
   while (controller.state != Controller::IDLE) {
     controller.update(dt);
     // TODO(J): expose absolute and relative
-    agent->velocity = agent->get_target_velocity();
-    agent->angle += CRadians(agent->target_twist.angular) * dt;
-    agent->position += agent->velocity * dt;
+    behavior->velocity = behavior->get_target_velocity();
+    behavior->angle += behavior->target_twist.angular * dt;
+    behavior->position += behavior->velocity * dt;
     t += dt;
   }
   printf("\nEnd loop after %.1f s @ (%.3f, %.3f), (%.3f %.3f)\n", t,
-         agent->position.x(), agent->position.y(),
-         agent->velocity.x(), agent->velocity.y());
+         behavior->position.x(), behavior->position.y(),
+         behavior->velocity.x(), behavior->velocity.y());
   return 0;
 }

@@ -29,18 +29,19 @@
 #include <geos/geom/Envelope.h>
 #include <geos/index/strtree/TemplateSTRtree.h>
 
-#include "hl_navigation/Agent.h"
-#include "hl_navigation/Controller.h"
+#include "hl_navigation/behavior.h"
+#include "hl_navigation/controller.h"
 
 
 using BoundingBox = geos::geom::Envelope;
+using namespace hl_navigation;
 
-class _Agent;
+class Agent;
 class World;
 
 struct Task {
   explicit Task() { }
-  virtual void update(_Agent * agent) { }
+  virtual void update(Agent * agent) { }
   virtual bool done() const { return false; }
 
 };
@@ -49,7 +50,7 @@ class StateEstimation {
  public:
   StateEstimation(const World * world): world(world) { }
 
-    virtual std::vector<Disc> neighbors(const _Agent * agent) const {
+    virtual std::vector<Disc> neighbors(const Agent * agent) const {
         return {};
     }
 
@@ -58,15 +59,15 @@ class StateEstimation {
 };
 
 
-class _Agent {
+class Agent {
  public:
-  _Agent(const char * behavior_name, float mass, float radius,
+  Agent(const char * behavior_name, float mass, float radius,
          std::unique_ptr<Task> && task, std::unique_ptr<StateEstimation> && estimation, float control_period) :
          control_period(control_period), control_deadline(0.0),
          mass(mass), radius(radius),
          task(std::move(task)), state_estimation(std::move(estimation)), nav_controller(),
-         nav_behavior(Agent::agent_with_name(behavior_name, HOLONOMIC, radius, 0.0)) {
-           nav_controller.agent = nav_behavior.get();
+         nav_behavior(Behavior::behavior_with_name(behavior_name, HOLONOMIC, radius, 0.0)) {
+           nav_controller.behavior = nav_behavior.get();
 //           printf("Use behavior %s - %s\n", behavior_name, typeid(*nav_behavior.get()).name());
          }
 
@@ -77,15 +78,15 @@ class _Agent {
     }
     control_deadline += control_period;
     task->update(this);
-    nav_controller.agent->set_neighbors(state_estimation->neighbors(this));
-    nav_controller.agent->velocity = velocity;
-    nav_controller.agent->position = position;
+    nav_controller.behavior->set_neighbors(state_estimation->neighbors(this));
+    nav_controller.behavior->velocity = velocity;
+    nav_controller.behavior->position = position;
     nav_controller.update(dt);
-    target_velocity = nav_controller.agent->get_target_velocity();
+    target_velocity = nav_controller.behavior->get_target_velocity();
   }
 
   Controller nav_controller;
-  std::unique_ptr<Agent> nav_behavior;
+  std::unique_ptr<Behavior> nav_behavior;
   float radius;
 
   void update_physics(float dt) {
@@ -118,7 +119,7 @@ class World {
     for (auto & a : agents) {
       a.update_physics(time_step);
     }
-    update_agents_strtree();
+    updateAgents_strtree();
     update_collisions();
   }
 
@@ -128,8 +129,8 @@ class World {
     }
   }
 
-  std::vector<_Agent *> get_neighbors(const BoundingBox & bb) const {
-    std::vector<_Agent *> rs;
+  std::vector<Agent *> get_neighbors(const BoundingBox & bb) const {
+    std::vector<Agent *> rs;
     // std::transform(agents.cbegin(), agents.cend(), std::back_inserter(rs), [](const auto & a) { return &a; });
     agent_index->query(bb, rs);
     return rs;
@@ -144,13 +145,13 @@ class World {
   }
 
   float time_step;
-  std::vector<_Agent> agents;
+  std::vector<Agent> agents;
   std::vector<Disc> obstacles;
   std::vector<LineSegment> walls;
 
  protected:
 
-  void resolve_collision(_Agent* a1, _Agent* a2) {
+  void resolve_collision(Agent * a1, Agent * a2) {
     auto delta = a1->position - a2->position;
     float penetration = delta.norm() - a1->radius - a2->radius;
     if (penetration > 0) {
@@ -177,8 +178,8 @@ class World {
 
   void update_collisions() {
     for (size_t i = 0; i < agents.size(); i++) {
-        _Agent * a1 = &agents[i];
-      agent_index->query(agent_envelops[i], [this, a1](_Agent * a2) {
+        Agent * a1 = &agents[i];
+      agent_index->query(agent_envelops[i], [this, a1](Agent * a2) {
         if (a1 < a2) {
           resolve_collision(a1, a2);
         }
@@ -189,12 +190,12 @@ class World {
           a.collision_correction = Eigen::Vector2f(0.0, 0.0);
       }
     //  TODO(Jerome): queryPairs not yet released ... but does more or less the above
-    //  agent_index->queryPairs([this](_Agent * a1, _Agent * a2) { resolve_collision(a1, a2); });
+    //  agent_index->queryPairs([this](Agent * a1, Agent * a2) { resolve_collision(a1, a2); });
   }
 
-  void update_agents_strtree() {
+  void updateAgents_strtree() {
     agent_envelops.clear();
-    agent_index = std::make_unique<geos::index::strtree::TemplateSTRtree<_Agent *>>(agents.size());
+    agent_index = std::make_unique<geos::index::strtree::TemplateSTRtree<Agent *>>(agents.size());
     for (const auto & agent : agents) {
       auto & bb = agent_envelops.emplace_back(
           agent.position[0] - agent.radius, agent.position[0] + agent.radius,
@@ -203,7 +204,7 @@ class World {
     }
   }
 
-  std::unique_ptr<geos::index::strtree::TemplateSTRtree<_Agent *>> agent_index;
+  std::unique_ptr<geos::index::strtree::TemplateSTRtree<Agent *>> agent_index;
   std::vector<geos::geom::Envelope> agent_envelops;
 
 };
@@ -250,7 +251,7 @@ struct WayPointsTask : Task {
     Task(),
     waypoints(_waypoints), waypoint(waypoints.begin()), loop(loop) {}
 
-  void update(_Agent * agent) override {
+  void update(Agent * agent) override {
     if (agent->nav_controller.state == Controller::IDLE) {
       if (waypoint != waypoints.end()) {
         agent->nav_controller.set_target_point(*waypoint);
@@ -275,9 +276,9 @@ class BoundedStateEstimation : public StateEstimation{
     BoundedStateEstimation(const World * world, float field_of_view, float range_of_view):
         StateEstimation(world), field_of_view(field_of_view), range_of_view(range_of_view) { }
 
-  virtual std::vector<Disc> neighbors(const _Agent * agent) const override {
+  virtual std::vector<Disc> neighbors(const Agent * agent) const override {
     std::vector<Disc> ns;
-    for (const _Agent * neighbor : world->get_neighbors(bounding_box(agent))) {
+    for (const Agent * neighbor : world->get_neighbors(bounding_box(agent))) {
       if (neighbor != agent && visible(agent, neighbor)) {
         ns.push_back(perceive_neighbor(agent, neighbor));
       }
@@ -285,13 +286,13 @@ class BoundedStateEstimation : public StateEstimation{
     return ns;
   }
 
-  virtual Disc perceive_neighbor(const _Agent * agent, const _Agent * neighbor) const {
+  virtual Disc perceive_neighbor(const Agent * agent, const Agent * neighbor) const {
     return Disc(neighbor->position, neighbor->radius, 0.0, neighbor->velocity);
   }
 
-  virtual bool visible(const _Agent * agent, const _Agent * neighbor) const { return true; }
+  virtual bool visible(const Agent * agent, const Agent * neighbor) const { return true; }
 
-   BoundingBox bounding_box(const _Agent * agent) const {
+   BoundingBox bounding_box(const Agent * agent) const {
         return {agent->position[0] - range_of_view, agent->position[0] + range_of_view, agent->position[1] - range_of_view, agent->position[1] + range_of_view};
    }
 
