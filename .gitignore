@@ -53,3 +53,7 @@ qtcreator-*
 CATKIN_IGNORE
 archive
 build_*
+xcode
+*.mp4
+*.h5
+*.pdf
