@@ -12,6 +12,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+typedef unsigned int uint;
+
 using CVector2 = Eigen::Vector2f;
 using CRadians = float;
 using Real = float;

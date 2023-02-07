@@ -5,6 +5,8 @@
 #ifndef _HLAGENT_H_
 #define _HLAGENT_H_
 
+#include <list>
+
 #include "Agent.h"
 
 // TODO(J): verify if behavior for tau < step is correct (non smooth)
@@ -12,12 +14,12 @@
 // trajectory planning
 
 #define UNKNOWN_DIST -2
-#define MAX_RESOLUTION 301
+#define MAX_RESOLUTION 361
 #define NO_COLLISION -1
 // configuration
 
 #define DEFAULT_APERTURE M_PI
-#define DEFAULT_RESOLUTION 360
+#define DEFAULT_RESOLUTION 101
 #define DEFAULT_TAU 0.1
 #define MIN_TAU 0.1
 
@@ -54,7 +56,7 @@ public:
   HLAgent(agent_type_t type, float radius, float axis_length=0.0) :
     Agent(type, radius, axis_length),
     resolution(DEFAULT_RESOLUTION), aperture(DEFAULT_APERTURE), tau(DEFAULT_TAU),
-    eta(tau) {}
+    eta(tau), nearAgents(), staticObstacles() {}
   ~HLAgent() {}
 
 
@@ -96,7 +98,7 @@ private:
                                                  Real *staticCache);
   Real fearedDistanceToCollisionAtRelativeAngle(CRadians angle);
   Real distForAngle(AgentCache *agent, CRadians angle);
-  Real staticDistForAngle(AgentCache *agent, CRadians angle);
+  Real staticDistForAngle(const AgentCache *agent, CRadians angle);
   Real distanceToCollisionAtRelativeAngle(CRadians angle);
 
 

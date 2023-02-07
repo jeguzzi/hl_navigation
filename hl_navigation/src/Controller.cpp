@@ -10,6 +10,13 @@ void Controller::set_target_point(float x, float y, float z) {
   state = MOVE;
 }
 
+// TODO(J 2023): Complete 2D and 3D. Ignore 3D if setting target point 2D
+void Controller::set_target_point(const CVector2 & point) {
+  target_type = POINT;
+  agent->targetPosition = point;
+  state = MOVE;
+}
+
 void Controller::set_pose(float x, float y, float z_, float theta) {
   z = z_;
   agent->position = CVector2(x, y);

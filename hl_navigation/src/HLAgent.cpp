@@ -517,6 +517,14 @@ Real HLAgent::distForAngle(AgentCache *agent, CRadians alpha) {
   CVector2 dv = optimalSpeed * unit(alpha) - agent->va;
   Real A = dv.squaredNorm();
   // TODO(J): use dot prod
+  // TODO(J 2023): maybe precompute minimal distance 
+  // a = optimalSpeed + agent_speed
+  // A = a * a
+  // B = -dist * a
+  // C = dist * dist - r * r
+  // D = dist * dist * A - dist * dist * A + r * r * A = r * r * a * a
+  // min_dist = optimalSpeed * (-B - sqrt(D)) / A = optimalSpeed * (dist * a - r * a) (a * a)
+  //          = optimalSpeed * (dist - r) / (optimalSpeed + agent_speed)
   Real B = agent->dx.x() * dv.x() + agent->dx.y() * dv.y();
 
   if (B > 0)
@@ -529,7 +537,7 @@ Real HLAgent::distForAngle(AgentCache *agent, CRadians alpha) {
   return optimalSpeed * (-B - sqrt(D)) / A;
 }
 
-Real HLAgent::staticDistForAngle(AgentCache *agent, CRadians alpha) {
+Real HLAgent::staticDistForAngle(const AgentCache *agent, CRadians alpha) {
   if (agent->C < 0) {
     if (abs(normalize(alpha - agent->gamma)) < agent->visibleAngle)
       return 0;

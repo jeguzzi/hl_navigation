@@ -7,8 +7,8 @@
 
 #include "common.h"
 #include <algorithm>
-#include <list>
 #include <map>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -80,7 +80,7 @@ public:
     desiredVelocity(0.0, 0.0), desired_twist(0.0, 0.0, 0.0), target_twist(0.0, 0.0, 0.0),
     type(type), axisLength(axis_length), radius(radius), maxSpeed(10000.0),
     horizon(0.0), safetyMargin(0.0), rotationTau(DEFAULT_ROTATION_TAU), optimalSpeed(0.0),
-    heading_behavior(DESIRED_ANGLE), static_obstacles(), neighbors() {
+    heading_behavior(DESIRED_ANGLE), static_obstacles(), neighbors(), line_obstacles() {
       if(type == TWO_WHEELED)
         target_wheel_speeds = std::vector<float>(2, 0.0);
       if(type == FOUR_WHEELED_OMNI)
@@ -153,9 +153,9 @@ protected:
   virtual void update_repulsive_force() { };
 
 
-  virtual void add_neighbor(const Disc & disc) = 0;
-  virtual void add_static_obstacle(const Disc & disc) = 0;
-  virtual void clear() = 0;
+  virtual void add_neighbor(const Disc & disc) { };
+  virtual void add_static_obstacle(const Disc & disc) { };
+  virtual void clear() { };
   virtual void prepare() { }
 
   virtual Twist2D compute_desired_twist() const;

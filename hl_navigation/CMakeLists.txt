@@ -8,14 +8,20 @@ endif()
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-find_package(ament_cmake REQUIRED)
+# set(CMAKE_BUILD_TYPE Release)
+# set(CMAKE_CXX_FLAGS_RELEASE "-Os")
+# set(CMAKE_C_FLAGS_RELEASE "-Os")
+
+# set(CMAKE_CXX_CLANG_TIDY "/usr/local/opt/llvm/bin/clang-tidy;-checks=*")
+
+# find_package(ament_cmake REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 set(orca_IMPLEMENTATIONS
@@ -41,6 +47,7 @@ include_directories(include)
 add_library(hl_navigation SHARED
   src/Controller.cpp
   src/Agent.cpp
+  src/Dummy.cpp
   src/HLAgent.cpp
   src/ORCAAgent.cpp
   src/HRVOAgent.cpp
@@ -50,8 +57,8 @@ add_library(hl_navigation SHARED
 
 target_link_libraries(hl_navigation Eigen3::Eigen)
 
-ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
-ament_export_dependencies(Eigen3)
+# ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
+# ament_export_dependencies(Eigen3)
 
 
 add_executable(test_behavior src/test_behavior.cpp)
@@ -62,9 +69,12 @@ add_executable(test_controller src/test_controller.cpp)
 target_link_libraries(test_controller hl_navigation)
 add_dependencies(test_controller hl_navigation)
 
+add_executable(benchmark src/benchmark.cpp)
+target_link_libraries(benchmark hl_navigation)
+add_dependencies(benchmark hl_navigation)
 
 install(TARGETS
-  test_behavior test_controller
+  test_behavior test_controller benchmark
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -81,7 +91,7 @@ install(
   INCLUDES DESTINATION include
 )
 
-ament_package()
+# ament_package()
 
 # See https://www.foonathan.net/2016/03/cmake-install/
 # meglio fare uno step intermedio che separa i package (ROS/non ROS) ma che usa ament_cmake.

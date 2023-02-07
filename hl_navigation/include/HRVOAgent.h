@@ -12,6 +12,8 @@ namespace HRVO
     class Agent;
 }
 
+// TODO(J:revision2023): verify DIFFERENTIAL_DRIVE
+
 class HRVOAgent : public Agent {
 public:
   HRVOAgent(agent_type_t type, float radius, float axis_length=0.0);

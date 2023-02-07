@@ -47,6 +47,8 @@ public:
   void set_pose(float x, float y, float z, float theta);
   void set_target_point(float x, float y, float z);
   void set_target_pose(float x, float y, float z, float theta);
+  void set_target_point(const CVector2 & point);
+
   State state;
   Agent *agent;
   void update(float dt);
