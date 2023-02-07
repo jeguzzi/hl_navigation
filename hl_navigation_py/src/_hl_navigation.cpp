@@ -100,6 +100,15 @@ PYBIND11_MODULE(_hl_navigation, m) {
         .def_readonly("e2", &LineSegment::e2)
         .def_readonly("length", &LineSegment::length);
 
+    py::class_<Cylinder>(m, "Cylinder")
+        .def(py::init<Vector3, float, float, float, Vector3>(),
+             py::arg("position"), py::arg("radius"), py::arg("height") = -1.0,
+             py::arg("social_margin") = 0.0, py::arg("velocity") = Vector2(0.0, 0.0))
+        .def_readonly("center", &Cylinder::position)
+        .def_readonly("radius", &Cylinder::radius)
+        .def_readonly("social_margin", &Cylinder::social_margin)
+        .def_readonly("velocity", &Cylinder::velocity);
+
     py::enum_<agent_type_t>(m, "AgentType")
         .value("HOLONOMIC", agent_type_t::HOLONOMIC)
         .value("TWO_WHEELED", agent_type_t::TWO_WHEELED)
@@ -126,11 +135,22 @@ PYBIND11_MODULE(_hl_navigation, m) {
         .def_readwrite("state", &Controller::state)
         .def_readwrite("behavior", &Controller::behavior)
         .def("set_target_point",
-             py::overload_cast<float, float, float>(&Controller::set_target_point))
+             py::overload_cast<const Vector3 &>(&Controller::set_target_point))
         .def("set_target_point",
              py::overload_cast<const Vector2 &>(&Controller::set_target_point))
-        .def("set_target_pose", &Controller::set_target_pose)
+        .def("set_target_pose",
+             py::overload_cast<const Vector3 &, Radians>(&Controller::set_target_pose))
+        .def("set_target_pose",
+              py::overload_cast<const Vector2 &, Radians>(&Controller::set_target_pose))
+        .def("set_pose",
+             py::overload_cast<const Vector3 &, Radians>(&Controller::set_pose))
+        .def("set_pose",
+             py::overload_cast<const Vector2 &, Radians>(&Controller::set_pose))
         .def("update", &Controller::update)
+        .def("set_neighbors",
+             py::overload_cast<const std::vector<Disc> &>(&Controller::set_neighbors))
+        .def("set_neighbors",
+             py::overload_cast<const std::vector<Cylinder> &>(&Controller::set_neighbors))
         .def("stop", &Controller::stop)
         .def_readwrite("speed_tolerance", &Controller::speed_tolerance)
         .def_readwrite("angle_tolerance", &Controller::speed_tolerance)

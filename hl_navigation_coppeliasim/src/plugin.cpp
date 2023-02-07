@@ -48,13 +48,15 @@ class Plugin : public sim::Plugin {
 
   void set_target_position(set_target_position_in *in, set_target_position_out *out) {
     if (in->handle < controllers.size()) {
-      controllers[in->handle]->set_target_point(in->position[0], in->position[1], in->position[2]);
+      controllers[in->handle]->set_target_point(
+          Vector3{in->position[0], in->position[1], in->position[2]});
     }
   }
 
   void set_pose(set_pose_in *in, set_pose_out *out) {
     if (in->handle < controllers.size()) {
-      controllers[in->handle]->set_pose(in->pose[0], in->pose[1], in->pose[2], in->pose[3]);
+      controllers[in->handle]->set_pose(
+        Vector3{in->pose[0], in->pose[1], in->pose[2]}, in->pose[3]);
     }
   }
 

@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
   behavior->velocity = Vector2(0.0f, 0.0f);
   // Go to 1, 0
   controller.behavior = behavior.get();
-  controller.set_target_point(1.0, 0.0, 0.0);
+  controller.set_target_point(Vector3{1.0, 0.0, 0.0});
   controller.distance_tolerance = 0.1;
   controller.speed_tolerance = 0.05;
   float t = 0.0;

@@ -211,7 +211,8 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     }
     // CHANGED: We don't assume anymore that twist and pose are in the same
     // frame!
-    set_pose(pose.position.x, pose.position.y, pose.position.z, tf2::getYaw(pose.orientation));
+    set_pose(Vector3{pose.position.x, pose.position.y, pose.position.z},
+             tf2::getYaw(pose.orientation));
   }
 
   bool setTargetPointFromMsg(const geometry_msgs::msg::PointStamped &msg) {
@@ -228,7 +229,7 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
           odom_frame.c_str());
       return false;
     }
-    set_target_point(targetPoint.point.x, targetPoint.point.y, targetPoint.point.z);
+    set_target_point(Vector3{targetPoint.point.x, targetPoint.point.y, targetPoint.point.z});
     if (drawing_enabled) {
         drawing.drawTarget(targetPoint.point, targetPoint.header.frame_id, distance_tolerance);
     }
@@ -241,9 +242,9 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     geometry_msgs::msg::PoseStamped targetPose;
     if (!inOdomFrame(msg, targetPose))
       return false;
-    set_target_pose(targetPose.pose.position.x, targetPose.pose.position.y,
-                  targetPose.pose.position.z,
-                  tf2::getYaw(targetPose.pose.orientation));
+    set_target_pose(Vector3{targetPose.pose.position.x, targetPose.pose.position.y,
+                            targetPose.pose.position.z},
+                    tf2::getYaw(targetPose.pose.orientation));
     if (drawing_enabled) {
         drawing.drawTarget(targetPose.pose.position,
                            targetPose.header.frame_id, distance_tolerance);
@@ -321,36 +322,27 @@ class ROSControllerNode : public Controller, public rclcpp::Node {
     }
   }
 
-// TODO(J): move 3D obstacle logic to
-
   void setObstaclesFromMessage(
       const hl_navigation_msgs::msg::Obstacles &obstacles_msg) {
     if (odom_frame == "")
       return;
-    std::vector<Disc> obstacles;
+    std::vector<Cylinder> obstacles;
     for (auto msg : obstacles_msg.obstacles) {
       geometry_msgs::msg::PointStamped topPosition;
       geometry_msgs::msg::Vector3Stamped velocity;
       if (!(inOdomFrame(msg.top_position, topPosition) &&
             inOdomFrame(msg.velocity, velocity)))
         continue;
-      double minZ = topPosition.point.z - msg.height;
-      double maxZ = topPosition.point.z;
-      bool relevant = false;
-      // Consider the cylindric obstacles iff it intersects the strip z-targetZ
-      if (!((z < minZ && targetZ < minZ) || (z > maxZ && targetZ > maxZ))) {
-        relevant = true;
-        Vector2 p(topPosition.point.x, topPosition.point.y);
-        Vector2 v(velocity.vector.x, velocity.vector.y);
-        obstacles.emplace_back(p, msg.radius, msg.social_margin, v);
-      }
+      Vector3 p{topPosition.point.x, topPosition.point.y, topPosition.point.z - msg.height};
+      Vector3 v(velocity.vector.x, velocity.vector.y, velocity.vector.z);
+      obstacles.emplace_back(p, msg.radius, msg.height, msg.social_margin, v);
       if (drawing_enabled) {
         drawing.drawObstacle(topPosition, msg.height, msg.radius,
-                             msg.social_margin, relevant, updatePeriod);
-        drawing.drawObstacleVelocity(topPosition, velocity.vector, relevant, updatePeriod);
+                             msg.social_margin, true, updatePeriod);
+        drawing.drawObstacleVelocity(topPosition, velocity.vector, true, updatePeriod);
       }
     }
-    behavior->set_neighbors(obstacles);
+    set_neighbors(obstacles);
   }
 
   void readStaticParameters() {

@@ -5,32 +5,84 @@
 
 namespace hl_navigation {
 
-void Controller::set_target_point(float x, float y, float z) {
+void Controller::set_target_point(const Vector3 & xyz) {
   target_type = POINT;
-  behavior->targetPosition = Vector2(x, y);
-  targetZ = z;
+  target_has_z = true;
+  behavior->targetPosition = xyz.head<2>();
+  targetZ = xyz[2];
   state = MOVE;
 }
 
-// TODO(J 2023): Complete 2D and 3D. Ignore 3D if setting target point 2D
-void Controller::set_target_point(const Vector2 & point) {
+void Controller::set_target_point(const Vector2 & xy) {
   target_type = POINT;
-  behavior->targetPosition = point;
+  target_has_z = false;
+  behavior->targetPosition = xy;
   state = MOVE;
 }
 
-void Controller::set_pose(float x, float y, float z_, Radians theta) {
-  z = z_;
-  behavior->position = Vector2(x, y);
+void Controller::set_pose(const Vector2 & xy, Radians theta) {
+  has_z = false;
+  behavior->position = xy;
   behavior->angle = theta;
 }
 
-void Controller::set_target_pose(float x, float y, float z, Radians theta) {
+void Controller::set_pose(const Vector3 & xyz, Radians theta) {
+  z = xyz[2];
+  has_z = true;
+  behavior->position = xyz.head<2>();
+  behavior->angle = theta;
+}
+
+void Controller::set_target_pose(const Vector3 & xyz, Radians theta) {
   target_type = POSE;
-  behavior->targetPosition = Vector2(x, y);
+  target_has_z = true;
+  behavior->targetPosition = xyz.head<2>();
   behavior->targetAngle = theta;
-  targetZ = z;
+  targetZ = xyz[2];
   state = MOVE;
+}
+
+void Controller::set_target_pose(const Vector2 & xy, Radians theta) {
+  target_type = POSE;
+  target_has_z = false;
+  behavior->targetPosition = xy;
+  behavior->targetAngle = theta;
+  state = MOVE;
+}
+
+void Controller::set_neighbors(const std::vector<Disc> & neighbors) {
+  behavior->set_neighbors(neighbors);
+}
+
+static bool overlaps(float a1, float a2, float b1, float b2) {
+  return b1 <= a2 || a1 <= b2;
+}
+
+// TODO(J): filter becomes outdated when z or target z changes!!!
+
+void Controller::set_neighbors(const std::vector<Cylinder> & neighbors) {
+  std::vector<Disc> neighbors_2d;
+  for (const auto & cylinder : neighbors) {
+    if (in_3d() && cylinder.height > 0) {
+      float z1, z2;
+      if (target_has_z) {
+        if (targetZ < z) {
+          z1 = targetZ;
+          z2 = z;
+        } else {
+          z2 = targetZ;
+          z1 = z;
+        }
+      } else {
+        z1 = z2 = z;
+      }
+      if (!overlaps(cylinder.position[2], cylinder.position[2] + cylinder.height, z1, z2)) {
+          continue;
+      }
+    }
+    neighbors_2d.push_back(cylinder.disc());
+  }
+  behavior->set_neighbors(neighbors_2d);
 }
 
 void Controller::turn() { state = TURN; }
@@ -88,13 +140,17 @@ void Controller::update_target_state() {
 }
 
 void Controller::update_vertical_velocity() {
+  if (in_3d() && target_has_z) {
   // TODO(old) complete with obstacle avoidance
-  float desiredVerticalSpeed = (targetZ - z) / tauZ;
-  if (desiredVerticalSpeed > optimalVerticalSpeed)
-    desiredVerticalSpeed = optimalVerticalSpeed;
-  else if (desiredVerticalSpeed < -optimalVerticalSpeed)
-    desiredVerticalSpeed = -optimalVerticalSpeed;
-  velocityZ = velocityZ + (desiredVerticalSpeed - velocityZ) / tauZ;
+    float desiredVerticalSpeed = (targetZ - z) / tauZ;
+    if (desiredVerticalSpeed > optimalVerticalSpeed)
+      desiredVerticalSpeed = optimalVerticalSpeed;
+    else if (desiredVerticalSpeed < -optimalVerticalSpeed)
+      desiredVerticalSpeed = -optimalVerticalSpeed;
+    velocityZ = velocityZ + (desiredVerticalSpeed - velocityZ) / tauZ;
+  } else {
+    velocityZ = 0.0;
+  }
 }
 
 void Controller::set_target_twist(const Twist2D & twist, float vertical_speed) { }
@@ -137,7 +193,8 @@ void Controller::update(float dt) {
   updated_control();
 }
 
-Controller::Controller() : state(IDLE) {}
+Controller::Controller(bool limit_to_2d) :
+  state(IDLE), limit_to_2d(limit_to_2d), has_z(false), target_has_z(false) {}
 
 Controller::~Controller() { stop(); }
 

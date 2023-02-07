@@ -65,7 +65,7 @@ class Agent {
          std::unique_ptr<Task> && task, std::unique_ptr<StateEstimation> && estimation, float control_period) :
          control_period(control_period), control_deadline(0.0),
          mass(mass), radius(radius),
-         task(std::move(task)), state_estimation(std::move(estimation)), nav_controller(),
+         task(std::move(task)), state_estimation(std::move(estimation)), nav_controller(false),
          nav_behavior(Behavior::behavior_with_name(behavior_name, HOLONOMIC, radius, 0.0)) {
            nav_controller.behavior = nav_behavior.get();
 //           printf("Use behavior %s - %s\n", behavior_name, typeid(*nav_behavior.get()).name());
