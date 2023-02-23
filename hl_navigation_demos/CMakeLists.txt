@@ -33,7 +33,7 @@ install(TARGETS
 )
 
 install(PROGRAMS
-  script/ros script/enki script/native
+  script/ros script/enki script/native_py
   DESTINATION lib/${PROJECT_NAME}
 )
 
