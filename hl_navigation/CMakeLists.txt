@@ -44,7 +44,6 @@ set(HRVO
 include_directories(include)
 
 add_library(hl_navigation SHARED
-  src/controller.cpp
   src/behavior.cpp
   src/behaviors/dummy.cpp
   src/behaviors/HL.cpp
@@ -52,6 +51,8 @@ add_library(hl_navigation SHARED
   ${ORCA}
   src/behaviors/HRVO/HRVO.cpp
   ${HRVO}
+  src/controller.cpp
+  src/controller_3d.cpp
 )
 
 target_link_libraries(hl_navigation Eigen3::Eigen)
@@ -68,18 +69,27 @@ add_executable(test_controller src/test_controller.cpp)
 target_link_libraries(test_controller hl_navigation)
 add_dependencies(test_controller hl_navigation)
 
+add_executable(test_controller_3d src/test_controller_3d.cpp)
+target_link_libraries(test_controller_3d hl_navigation)
+add_dependencies(test_controller_3d hl_navigation)
+
+add_executable(test_controller_async src/test_controller_async.cpp)
+target_link_libraries(test_controller_async hl_navigation)
+add_dependencies(test_controller_async hl_navigation)
+
 add_executable(benchmark src/benchmark.cpp)
 target_link_libraries(benchmark hl_navigation)
 add_dependencies(benchmark hl_navigation)
 
 install(TARGETS
-  test_behavior test_controller benchmark
+  test_behavior benchmark  test_controller test_controller_3d test_controller_async
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(
-  DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME})
+  DIRECTORY include/${PROJECT_NAME}
+  DESTINATION include
+)
 
 install(
   TARGETS hl_navigation

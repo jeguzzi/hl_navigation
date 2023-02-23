@@ -11,6 +11,8 @@
 
   <buildtool_depend>cmake</buildtool_depend>
 
+  <depend>hl_navigation</depend>
+
   <export>
     <build_type>cmake</build_type>
   </export>

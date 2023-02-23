@@ -2,39 +2,22 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "behaviors/HL.h"
+#include "hl_navigation/behaviors/HL.h"
+
+#include <assert.h>
+
 #include <algorithm>
 
-namespace hl_navigation {
-
-void HLBehavior::setTau(float value) { tau = value; }
-void HLBehavior::setEta(float value) { eta = value; }
-void HLBehavior::setAperture(Radians value) { aperture = value; }
-
-void HLBehavior::setResolution(unsigned int value) {
-  resolution = std::min((int)value, MAX_RESOLUTION);
-}
-
 static float relax(float x0, float x1, float tau, float dt) {
-  if (tau == 0)
-    return x1;
+  if (tau == 0) return x1;
   // float dt=0.1;
   return exp(-dt / tau) * (x0 - x1) + x1;
 }
 
-#if 0
-static Vector2 relax(Vector2 x0, Vector2 x1, float tau, float dt) {
-  if (tau == 0)
-    return x1;
-  // float dt=0.1;
-  return exp(-dt / tau) * (x0 - x1) + x1;
-}
-#endif
-
-static std::vector<float> relax(const std::vector<float> & v0, const std::vector<float> & v1,
-                                float tau, float dt) {
-  if (tau == 0)
-    return v1;
+static std::vector<float> relax(const std::vector<float> &v0,
+                                const std::vector<float> &v1, float tau,
+                                float dt) {
+  if (tau == 0) return v1;
   auto v2 = std::vector<float>(v0.size());
   for (size_t i = 0; i < v0.size(); i++) {
     v2[i] = relax(v0[i], v1[i], tau, dt);
@@ -42,82 +25,135 @@ static std::vector<float> relax(const std::vector<float> & v0, const std::vector
   return v2;
 }
 
-static Twist2D relax(const Twist2D & v0, const Twist2D & v1, float tau, float dt) {
-  if (tau == 0)
+static hl_navigation::Twist2 relax(const hl_navigation::Twist2 &v0,
+                                   const hl_navigation::Twist2 &v1, float tau,
+                                   float dt) {
+  assert(v1.relative == v0.relative);
+  if (tau == 0) {
     return v1;
-  return Twist2D(
-    relax(v0.longitudinal, v1.longitudinal, tau, dt),
-    relax(v0.lateral, v1.lateral, tau, dt),
-    relax(v0.angular, v1.angular, tau, dt));
+  }
+  return {{relax(v0.velocity[0], v1.velocity[0], tau, dt),
+           relax(v0.velocity[1], v1.velocity[1], tau, dt)},
+          relax(v0.angular_speed, v1.angular_speed, tau, dt),
+          v1.relative};
 }
 
+namespace hl_navigation {
 
-static void setDx(AgentCache &agent, Vector2 p) {
+static void set_dx(DiscCache &agent, const Vector2 &p) {
   agent.dx = p;
-  agent.centerDistance = p.norm();
+  agent.center_distance = p.norm();
 
-  // visibleDistance=centerDistance-agentSensingMargin;
-  // penetration=(socialMargin-centerDistance);
+  // visibleDistance=center_distance-agent_sensing_margin;
+  // penetration=(social_margin-center_distance);
 
-  agent.C = p.squaredNorm() - agent.sensingMargin * agent.sensingMargin;
+  agent.C = p.squaredNorm() - agent.sensing_margin * agent.sensing_margin;
   agent.gamma = polar_angle(-p);
-  agent.visibleAngle = M_PI_2;
-  // Radians alpha=ASin(agent.agentSensingMargin/agent.centerDistance);
+  agent.visible_angle = M_PI_2;
+  // Radians alpha=ASin(agent.agent_sensing_margin/agent.center_distance);
   // agent.beta1=agent.gamma-alpha;
   // agent.beta2=agent.gamma+alpha;
 }
 
+// TODO(J 2023): review that we modify the obstacle position
+static DiscCache make_obstacle_cache(const Vector2 &position,
+                                     Vector2 &obstacle_position,
+                                     const Vector2 &obstacle_velocity,
+                                     float radius, float obstacle_radius,
+                                     float safety_margin, float social_margin) {
+  /// TODO(J old): eliminare radius (non lo uso)
+  DiscCache agent;
+  agent.radius = radius;
+  float distance;
+  Vector2 relative_position = obstacle_relative_position(
+      position, obstacle_position, radius, obstacle_radius, distance);
+  agent.sensing_margin = radius + obstacle_radius +
+                         obstacle_margin(distance, radius, obstacle_radius,
+                                         safety_margin, social_margin);
+  agent.va = obstacle_velocity;
+  set_dx(agent, -relative_position);
+  agent.position = obstacle_position;
+  return agent;
+}
 
+// TODO(J 2023): review that we modify the obstacle position
+static DiscCache make_obstacle_cache(const Vector2 &position,
+                                     Vector2 &obstacle_position, float radius,
+                                     float obstacle_radius, float safety_margin,
+                                     float social_margin) {
+  DiscCache obstacle;
+  obstacle.radius = obstacle_radius;
+  float distance;
+  Vector2 relative_position = obstacle_relative_position(
+      position, obstacle_position, radius, obstacle_radius, distance);
+  // obstacle.agent_sensing_margin = obstacle_radius;
+  obstacle.sensing_margin = safety_margin + radius + obstacle_radius;
+  obstacle.position = obstacle_position;
+  set_dx(obstacle, -relative_position);
+  return obstacle;
+}
 
-Radians HLBehavior::angleResolution() { return 2 * aperture / resolution; }
-
-void HLBehavior::debugNeigbors() {
-  printf("--------------------- AGENTS -------------------\n");
-  for (agentIterator_t it = nearAgents.begin(); it != nearAgents.end(); it++) {
-    printf("dx=(%.2f,%.2f), va=(%.2f, %.2f), C=%.2f\r\n", it->dx.x(),
-           it->dx.y(), it->va.x(), it->va.y(), it->C);
+static float penetration(const DiscCache *agent) {
+  if (agent->C > 0) {
+    return 0;
+  } else {
+    return agent->center_distance - agent->sensing_margin;
   }
-  printf("--------------------- ****** -------------------\n");
 }
 
-void HLBehavior::initDistanceCache() {
-  unsigned int k = 0;
-  for (; k < resolution; k++)
-    distanceCache[k] = UNKNOWN_DIST;
+HLBehavior::~HLBehavior() = default;
+
+void HLBehavior::dump_neighbors_cache() const {
+  printf("--------------------- NEIGHBORS -------------------\n");
+  for (const auto &neighbor : neighbors_cache) {
+    printf("dx=(%.2f,%.2f), va=(%.2f, %.2f), C=%.2f\r\n", neighbor.dx.x(),
+           neighbor.dx.y(), neighbor.va.x(), neighbor.va.y(), neighbor.C);
+  }
+  printf("--------------------- ********* -------------------\n");
 }
 
-float HLBehavior::fearedDistanceToCollisionAtRelativeAngle(Radians relativeAngle) {
-  if (abs(normalize(relativeAngle)) >= aperture)
-    return UNKNOWN_DIST;
-  int k = indexOfRelativeAngle(relativeAngle);
-  return staticDistanceCache[k];
+void HLBehavior::dump_static_obstacles_cache() const {
+  // if(!consoleDebugging) return;
+  printf("----------------- Static Obstacles ----------------\n");
+  printf("----------------- **************** ----------------\n");
+  printf("static_obstacles_cache=[");
+  for (const auto &obstacles : static_obstacles_cache) {
+    printf("%.3f,%.3f,", obstacles.position.x(), obstacles.position.y());
+  }
+  printf("];\n");
+  printf("----------------- **************** ----------------\n");
 }
 
-unsigned int HLBehavior::indexOfRelativeAngle(Radians relativeAngle) {
-  int k = floor((normalize(relativeAngle) + aperture) / (2 * aperture) * resolution);
+float HLBehavior::feared_distance_to_collision_at_relative_angle(
+    Radians relative_angle) {
+  if (abs(normalize(relative_angle)) >= aperture) return UNKNOWN_DIST;
+  int k = index_of_relative_angle(relative_angle);
+  return static_distance_cache[k];
+}
 
+unsigned int HLBehavior::index_of_relative_angle(Radians relative_angle) {
+  int k = floor((normalize(relative_angle) + aperture) / (2 * aperture) *
+                resolution);
   k = k % resolution;
-  if (k < 0)
-    k += resolution;
+  if (k < 0) k += resolution;
   return k;
 }
 
-float HLBehavior::distanceToCollisionAtRelativeAngle(Radians relativeAngle) {
-  if (abs(normalize(relativeAngle)) >= aperture)
-    return UNKNOWN_DIST;
-  int k = indexOfRelativeAngle(relativeAngle);
-  if (distanceCache[k] < 0) {
-    distanceCache[k] = computeDistanceToCollisionAtRelativeAngle(
-        relativeAngle, staticDistanceCache + k);
+float HLBehavior::distance_to_collision_at_relative_angle(
+    Radians relative_angle) {
+  if (abs(normalize(relative_angle)) >= aperture) return UNKNOWN_DIST;
+  int k = index_of_relative_angle(relative_angle);
+  if (distance_cache[k] < 0) {
+    distance_cache[k] = compute_distance_to_collision_at_relative_angle(
+        relative_angle, static_distance_cache + k);
   }
-  return distanceCache[k];
+  return distance_cache[k];
 }
 
-
-
-float HLBehavior::distance_to_segment(const LineSegment & line, Radians absolute_angle) {
-  Vector2 delta = position - line.p1;
-  float r = radius + safetyMargin;
+float HLBehavior::distance_to_segment(const LineSegment &line,
+                                      Radians absolute_angle) {
+  Vector2 delta = pose.position - line.p1;
+  float r = radius + safety_margin;
   float y = delta.dot(line.e2);
   float x = delta.dot(line.e1);
   Vector2 e = unit(absolute_angle);
@@ -139,139 +175,126 @@ float HLBehavior::distance_to_segment(const LineSegment & line, Radians absolute
   return distance;
 }
 
-// TODO(J:revision2023): check why we need effectiveHorizon
+// TODO(J:revision2023): check why we need effective_horizon
 
-float HLBehavior::computeDistanceToCollisionAtRelativeAngle(Radians relativeAngle,
-                                                        float *staticCache) {
-  Radians vangle = relativeAngle + angle;
+float HLBehavior::compute_distance_to_collision_at_relative_angle(
+    Radians relative_angle, float *static_cache) {
+  Radians vangle = relative_angle + pose.orientation;
 
-  //!!! Change horizon -> effectiveHorizon !!!
+  //!!! Change horizon -> effective_horizon !!!
 
-  // HACK(J): disabled effectiveHorizon to test function in python
-  effectiveHorizon = horizon;
-  float minDistance = effectiveHorizon - radius;
+  // HACK(J): disabled effective_horizon to test function in python
+  effective_horizon = horizon;
+  float min_distance = effective_horizon - radius;
 
   ////
   float distance;
-  float staticDistance;
-  *staticCache = minDistance;
+  float static_distance;
+  *static_cache = min_distance;
 
-  for (auto & segment : line_obstacles) {
-      staticDistance = distance_to_segment(segment, vangle);
-      // printf("staticDistance %.4f\n", staticDistance);
-      if (staticDistance >= 0) {
-        *staticCache = fmin(*staticCache, staticDistance);
-      }
-      distance = staticDistance;
-      if (distance < 0)
-        continue;
-      minDistance = fmin(minDistance, distance);
-      if (minDistance == 0)
-        return 0;
+  for (const auto &segment : line_obstacles) {
+    static_distance = distance_to_segment(segment, vangle);
+    // printf("static_distance %.4f\n", static_distance);
+    if (static_distance >= 0) {
+      *static_cache = fmin(*static_cache, static_distance);
+    }
+    distance = static_distance;
+    if (distance < 0) continue;
+    min_distance = fmin(min_distance, distance);
+    if (min_distance == 0) return 0;
   }
 
-  for (obstacleIterator_t it = staticObstacles.begin();
-       it != staticObstacles.end(); it++) {
-    staticDistance = staticDistForAngle(&(*it), vangle);
-    if (!(staticDistance < 0))
-      *staticCache = fmin(*staticCache, staticDistance);
+  for (const auto &obstacle : static_obstacles_cache) {
+    static_distance = static_dist_for_angle(&obstacle, vangle);
+    if (!(static_distance < 0))
+      *static_cache = fmin(*static_cache, static_distance);
 
-    distance = staticDistance;
+    distance = static_distance;
 
-    if (distance < 0)
-      continue;
-    minDistance = fmin(minDistance, distance);
+    if (distance < 0) continue;
+    min_distance = fmin(min_distance, distance);
 
-    if (minDistance == 0)
-      return 0;
+    if (min_distance == 0) return 0;
   }
 
-  for (agentIterator_t it = nearAgents.begin(); it != nearAgents.end(); it++) {
-    staticDistance = staticDistForAngle(&(*it), vangle);
-    if (!(staticDistance < 0))
-      *staticCache = fmin(*staticCache, staticDistance);
+  for (const auto &neighbor : neighbors_cache) {
+    static_distance = static_dist_for_angle(&neighbor, vangle);
+    if (!(static_distance < 0))
+      *static_cache = fmin(*static_cache, static_distance);
 
-    distance = distForAngle(&(*it), vangle);
+    distance = dist_for_angle(&neighbor, vangle);
 
-    if (distance < 0)
-      continue;
-    minDistance = fmin(minDistance, distance);
+    if (distance < 0) continue;
+    min_distance = fmin(min_distance, distance);
 
-    if (minDistance == 0)
-      return 0;
+    if (min_distance == 0) return 0;
   }
 
-  return minDistance;
+  return min_distance;
 }
 
-std::vector<float> HLBehavior::getDistances() {
-  std::vector<float> d;
+HLBehavior::CollisionMap HLBehavior::get_collision_distance(bool assuming_static) {
+  if (!cache_is_valid()) prepare();
+  HLBehavior::CollisionMap d;
+  d.reserve(resolution);
   Radians a = -aperture;
-  Radians da = 2 * aperture / (float)resolution;
+  Radians da = 2.0f * aperture / static_cast<float>(resolution);
   while (a < aperture) {
-    d.push_back(distanceToCollisionAtRelativeAngle(a));
+    d.push_back(std::make_tuple(
+        a, assuming_static ? feared_distance_to_collision_at_relative_angle(a)
+                           : distance_to_collision_at_relative_angle(a)));
     a += da;
   }
   return d;
 }
 
-static float penetration(AgentCache *agent) {
-  if (agent->C > 0) {
-    return 0;
-  } else {
-    return agent->centerDistance - agent->sensingMargin;
-  }
-}
-
-void HLBehavior::update_repulsive_force() {
-  repulsiveForce = Vector2(0, 0);
-  insideObstacle = false;
-
-  for (obstacleIterator_t it = staticObstacles.begin();
-       it != staticObstacles.end(); it++) {
-    AgentCache *a = &(*it);
-    float d = penetration(a);
+Vector2 HLBehavior::compute_repulsive_force(bool &inside_obstacle) {
+  Vector2 repulsive_force(0, 0);
+  inside_obstacle = false;
+  for (const auto &obstacle : static_obstacles_cache) {
+    float d = penetration(&obstacle);
     if (d) {
-      repulsiveForce += d * unit(a->gamma);
-      insideObstacle = true;
+      repulsive_force += d * unit(obstacle.gamma);
+      inside_obstacle = true;
     }
   }
-  for (agentIterator_t it = nearAgents.begin(); it != nearAgents.end(); it++) {
-    AgentCache *a = &(*it);
-    float d = penetration(a);
+  for (const auto &neighbor : neighbors_cache) {
+    float d = penetration(&neighbor);
     if (d) {
-      repulsiveForce += d * unit(a->gamma);
-      insideObstacle = true;
+      repulsive_force += d * unit(neighbor.gamma);
+      inside_obstacle = true;
     }
   }
+  return repulsive_force;
 }
 
-void HLBehavior::update_desired_velocity() {
+// Absolute!
+Vector2 HLBehavior::compute_desired_velocity() {
+  if (!cache_is_valid()) prepare();
   // setup();
 
   // debugBehaviors();
   // debugStaticObstacles();
 
-  Vector2 agentToTarget = targetPosition - position;
-  Radians a0 = polar_angle(agentToTarget) - angle;
-  Radians da = angleResolution();
+  Vector2 agentToTarget = target_pose.position - pose.position;
+  Radians a0 = polar_angle(agentToTarget) - pose.orientation;
+  Radians da = get_angular_resolution();
   float D = agentToTarget.norm();
-  effectiveHorizon = horizon;
-  // effectiveHorizon=fmin(horizon,D);
+  effective_horizon = horizon;
+  // effective_horizon=fmin(horizon,D);
 
-  // Vector2 effectiveTarget = agentToTarget / D * effectiveHorizon;
-
+  // Vector2 effectiveTarget = agentToTarget / D * effective_horizon;
 
   // printf("HLBehavior: updateDesiredVelocity to %.2f, h = %.2f
   // \r\n",a0.GetValue(),horizon);
 
-  // initDistanceCache();
+  // initDistance_cache();
 
   Radians searchAngle = 0.0;
 
   float minPossibleDistanceToTarget;
-  D = effectiveHorizon;
-  float minDistanceToTarget = D;
+  D = effective_horizon;
+  float min_distanceToTarget = D;
   float d;
   float distanceToTarget;
   Radians nearestAngle = a0;
@@ -286,16 +309,11 @@ void HLBehavior::update_desired_velocity() {
     // new in paper
     minPossibleDistanceToTarget = fabs(sin(searchAngle) * D);
     // minPossibleDistanceToTarget=2*D*Sin(0.5*searchAngle);
-    if (minDistanceToTarget < minPossibleDistanceToTarget)
-      break;
-    d = distanceToCollisionAtRelativeAngle(a0 + searchAngle);
+    if (min_distanceToTarget < minPossibleDistanceToTarget) break;
+    d = distance_to_collision_at_relative_angle(a0 + searchAngle);
 
-    // printf("%.2f -> %.2f\r\n",searchAngle.GetValue(),d);
-
-    if (d == UNKNOWN_DIST && leftOut == 1)
-      leftOut = 2;
-    if (d != UNKNOWN_DIST && leftOut == 0)
-      leftOut = 1;
+    if (d == UNKNOWN_DIST && leftOut == 1) leftOut = 2;
+    if (d != UNKNOWN_DIST && leftOut == 0) leftOut = 1;
 
     d = fmin(D, d);
 
@@ -305,22 +323,15 @@ void HLBehavior::update_desired_velocity() {
       } else {
         distanceToTarget = sqrt(D * D + d * d - 2 * d * D * cos(searchAngle));
       }
-      // printf("%.2f < ? %.2f\r\n",distanceToTarget,minDistanceToTarget);
-      // distanceToTarget=sqrt(D*D+d*d-2*d*D*Cos(searchAngle));
-      if (distanceToTarget < minDistanceToTarget) {
-        minDistanceToTarget = distanceToTarget;
+      if (distanceToTarget < min_distanceToTarget) {
+        min_distanceToTarget = distanceToTarget;
         nearestAngle = a0 + searchAngle;
       }
     }
     if (searchAngle > 0.0) {
-      d = distanceToCollisionAtRelativeAngle(a0 - searchAngle);
-
-      //  printf("%.2f -> %.2f\r\n",-searchAngle.GetValue(),d);
-
-      if (d == UNKNOWN_DIST && rightOut == 1)
-        rightOut = 2;
-      if (d != UNKNOWN_DIST && rightOut == 0)
-        rightOut = 1;
+      d = distance_to_collision_at_relative_angle(a0 - searchAngle);
+      if (d == UNKNOWN_DIST && rightOut == 1) rightOut = 2;
+      if (d != UNKNOWN_DIST && rightOut == 0) rightOut = 1;
 
       d = fmin(D, d);
 
@@ -330,12 +341,8 @@ void HLBehavior::update_desired_velocity() {
         } else {
           distanceToTarget = sqrt(D * D + d * d - 2 * d * D * cos(searchAngle));
         }
-
-        // printf("%.2f < ? %.2f\r\n",distanceToTarget,minDistanceToTarget);
-
-        // distanceToTarget=sqrt(D*D+d*d-2*d*D*Cos(searchAngle));
-        if (distanceToTarget < minDistanceToTarget) {
-          minDistanceToTarget = distanceToTarget;
+        if (distanceToTarget < min_distanceToTarget) {
+          min_distanceToTarget = distanceToTarget;
           nearestAngle = a0 - searchAngle;
         }
       }
@@ -344,13 +351,11 @@ void HLBehavior::update_desired_velocity() {
   }
 
   float nearestCollision =
-      fearedDistanceToCollisionAtRelativeAngle(nearestAngle);
-
-  // printf("nearearest %.2f\n",nearestCollision);
+      feared_distance_to_collision_at_relative_angle(nearestAngle);
 
   float newTargetSpeed;
   if (nearestCollision > 0) {
-    newTargetSpeed = fmin(optimalSpeed, nearestCollision / eta);
+    newTargetSpeed = fmin(optimal_speed, nearestCollision / eta);
   } else {
     newTargetSpeed = 0;
   }
@@ -358,263 +363,101 @@ void HLBehavior::update_desired_velocity() {
   // desiredAngle = nearestAngle;
   // desiredSpeed = newTargetSpeed;
   // TODO(Jerome): verify that all desired velocities are in the fixed frame
-  desiredVelocity = newTargetSpeed * unit(nearestAngle + angle);
-
-  // DEBUG_CONTROLLER("=> desiredVelocity (%.2f,%.2f) %.2f
-  // \n",desiredVelocity.x(),desiredVelocity.y(),desiredAngle.GetValue());
-
-  //    DEBUG_CONTROLLER("=> desired speed %.2f, desired angle %.2f
-  //    \n",desiredSpeed,desiredAngle.GetValue());
+  return newTargetSpeed * unit(nearestAngle + pose.orientation);
 }
 
-void HLBehavior::clear() {
-  nearAgents.clear();
-  staticObstacles.clear();
+bool HLBehavior::cache_is_valid() const {
+  return !changed(HORIZON | NEIGHBORS | STATIC_OBSTACLES | POSITION | RADIUS |
+                  SAFETY_MARGIN);
 }
-
-
-void HLBehavior::add_static_obstacle(const Disc & d) {
-  AgentCache obstacle = makeObstacleAtPoint(d.position, d.radius, d.social_margin);
-  staticObstacles.push_back(obstacle);
-}
-
-void HLBehavior::add_neighbor(const Disc & d) {
-  // printf("Add obstacle at (%.2f %.2f) with v (%.2f %.2f) and r %.2f
-  // \n",p.x(),p.y(),v.x(),v.y(),r);
-  AgentCache agent = makeObstacleAtPoint(d.position, d.velocity, d.radius, d.social_margin);
-  nearAgents.push_back(agent);
-}
-
-/*
-void HLBehavior::addObstacleWithHuman(Human *human)
-{
-  AgentCache agent=makeAgentCacheWithHuman(human);
-  nearAgents.push_back(agent);
-  }*/
-
-# if 0
-static bool compare(AgentCache first, AgentCache second) {
-  return first.centerDistance < second.centerDistance;
-}
-#endif
 
 void HLBehavior::prepare() {
-  initDistanceCache();
-  effectiveHorizon = horizon;
-}
-
-AgentCache HLBehavior::makeObstacleAtPoint(Vector2 p, float r, float socialMargin) {
-  AgentCache obstacle = AgentCache();
-  obstacle.radius = r;
-  float distance;
-  Vector2 relativePosition = relativePositionOfObstacleAt(p, r, distance);
-  obstacle.agentSensingMargin = r;
-  obstacle.sensingMargin = safetyMargin + radius + r;
-  obstacle.position = p;
-  setDx(obstacle, -relativePosition);
-  return obstacle;
-}
-
-/*
-AgentCache HLBehavior::makeObstacleWithHuman(Human* human)
-{
-  //printf("Add human agent cache ");
-
-   AgentCache agent=AgentCache();
-    agent.radius=radius;
-
-    Vector2 relativePosition=human->position-position;
-
-
-
-    float distance=relativePosition.norm();
-    float minDistance=radius+0.01+HUMAN_RADIUS;
-    if(distance<minDistance)
-      {
-        relativePosition=relativePosition/distance*minDistance;
-        distance=minDistance;
-      }
-
-    double farMargin=2;
-    double margin;
-    double distanceToBeSeparated=safetyMargin+radius+HUMAN_RADIUS;
-    double distanceToBeFar=farMargin+radius+HUMAN_RADIUS;
-
-
-
-    if(distance<distanceToBeSeparated)
-    {
-        margin=safetyMargin;
-        //obstacle.visibleAngle=PI/2;
-    }
-    else if(distance>distanceToBeFar)
-    {
-      margin=socialMargin;
-    }
-    else
-    {
-        margin=(socialMargin-safetyMargin)/(distanceToBeFar -
-distanceToBeSeparated ) * (distance - distanceToBeSeparated)+ safetyMargin;
-    }
-
-
-
-    agent.sensingMargin=HUMAN_RADIUS+radius+margin;
-
-    //printf("at (%.2f,%.2f), margin %.2f, minDist %.2f,
-[%.2f,%.2f,%.2f,%.2f,%.2f]\n",relativePosition.x(),relativePosition.y(),margin,agent.sensingMargin,distance,distanceToBeSeparated,distanceToBeFar,safetyMargin,socialMargin);
-
-    setDx(agent,-relativePosition);
-    agent.va=human->velocity;
-    agent.position=human->position;
-    return agent;
-    }*/
-
-AgentCache HLBehavior::makeObstacleAtPoint(Vector2 obstaclePosition,
-                                        Vector2 obstacleVelocity,
-                                        float obstacleRadius,
-                                        float socialMargin) {
-  /// TODO: eliminare radius (non lo uso)
-
-  AgentCache agent = AgentCache();
-  agent.radius = radius;
-  float distance;
-  Vector2 relativePosition =
-      relativePositionOfObstacleAt(obstaclePosition, obstacleRadius, distance);
-  agent.sensingMargin = (radius + obstacleRadius) +
-                        marginForObstacleAtDistance(distance, obstacleRadius,
-                                                    safetyMargin, socialMargin);
-
-  // printf("X %.2f, r %.3f or %.3f, sm %.3f Sm %.3f
-  // \n",agent.sensingMargin,radius,obstacleRadius,safetyMargin,socialMargin);
-
-  agent.va = obstacleVelocity;
-  setDx(agent, -relativePosition);
-  agent.position = obstaclePosition;
-  return agent;
-}
-
-void HLBehavior::debugStaticObstacles() {
-  // if(!consoleDebugging) return;
-  printf("---------------------------- Static Obstacles "
-         "----------------------------\r\n");
-  printf("staticObstacles=[");
-  for (obstacleIterator_t it = staticObstacles.begin();
-       it != staticObstacles.end(); it++) {
-    printf("%.3f,%.3f,", it->position.x(), it->position.y());
+  for (unsigned int k = 0; k < resolution; k++)
+    distance_cache[k] = UNKNOWN_DIST;
+  effective_horizon = horizon;
+  neighbors_cache.clear();
+  static_obstacles_cache.clear();
+  for (Disc &d : neighbors) {
+    neighbors_cache.push_back(
+        make_obstacle_cache(pose.position, d.position, d.velocity, radius,
+                            d.radius, safety_margin, d.social_margin));
   }
-  printf("];\n");
-  printf("---------------------------- **************** "
-         "----------------------------\r\n");
+  for (Disc &d : static_obstacles) {
+    static_obstacles_cache.push_back(
+        make_obstacle_cache(pose.position, d.position, radius, d.radius,
+                            safety_margin, d.social_margin));
+  }
+  reset_changes();
 }
 
-float HLBehavior::distForAngle(AgentCache *agent, Radians alpha) {
+float HLBehavior::dist_for_angle(const DiscCache *agent, Radians alpha) {
   if (agent->C < 0) {
-    if (abs(normalize(alpha - agent->gamma)) < agent->visibleAngle)
-      return 0;
+    if (abs(normalize(alpha - agent->gamma)) < agent->visible_angle) return 0;
     return NO_COLLISION;
   }
-
-  Vector2 dv = optimalSpeed * unit(alpha) - agent->va;
+  Vector2 dv = optimal_speed * unit(alpha) - agent->va;
   float A = dv.squaredNorm();
   // TODO(J): use dot prod
   // TODO(J 2023): maybe precompute minimal distance
-  // a = optimalSpeed + agent_speed
+  // a = optimal_speed + agent_speed
   // A = a * a
   // B = -dist * a
   // C = dist * dist - r * r
   // D = dist * dist * A - dist * dist * A + r * r * A = r * r * a * a
-  // min_dist = optimalSpeed * (-B - sqrt(D)) / A = optimalSpeed * (dist * a - r * a) (a * a)
-  //          = optimalSpeed * (dist - r) / (optimalSpeed + agent_speed)
+  // min_dist = optimal_speed * (-B - sqrt(D)) / A = optimal_speed * (dist * a -
+  // r * a) (a * a)
+  //          = optimal_speed * (dist - r) / (optimal_speed + agent_speed)
   float B = agent->dx.x() * dv.x() + agent->dx.y() * dv.y();
 
-  if (B > 0)
-    return NO_COLLISION;
+  if (B > 0) return NO_COLLISION;
   float D = B * B - A * agent->C;
 
-  if (D < 0)
-    return NO_COLLISION;
+  if (D < 0) return NO_COLLISION;
 
-  return optimalSpeed * (-B - sqrt(D)) / A;
+  return optimal_speed * (-B - sqrt(D)) / A;
 }
 
-float HLBehavior::staticDistForAngle(const AgentCache *agent, Radians alpha) {
+float HLBehavior::static_dist_for_angle(const DiscCache *agent, Radians alpha) {
   if (agent->C < 0) {
-    if (abs(normalize(alpha - agent->gamma)) < agent->visibleAngle)
-      return 0;
+    if (abs(normalize(alpha - agent->gamma)) < agent->visible_angle) return 0;
     return NO_COLLISION;
   }
   float B = agent->dx.x() * cos(alpha) + agent->dx.y() * sin(alpha);
-  if (B > 0)
-    return NO_COLLISION;
+  if (B > 0) return NO_COLLISION;
   float D = B * B - agent->C;
-  if (D < 0)
-    return NO_COLLISION;
+  if (D < 0) return NO_COLLISION;
   return -B - sqrt(D);
 }
 
-void HLBehavior::update_target_twist(float dt) {
-  if (is_wheeled()) {
-    target_wheel_speeds = relax(target_wheel_speeds, desired_wheel_speeds, tau, dt);
-    target_twist = twist_from_wheel_speeds(target_wheel_speeds);
+Twist2 HLBehavior::relax(const Twist2 &value, float dt) const {
+  if (kinematic->is_wheeled()) {
+    auto wheel_speeds = wheel_speeds_from_twist(value);
+    auto actuated_wheel_speeds = wheel_speeds_from_twist(actuated_twist);
+    return twist_from_wheel_speeds(
+        ::relax(actuated_wheel_speeds, wheel_speeds, tau, dt));
   } else {
-    // TODO(Jerome): same than before when I relaxed the absolute velocity, not the relative
-    // but different than original paper
-    target_twist = relax(target_twist, desired_twist, tau, dt);
+    // TODO(Jerome old): same than before when I relaxed the absolute velocity,
+    // not the relative but different than original paper CHANGED(J 2023): relax
+    // in arbitrary frame
+    return ::relax(actuated_twist.relative == value.relative
+                       ? actuated_twist
+                       : to_frame(actuated_twist, value.relative),
+                   value, tau, dt);
   }
 }
 
-float *HLBehavior::collisionMap() { return &distanceCache[0]; }
-
-
-/*
-  void HLBehavior::updateVelocityCartesian ()
-  {
-    //DEBUG_CONTROLLER("updateVelocityCartesian()\r\n");
-
-#ifdef RELAXED_VELOCITY
-    //Perhaps it makes more sense to do it in polar coordinates, i.e
-speed->exp(...), angle->angle(...)
-
-    desiredVelocity=relax(velocity,desiredVelocity,tau);
-    //desiredAngle=relax(0,desiredAngle,tau);
-#endif
-
-
-
-    Radians delta;
-
-    float v=fabs(desiredVelocity.norm()/0.05);
-
-    if(v>1) delta=desiredVelocity.Angle();
-    else
-delta=(Vector2(v,desiredVelocity.Angle())+Vector2(1-v,desiredAngle)).Angle();
-
-    delta=delta.SignedNormalize();
-    float angularSpeed;
-    float linearSpeed=0;
-
-    angularSpeed=1.0/rotationTau*delta.SignedNormalize().GetValue()*0.5*axisLength;
-    if(angularSpeed>maxRotationSpeed)
-      {
-        angularSpeed=maxRotationSpeed;
-      }
-    else if(angularSpeed<-maxRotationSpeed)
-      {
-        angularSpeed=-maxRotationSpeed;
-      }
-    else
-      {
-        linearSpeed=desiredVelocity.norm()*(1-fabs(angularSpeed)/maxRotationSpeed);
-      }
-    //DEBUG_CONTROLLER("Angular Speed %.2f, Linear Speed %.2f
-[cm/s]\r\n",100*angularSpeed,100*linearSpeed);
-    leftWheelDesiredSpeed=linearSpeed-angularSpeed;
-    rightWheelDesiredSpeed=linearSpeed+angularSpeed;
+Twist2 HLBehavior::cmd_twist(float dt, bool relative, Mode mode,
+                             bool set_as_actuated) {
+  Twist2 twist = Behavior::cmd_twist(dt, relative, mode, false);
+  if (tau > 0) {
+    twist = relax(twist, dt);
   }
-*/
+  if (set_as_actuated) {
+    actuated_twist = twist;
+  }
+  return twist;
+}
 
-const char * HLBehavior::name = register_type<HLBehavior>("HL");
-
+const char *HLBehavior::name = register_type<HLBehavior>("HL");
 
 }  // namespace hl_navigation

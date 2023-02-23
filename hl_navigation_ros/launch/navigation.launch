@@ -2,69 +2,54 @@
 
   <!-- KINEMATIC -->
 
-  <!-- Robot kinematics class: one of 'TWO_WHEELED', 'HOLONOMIC'  -->
-  <arg name="type" default="TWO_WHEELED"/>
+  <!-- Robot kinematics class: one of 'two_wheeled', 'holonomic', 'forward', 'four_wheeled'  -->
+  <arg name="kinematic_type" default="two_wheeled"/>
+  <!-- The maximal speed -->
+  <arg name="kinematic_maximal_speed" default="0.3"/>
+  <!-- The maximal angular speed -->
+  <arg name="kinematic_maximal_angular_speed" default="0.2"/>
+  <!-- The wheel axis length -->
+  <arg name="kinematic_axis_length" default="1.0"/>
   <!-- The radius -->
   <arg name="radius" default="0.3"/>
-  <!-- The maximal speed -->
-  <arg name="maximal_speed" default="0.3"/>
-  <!-- The maximal angular speed -->
-  <arg name="maximal_angular_speed" default="0.2"/>
 
-  <!-- KINEMATIC: TWO_WHEELED  -->
-  <!-- The wheel axis length -->
-  <arg name="axis_length" default="1.0"/>
-  <!-- Unless maximal_angular_speed is defined: the maximal wheel speed while rotating,
-   if undefined, will use maximal_speed-->
-  <arg name="maximal_rotation_speed" default="0.2"/>
-
-  <!-- KINEMATIC: HOLONOMIC -->
-  <!-- Enable point towards target -->
-  <arg name="point_toward_target" default="false"/>
-
-
-  <!-- PLANNING -->
-  <!-- The navigation behavior. One of "HL", "ORCA", "HRVO" -->
+  <!-- CONTROL -->
+  <!-- Heading behavior -->
+  <arg name="heading" default="idle"/>
+  <!-- The navigation behavior. One of "HL", "ORCA", "HRVO", "Dummy" -->
   <arg name="behavior" default="HL"/>
   <!-- The horizontal speed at which a free agent should move -->
   <arg name="optimal_speed" default="0.3"/>
   <!-- The angular speed at which a free agent should move [radian/sec]-->
   <arg name="optimal_angular_speed" default="0.3"/>
-  <!-- or alternatively, for differential driven robots, the optimal wheel speed while rotating [m/s]-->
-  <arg name="optimal_rotation_speed" default="0.3"/>
-  <!-- The relaxation constant on speed -->
-  <arg name="tau" default="0.5"/>
   <!-- The relaxation constant on angular speed -->
   <arg name="rotation_tau" default="0.5"/>
   <!-- The (planning) horizon -->
   <arg name="horizon" default="1.0"/>
   <!-- The safety margin to add to the robot radius-->
   <arg name="safety_margin" default="0.1"/>
-  <!-- Target tolerance (angle) -->
-  <arg name="tol_angle" default="0.1"/>
-  <!-- Target tolerance (distance) -->
-  <arg name="tol_distance" default="0.2"/>
   <!-- Minimal speed (lower desired speed are set to zero)-->
-  <arg name="minimal_speed" default="0.05"/>
-
+  <arg name="speed_tolerance" default="0.05"/>
 
   <!-- PLANNING: HL -->
+  <!-- The relaxation constant on speed -->
+  <arg name="hl_tau" default="0.5"/>
   <!-- The caution, i.e. how many seconds to keep away from an obstacle-->
-  <arg name="eta" default="0.5"/>
+  <arg name="hl_eta" default="0.5"/>
   <!-- The aperture (i.e., the range of steering angles)-->
-  <arg name="aperture" default="3.14"/>
+  <arg name="hl_aperture" default="3.14"/>
   <!-- The resolution (i.e., the number of directions to subdivide aperture)-->
-  <arg name="resolution" default="30"/>
+  <arg name="hl_resolution" default="30"/>
 
   <!-- PLANNING: ORCA - HRVO -->
   <!-- The (planning) time horizon-->
-  <arg name="time_horizon" default="1.0"/>
+  <arg name="orca_time_horizon" default="1.0"/>
 
   <!-- PLANNING: 3D -->
   <!-- The vertical speed at which a free agent should move -->
-  <arg name="optimal_vertical_speed" default="0.1"/>
+  <arg name="altitude_optimal_speed" default="0.1"/>
   <!-- The relaxation constant on vertical velocity -->
-  <arg name="tau_z" default="1.0"/>
+  <arg name="altitude_tau" default="1.0"/>
 
   <!-- DEBUGGING -->
   <!-- enable (rviz) markers  -->
@@ -76,39 +61,44 @@
   <!-- The control rate -->
   <arg name="rate" default='10.0'/>
 
+  <arg name="odom_topic" default='odom'/>
+  <arg name="frame_id" default='world'/>
+
 
    <node name="navigation" pkg="hl_navigation_ros" exec="controller" output="screen">
-      <param name="type" value="$(var type)" />
-      <param name="radius" value="$(var radius)" />
-      <param name="axis_length" value="$(var axis_length)" />
-      <param name="maximal_speed" value="$(var maximal_speed)" />
-      <param name="maximal_angular_speed" value="$(var maximal_angular_speed)" />
-      <param name="maximal_rotation_speed" value="$(var maximal_rotation_speed)" />
-      <param name="behavior" value="$(var behavior)" />
 
+      <param name="frame_id" value="$(var frame_id)" />
+
+      <param name="kinematic.type" value="$(var kinematic_type)" />
+      <param name="radius" value="$(var radius)" />
+      <param name="kinematic.axis_length" value="$(var kinematic_axis_length)" />
+      <param name="kinematic.maximal_speed" value="$(var kinematic_maximal_speed)" />
+      <param name="kinematic.maximal_angular_speed" value="$(var kinematic_maximal_angular_speed)" />
+      
+      <param name="behavior" value="$(var behavior)" />
       <param name="publish_cmd_stamped" value="$(var publish_cmd_stamped)" />
       <param name="rate" value="$(var rate)" />
 
       <param name="optimal_speed" value="$(var optimal_speed)"/>
       <param name="optimal_angular_speed" value="$(var optimal_angular_speed)"/>
-      <param name="optimal_rotation_speed" value="$(var optimal_rotation_speed)"/>
-      <param name="tau" value="$(var tau)"/>
+      
       <param name="rotation_tau" value="$(var rotation_tau)"/>
       <param name="horizon" value="$(var horizon)"/>
       <param name="safety_margin" value="$(var safety_margin)"/>
-      <param name="tol_angle" value="$(var tol_angle)"/>
-      <param name="tol_distance" value="$(var tol_distance)"/>
-      <param name="minimal_speed" value="$(var minimal_speed)"/>
+      <param name="speed_tolerance" value="$(var speed_tolerance)"/>
 
-      <param name="optimal_vertical_speed" value="$(var optimal_vertical_speed)"/>
-      <param name="tau_z" value="$(var tau_z)"/>
+      <param name="altitude.optimal_speed" value="$(var altitude_optimal_speed)"/>
+      <param name="altitude.tau" value="$(var altitude_tau)"/>
 
-      <param name="eta" value="$(var eta)"/>
-      <param name="aperture" value="$(var aperture)"/>
-      <param name="resolution" value="$(var resolution)"/>
+      <param name="hl.eta" value="$(var hl_eta)"/>
+      <param name="hl.tau" value="$(var hl_tau)"/>
+      <param name="hl.aperture" value="$(var hl_aperture)"/>
+      <param name="hl.resolution" value="$(var hl_resolution)"/>
 
-      <param name="time_horizon" value="$(var time_horizon)"/>
+      <param name="orca.time_horizon" value="$(var orca_time_horizon)"/>
 
       <param name="drawing" value="$(var drawing)"/>
+
+      <remap from="odom" to="$(var odom_topic)"/>
    </node>
 </launch>

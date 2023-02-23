@@ -1,0 +1,7 @@
+#!/usr/local/Cellar/python@3.9/3.9.16/bin/python3.9
+
+import sys
+
+from hl_navigation_demos.enki import main
+
+sys.exit(main())

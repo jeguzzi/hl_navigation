@@ -2,42 +2,45 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "behaviors/HRVO.h"
+#include "hl_navigation/behaviors/HRVO.h"
+
 #include "HRVO/Agent.h"
 #include "HRVO/HRVO.h"
 #include "HRVO/Obstacle.h"
 
 namespace hl_navigation {
 
-HRVOBehavior::HRVOBehavior(agent_type_t type, float radius, float axis_length) :
-  Behavior(type, radius, axis_length),
-  _HRVOAgent(std::make_unique<HRVO::Agent>()) {
-    _HRVOAgent->radius_ = radius;
-    _HRVOAgent->maxNeighbors_ = 1000;
+HRVOBehavior::HRVOBehavior(std::shared_ptr<Kinematic> kinematic, float radius)
+    : Behavior(kinematic, radius),
+      _HRVOAgent(std::make_unique<HRVO::Agent>()) {
+  _HRVOAgent->radius_ = radius;
+  _HRVOAgent->maxNeighbors_ = 1000;
 }
-
 HRVOBehavior::~HRVOBehavior() = default;
 
+bool HRVOBehavior::cache_is_valid() const {
+  return !changed(TARGET_POSITION | POSITION | VELOCITY | ORIENTATION |
+                  NEIGHBORS | STATIC_OBSTACLES | RADIUS | SAFETY_MARGIN |
+                  HORIZON | OPTIMAL_SPEED);
+}
+
 void HRVOBehavior::prepare() {
-  _HRVOAgent->velocity_ =
-      HRVO::Vector2((float)velocity.x(), (float)velocity.y());
-  _HRVOAgent->orientation_ = normalize(angle);
-  _HRVOAgent->position_ =
-      HRVO::Vector2((float)position.x(), (float)position.y());
+  if (cache_is_valid()) return;
+  _HRVOAgent->velocity_ = HRVO::Vector2(twist.velocity.x(), twist.velocity.y());
+  _HRVOAgent->orientation_ = normalize(pose.orientation);
+  _HRVOAgent->position_ = HRVO::Vector2(pose.position.x(), pose.position.y());
 
   _HRVOAgent->neighborDist_ = 2 * horizon;
   _HRVOAgent->isColliding_ = false;
   rangeSq = (horizon * 2) * (horizon * 2);
-  HRVO::Vector2 t = HRVO::Vector2((float)targetPosition.x(),
-                                  (float)targetPosition.y()) -
-                    _HRVOAgent->position_;
-  _HRVOAgent->prefVelocity_ = t * optimalSpeed / abs(t);
-  _HRVOAgent->prefSpeed_ = optimalSpeed;
-  _HRVOAgent->maxSpeed_ = optimalSpeed;
+  HRVO::Vector2 t =
+      (HRVO::Vector2(target_pose.position.x(), target_pose.position.y()) -
+       _HRVOAgent->position_);
+  _HRVOAgent->prefVelocity_ = t * optimal_speed / abs(t);
+  _HRVOAgent->prefSpeed_ = optimal_speed;
+  _HRVOAgent->maxSpeed_ = optimal_speed;
   _HRVOAgent->uncertaintyOffset_ = 0;
-}
 
-void HRVOBehavior::clear() {
   _HRVOAgent->neighbors_.clear();
   for (uint i = 0; i < _HRVOAgent->obstacles_.size(); i++) {
     delete _HRVOAgent->obstacles_[i];
@@ -49,25 +52,31 @@ void HRVOBehavior::clear() {
   _HRVOAgent->obstacles_.clear();
   _HRVOAgent->agents_.clear();
   agentIndex = 0;
+
+  for (const auto &n : neighbors) {
+    add_neighbor(n);
+  }
+  for (const auto &o : static_obstacles) {
+    add_neighbor(o);
+  }
+
+  reset_changes();
 }
 
-void HRVOBehavior::update_desired_velocity() {
-  _HRVOAgent->computeNewVelocity();
-  desiredVelocity = Vector2(_HRVOAgent->newVelocity_.x(), _HRVOAgent->newVelocity_.y());
-}
-
-void HRVOBehavior::add_neighbor(const Disc & d) {
+void HRVOBehavior::add_neighbor(const Disc &d) {
   HRVO::Agent *a = new HRVO::Agent();
   Vector2 p = d.position;
   a->velocity_ = HRVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
   a->position_ = HRVO::Vector2((float)p.x(), (float)p.y());
 
   float distance;
-  Vector2 relativePosition = relativePositionOfObstacleAt(p, d.radius, distance);
+  Vector2 relative_position =
+      obstacle_relative_position(pose.position, p, radius, d.radius, distance);
   // a->radius_=r+marginForObstacleAtDistance(distance,r,safetyMargin,socialMargin);
-  a->radius_ = d.radius + fmin(
-      distance - d.radius - _HRVOAgent->radius_ - 0.001,
-      marginForObstacleAtDistance(distance, d.radius, safetyMargin, d.social_margin));
+  a->radius_ =
+      d.radius + fmin(distance - d.radius - _HRVOAgent->radius_ - 0.001,
+                      obstacle_margin(distance, radius, d.radius, safety_margin,
+                                      d.social_margin));
   // printf("Obstacle radius %.3f\n",a->radius_);
 
   // a->radius_=r+marginForObstacleAtDistance(p.norm(),r,safetyMargin,socialMargin);
@@ -77,10 +86,12 @@ void HRVOBehavior::add_neighbor(const Disc & d) {
   agentIndex++;
 }
 
-void HRVOBehavior::add_static_obstacle(const Disc & d) {
-  add_neighbor(d);
+Vector2 HRVOBehavior::compute_desired_velocity() {
+  prepare();
+  _HRVOAgent->computeNewVelocity();
+  return {_HRVOAgent->newVelocity_.x(), _HRVOAgent->newVelocity_.y()};
 }
 
-const char * HRVOBehavior::name = register_type<HRVOBehavior>("HRVO");
+const char *HRVOBehavior::name = register_type<HRVOBehavior>("HRVO");
 
 }  // namespace hl_navigation

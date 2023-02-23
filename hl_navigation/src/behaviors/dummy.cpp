@@ -2,15 +2,15 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "behaviors/dummy.h"
+#include "hl_navigation/behaviors/dummy.h"
 
 namespace hl_navigation {
 
-void DummyBehavior::update_desired_velocity() {
-  Vector2 delta = targetPosition - position;
-  desiredVelocity = optimalSpeed * delta / delta.norm();
+Vector2 DummyBehavior::compute_desired_velocity() {
+  auto delta = target_pose.position - pose.position;
+  return optimal_speed * delta / delta.norm();
 }
 
-const char * DummyBehavior::name = register_type<DummyBehavior>("Dummy");
+const char* DummyBehavior::name = register_type<DummyBehavior>("Dummy");
 
 }  // namespace hl_navigation

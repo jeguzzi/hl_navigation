@@ -13,31 +13,27 @@ class Thymio(pyenki.Thymio2):
                  obstacles: List[pyenki.CircularObject] = []):
         super().__init__(use_aseba_units=False)
         self.behavior = hl_navigation.behavior_with_name(
-            behavior_name, hl_navigation.AgentType.TWO_WHEELED, 0.08, 0.01 * self.wheel_axis)
+            behavior_name, hl_navigation.TwoWheeled(0.01 * self.max_wheel_speed, 0.01 * self.wheel_axis), 0.08)
         if not self.behavior:
             print(f"No behavior with name {behavior_name}")
             sys.exit(1)
         self.behavior.safety_margin = 0.02
-        self.behavior.max_speed = 0.01 * self.max_wheel_speed
         self.behavior.optimal_speed = 0.1
-        self.behavior.optimal_angular_speed = self.behavior.max_angular_speed
         self.behavior.horizon = 1.0
-        self.controller = hl_navigation.Controller()
-        self.controller.behavior = self.behavior
-        self.controller.distance_tolerance = 0.6
+        self.controller = hl_navigation.Controller(self.behavior)
         self.controller.speed_tolerance = 0.01
 
         os = []
         for obstacle in obstacles:
             x, y = obstacle.position
-            p = hl_navigation.Vector2(x * 0.01, y * 0.01)
+            p = (x * 0.01, y * 0.01)
             o = hl_navigation.Disc(position=p, radius=0.01 * obstacle.radius)
             os.append(o)
-        self.behavior.set_static_obstacles(os)
+        self.behavior.static_obstacles = os
 
     def controlStep(self, dt: float) -> None:
         x, y = self.position
-        self.behavior.angle = self.angle
+        self.behavior.orientation = self.angle
         self.behavior.position = (x * 0.01, y * 0.01)
         x, y = self.velocity
         v = (x * 0.01, y * 0.01)
@@ -52,18 +48,18 @@ class Thymio(pyenki.Thymio2):
             x, y = thymio.velocity
             v = (x * 0.01, y * 0.01)
             ns.append(hl_navigation.Disc(p, 0.08, 0.05, v))
-        self.behavior.set_neighbors(ns)
-        self.controller.update(dt)
+        self.behavior.neighbors = ns
+        _ = self.controller.update(dt)
         # print('D', self.behavior.desiredVelocity)
         # TODO(Jerome): sono gia' dei memeber (leftSpeed,...)
-        left_speed, right_speed = self.behavior.target_wheel_speeds
+        left_speed, right_speed = self.behavior.actuated_wheel_speeds
         # print(left_speed, right_speed, self.behavior.desiredLinearSpeed, self.behavior.desiredAngularSpeed.value())
         self.motor_left_target = 100 * left_speed
         self.motor_right_target = 100 * right_speed
         # print(self.motor_left_speed, self.motor_right_speed, self.controller.state, self.behavior.velocity)
-        if self.controller.state == hl_navigation.ControllerState.IDLE:
+        if self.controller.state == hl_navigation.ActionState.idle:
             color, target = next(self.targets)
-            self.controller.set_target_point(*target)
+            self.controller.go_to_position(target, 0.6)
             self.set_led_top(*color)
 
 
@@ -80,8 +76,8 @@ def main(behavior_name: str = "HL") -> None:
         cylinder.position = tuple([c * 100 for c in p])
         world.add_object(cylinder)
         obstacles.append(cylinder)
-    targets = [(r, (2.0, 0.0, 0.0)), (g, (-2.0, 0.0, 0.0)),
-               (y, (0.0, 2.0, 0.0)), (b, (0.0, -2.0, 0.0))]
+    targets = [(r, (2.0, 0.0)), (g, (-2.0, 0.0)),
+               (y, (0.0, 2.0)), (b, (0.0, -2.0))]
     for color, pose in targets:
         cylinder = pyenki.CircularObject(20.0, 1.0, -1, pyenki.Color(*color))
         cylinder.position = tuple([c * 100 for c in pose[:2]])

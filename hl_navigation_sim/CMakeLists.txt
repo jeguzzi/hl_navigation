@@ -24,22 +24,35 @@ find_package(geos REQUIRED)
 
 include_directories(include)
 
-add_executable(hl_navigation_sim src/cross.cpp)
-ament_target_dependencies(hl_navigation_sim hl_navigation)
-target_link_libraries(hl_navigation_sim HighFive GEOS::geos)
+add_library(hl_navigation_sim SHARED
+  src/simulation.cpp
+)
+
+target_link_libraries(hl_navigation_sim PUBLIC GEOS::geos hl_navigation::hl_navigation)
+target_link_libraries(hl_navigation_sim PRIVATE HighFive)
+
+ament_export_targets(hl_navigation_simTargets HAS_LIBRARY_TARGET)
+ament_export_dependencies(geos hl_navigation)
+
+add_executable(main src/main.cpp)
+target_link_libraries(main hl_navigation_sim)
+add_dependencies(main hl_navigation_sim)
+
 
 install(TARGETS
-  hl_navigation_sim
+  main
   DESTINATION
   lib/${PROJECT_NAME}
 )
 
 install(
-  DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME})
+  DIRECTORY include/${PROJECT_NAME}
+  DESTINATION include
+)
 
 install(
   TARGETS hl_navigation_sim
+  EXPORT hl_navigation_simTargets
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin

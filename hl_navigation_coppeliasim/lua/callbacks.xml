@@ -3,21 +3,18 @@
 
 <plugin name="HLNavigation" author="jerome.guzzi@idsia.ch">
     <description>A plugin for [human-like] navigation in CoppeliaSim</description>
-    <command name="controller">
+    <command name="Controller">
         <description>Instantiate a navigation controller
         </description>
         <params>
-          <param name="behavior" type="string" default='"HL"'>
+          <param name="behavior" type="string">
             <description>The obstacle avoidance behavior</description>
           </param>
-          <param name="kinematics" type="int" default="2">
-            <description>The type of kinematics</description>
+          <param name="kinematic" type="kinematic_t">
+            <description>The kinematic</description>
           </param>
-          <param name="radius" type="float" default="0.5">
+          <param name="radius" type="float">
             <description>The radius</description>
-          </param>
-          <param name="axis_length" type="float" default="0.0">
-            <description>The axis length</description>
           </param>
         </params>
         <return>
@@ -26,7 +23,35 @@
           </param>
         </return>
     </command>
-    <command name="set_target_position">
+<!--     <command name="set_optimal_speed">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="parameters" type="table" item-type="float">
+            <description>The parameters</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+      <command name="set_optimal_speed">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+        </params>
+        <return>
+            <param name="parameters" type="table" item-type="float">
+              <description>The parameters</description>
+            </param>
+        </return>
+    </command> -->
+    <command name="go_to_position">
         <description>TODO
         </description>
         <params>
@@ -35,6 +60,63 @@
           </param>
           <param name="position" type="table" item-type="float">
             <description>The target position</description>
+          </param>
+          <param name="tolerance" type="float">
+            <description>The target tolerance</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="go_to_pose">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="position" type="table" item-type="float">
+            <description>The target position</description>
+          </param>
+          <param name="orientation" type="float">
+            <description>The target orientation</description>
+          </param>
+          <param name="position_tolerance" type="float">
+            <description>The target tolerance</description>
+          </param>
+          <param name="orientation_tolerance" type="float">
+            <description>The target tolerance</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+      <command name="follow_point">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="point" type="table" item-type="float">
+            <description>The target position</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+      <command name="follow_pose">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="position" type="table" item-type="float">
+            <description>The target position</description>
+          </param>
+          <param name="orientation" type="float">
+            <description>The target orientation</description>
           </param>
         </params>
         <return>
@@ -47,14 +129,17 @@
           <param name="handle" type="int">
             <description>The controller handle</description>
           </param>
-          <param name="pose" type="table" item-type="float">
-            <description>The pose {x, y, z, yaw}</description>
+          <param name="position" type="table" item-type="float">
+            <description>The 3d position</description>
+          </param>
+          <param name="orientation" type="float">
+            <description>The orientation in radians</description>
           </param>
         </params>
         <return>
         </return>
     </command>
-    <command name="set_velocity">
+    <command name="set_twist">
         <description>TODO
         </description>
         <params>
@@ -62,7 +147,80 @@
             <description>The controller handle</description>
           </param>
           <param name="velocity" type="table" item-type="float">
-            <description>The 2d or 3d velocity</description>
+            <description>The 3d velocity</description>
+          </param>
+          <param name="angular_speed" type="float">
+            <description>The angular speed in radians/s</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="set_rotation_tau">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="value" type="float">
+            <description>The value</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="set_horizon">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="value" type="float">
+            <description>The value</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="set_safety_margin">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="value" type="float">
+            <description>The value</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="set_optimal_speed">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="value" type="float">
+            <description>The value</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="set_heading_behavior">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="value" type="int">
+            <description>The value</description>
           </param>
         </params>
         <return>
@@ -80,9 +238,18 @@
           </param>
         </params>
         <return>
+          <param name="velocity" type="table" item-type="float">
+              <description>The 3d velocity</description>
+          </param>
+          <param name="angular_speed" type="float">
+            <description>The angular speed in radians/s</description>
+          </param>
+          <param name="state" type="float">
+            <description>The angular speed in radians/s</description>
+          </param>
         </return>
     </command>
-    <command name="get_target_twist">
+<!--     <command name="get_target_twist">
         <description>TODO
         </description>
         <params>
@@ -95,7 +262,7 @@
               <description>A 2d twist {v_x, v_y, w_z}</description>
           </param>
         </return>
-    </command>
+    </command> -->
     <command name="set_static_obstacles">
         <description>TODO
         </description>
@@ -118,13 +285,27 @@
             <description>The controller handle</description>
           </param>
           <param name="obstacles" type="table" item-type="obstacle_t">
-            <description>The controller handle</description>
+            <description>The obstacles</description>
           </param>
         </params>
         <return>
         </return>
     </command>
-    <command name="get_status">
+    <command name="set_line_obstacles">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="obstacles" type="table" item-type="line_t">
+            <description>The lines</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="get_state">
         <description>TODO
         </description>
         <params>
@@ -133,7 +314,21 @@
           </param>
         </params>
         <return>
-          <param name="status" type="int">
+          <param name="state" type="int">
+              <description>TODO</description>
+          </param>
+        </return>
+    </command>
+    <command name="get_actuated_wheel_speeds">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+        </params>
+        <return>
+          <param name="speeds" type="table" item-type="float">
               <description>TODO</description>
           </param>
         </return>
@@ -153,16 +348,48 @@
             <description>The social margin</description>
         </param>
     </struct>
-    <enum name="Status" item-prefix="" base="0">
-      <item name="MOVE" />
-      <item name="TURN" />
-      <item name="IDLE" />
-      <item name="BRAKING" />
+    <struct name="line_t">
+        <description>TODO</description>
+        <param name="p1" type="table" item-type="float">
+            <description>The position of the first vertex</description>
+        </param>
+        <param name="p2" type="table" item-type="float">
+            <description>The position of the second vertex</description>
+        </param>
+    </struct>
+    <struct name="kinematic_t">
+        <description>TODO</description>
+        <param name="type" type="int">
+          <description>The type</description>
+        </param>
+        <param name="max_speed" type="float" default="0.0">
+          <description>The maximal speed</description>
+        </param>
+        <param name="max_angular_speed" type="float" default="0.0">
+          <description>The maximal angular speed</description>
+        </param>
+        <param name="axis_length" type="float" default="0.0">
+            <description>The axis length</description>
+        </param>
+    </struct>           
+    <enum name="State" item-prefix="" base="0">
+      <item name="idle" />
+      <item name="running" />
+      <item name="failure" />
+      <item name="success" />
     </enum>
-    <enum name="Kinematics" item-prefix="" base="0">
-      <item name="HOLONOMIC" />
-      <item name="TWO_WHEELED" />
-      <item name="HEAD" />
-      <item name="FOUR_WHEELED_OMNI" />
+    <enum name="Kinematic" item-prefix="" base="0">
+      <item name="holonomic" />
+      <item name="frontal" />
+      <item name="two_wheeled" />
+      <item name="four_wheeled" />
     </enum>
+    <enum name="Heading" item-prefix="" base="0">
+      <item name="off" />
+      <item name="target_point" />
+      <item name="target_angle" />
+      <item name="target_angular_speed" />
+      <item name="velocity" />
+    </enum>
+
 </plugin>
