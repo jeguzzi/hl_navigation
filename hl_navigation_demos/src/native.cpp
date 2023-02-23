@@ -44,6 +44,9 @@ static void go_to(Controller *controller, Vector2 target) {
 
 static void run(const char *behavior = "HL") {
   std::vector<Controller> controllers;
+  // Attention: need to reserve, else the pointer passed to go_to could be invalid
+  // an alternative could be to use shared pointers
+  controllers.reserve(2);
   std::vector<Behavior *> agents;
   std::vector<Disc> obstacles = {Disc({0.0f, 0.0f}, 0.1)};
   Vector2 target{1.0, 0.0};
@@ -56,7 +59,8 @@ static void run(const char *behavior = "HL") {
     agent->set_position(Vector2(i ? -0.5f : 0.5f, 0.0f));
     agent->set_static_obstacles(obstacles);
     agents.push_back(agent.get());
-    auto &controller = controllers.emplace_back(agent);
+    auto & controller = controllers.emplace_back(agent);
+    controller.set_speed_tolerance(0.01f);
     go_to(&controller, target);
   }
   const float dt = 0.02f;
