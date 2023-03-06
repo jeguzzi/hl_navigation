@@ -68,7 +68,7 @@ void ORCABehavior::add_neighbor(const Disc &d) {
   a->position_ = RVO::Vector2((float)p.x(), (float)p.y());
   float distance;
 
-  Vector2 relative_position =
+  [[maybe_unused]] Vector2 relative_position =
       obstacle_relative_position(pose.position, p, radius, d.radius, distance);
   a->radius_ = d.radius + fmin(distance - d.radius - _RVOAgent->radius_ - 0.001,
                                obstacle_margin(distance, radius, d.radius,

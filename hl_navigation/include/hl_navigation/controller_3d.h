@@ -109,12 +109,16 @@ struct SimpleControl {
   Mode mode;
 
   SimpleControl()
-      : value_set(false),
+      : value(0.0f),
+        speed(0.0f),
+        target(0.0f),
+        tau(0.125f),
+        optimal_speed(1.0f),
+        target_speed(0.0f),
+        value_set(false),
         target_speed_set(false),
         target_set(false),
-        mode(Mode::idle),
-        tau(0.125f),
-        optimal_speed(1.0f) {}
+        mode(Mode::idle) {}
 
   float update(float dt) {
     if (mode == Mode::value && target_set && value_set) {
@@ -255,8 +259,8 @@ class Controller3 : public Controller {
               bool limit_to_2d = false)
       : Controller(behavior, compute_relative_twist,
                    set_twist_as_automatically_actuated),
-        limit_to_2d{limit_to_2d},
-        altitude() {}
+        altitude(),
+        limit_to_2d{limit_to_2d} {}
 
   /**
    * @brief      Sets the neighbors.
@@ -517,7 +521,7 @@ class Controller3 : public Controller {
           behavior->cmd_twist(time_step, compute_relative_twist, mode,
                               set_twist_as_automatically_actuated);
       const float cmd_z = limit_to_2d ? 0.0f : altitude.update(time_step);
-      const Twist3 cmd = Twist3(twist, cmd_z);
+      Twist3 cmd = Twist3(twist, cmd_z);
       if (cmd_cb_3) {
         (*cmd_cb_3)(cmd);
       }

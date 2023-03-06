@@ -12,7 +12,7 @@
 
 using namespace hl_navigation;
 
-static void show_usage(std::string name) {
+static void show_usage(const std::string & name) {
   std::vector<std::string> keys = Behavior::behavior_names();
   std::ostringstream behaviors;
   // Dump all keys
@@ -66,7 +66,7 @@ void run(const char *behavior = "HL", float radius = 4, unsigned number = 5,
                  });
 
   for (size_t i = 0; i < 1000; i++) {
-    int j = 0;
+    size_t j = 0;
     for (auto &agent : agents) {
       neighbors[j].position = agent->get_position();
       neighbors[j].velocity = agent->get_velocity(false);
@@ -76,7 +76,7 @@ void run(const char *behavior = "HL", float radius = 4, unsigned number = 5,
     for (auto &agent : agents) {
       auto g = agent->get_target_position();
       auto p = agent->get_position();
-      if ((g[0] == 0 && p[1] / p[1] > 1) || (g[1] == 0 && p[0] / g[0] > 1)) {
+      if ((g[0] == 0 && p[1] / g[1] > 1) || (g[1] == 0 && p[0] / g[0] > 1)) {
         agent->set_target_position(-p);
       }
       std::vector<Disc> agent_neighbors;
@@ -100,7 +100,7 @@ void run(const char *behavior = "HL", float radius = 4, unsigned number = 5,
 int main(int argc, char *argv[]) {
   char behavior_name[10] = "HL";
   for (int i = 0; i < argc; i++) {
-    if (sscanf(argv[i], "--behavior=%10s", behavior_name)) {
+    if (sscanf(argv[i], "--behavior=%9s", behavior_name)) {
       continue;
     }
     if (strcmp(argv[i], "--help") == 0) {

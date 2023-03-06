@@ -190,15 +190,15 @@ class Behavior {
         twist(),
         horizon(default_horizon),
         safety_margin(0.0f),
-        rotation_tau(default_rotation_tau),
         optimal_speed(kinematic->get_max_speed()),
         optimal_angular_speed(kinematic->get_max_angular_speed()),
+        rotation_tau(default_rotation_tau),
         heading_behavior(Heading::idle),
+        target_pose(),
+        target_twist(),
         static_obstacles(),
         neighbors(),
         line_obstacles(),
-        target_pose(),
-        target_twist(),
         changes{ALL} {}
 
   virtual ~Behavior() = default;
@@ -274,7 +274,7 @@ class Behavior {
    * @param      value  A positive value.
    */
   void set_radius(float value) {
-    radius = std::max(0.0f, radius);
+    radius = std::max(0.0f, value);
     register_change(RADIUS);
   }
   /**

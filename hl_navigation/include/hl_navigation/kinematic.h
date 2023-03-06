@@ -177,7 +177,7 @@ class Wheeled : public Kinematic {
    * @brief      Ignored as the angular speed depends on the maximal wheel speed
    * @param[in]  value  A positive value.
    */
-  virtual void set_max_angular_speed(float value) override {}
+  virtual void set_max_angular_speed([[maybe_unused]] float value) override {}
 
   /**
    * @brief      Convert wheel speeds to a twist

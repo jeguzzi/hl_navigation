@@ -78,10 +78,11 @@ class HLBehavior : public Behavior {
 
   HLBehavior(std::shared_ptr<Kinematic> kinematic, float radius)
       : Behavior(kinematic, radius),
-        resolution(std::min(default_resolution, max_resolution)),
-        aperture(default_aperture),
+        effective_horizon(0.0f),
         tau(default_tau),
         eta(default_eta),
+        aperture(default_aperture),
+        resolution(std::min(default_resolution, max_resolution)),
         neighbors_cache(),
         static_obstacles_cache() {}
   ~HLBehavior();

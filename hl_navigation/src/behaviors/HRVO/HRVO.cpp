@@ -12,6 +12,8 @@ namespace hl_navigation {
 
 HRVOBehavior::HRVOBehavior(std::shared_ptr<Kinematic> kinematic, float radius)
     : Behavior(kinematic, radius),
+      agentIndex(0), 
+      rangeSq(0.0f),
       _HRVOAgent(std::make_unique<HRVO::Agent>()) {
   _HRVOAgent->radius_ = radius;
   _HRVOAgent->maxNeighbors_ = 1000;
@@ -70,7 +72,7 @@ void HRVOBehavior::add_neighbor(const Disc &d) {
   a->position_ = HRVO::Vector2((float)p.x(), (float)p.y());
 
   float distance;
-  Vector2 relative_position =
+  [[maybe_unused]] Vector2 relative_position =
       obstacle_relative_position(pose.position, p, radius, d.radius, distance);
   // a->radius_=r+marginForObstacleAtDistance(distance,r,safetyMargin,socialMargin);
   a->radius_ =

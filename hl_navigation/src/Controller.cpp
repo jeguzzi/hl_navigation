@@ -6,11 +6,11 @@
 
 namespace hl_navigation {
 
-float FollowTwistAction::tick(Controller* controller, float dt) {
+float FollowTwistAction::tick([[maybe_unused]] Controller* controller, [[maybe_unused]] float dt) {
   return 0.0;
 }
 
-float FollowAction::tick(Controller* controller, float dt) {
+float FollowAction::tick(Controller* controller, [[maybe_unused]] float dt) {
   float distance = controller->time_to_target();
   if (has_target_orientation) {
     distance = std::max(distance, controller->time_to_target_orientation());
@@ -18,7 +18,7 @@ float FollowAction::tick(Controller* controller, float dt) {
   return distance;
 }
 
-float MoveAction::tick(Controller* controller, float dt) {
+float MoveAction::tick(Controller* controller, [[maybe_unused]] float dt) {
   float distance = 0.0f;
   float duration = 0.0f;
   if (move_state == Behavior::Mode::move) {

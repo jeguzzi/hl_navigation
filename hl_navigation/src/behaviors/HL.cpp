@@ -80,7 +80,7 @@ static DiscCache make_obstacle_cache(const Vector2 &position,
 static DiscCache make_obstacle_cache(const Vector2 &position,
                                      Vector2 &obstacle_position, float radius,
                                      float obstacle_radius, float safety_margin,
-                                     float social_margin) {
+                                     [[maybe_unused]] float social_margin) {
   DiscCache obstacle;
   obstacle.radius = obstacle_radius;
   float distance;

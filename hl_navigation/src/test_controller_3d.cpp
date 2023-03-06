@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   float dt = 0.1;
   char behavior_name[10] = "HL";
   for (int i = 0; i < argc; i++) {
-    if (sscanf(argv[i], "--behavior=%10s", behavior_name)) {
+    if (sscanf(argv[i], "--behavior=%9s", behavior_name)) {
       continue;
     }
     if (strcmp(argv[i], "--help") == 0) {
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
   auto p = controller.get_pose().position;
   printf("Start loop @ (%.3f, %.3f, %.3f)\n", p.x(), p.y(), p.z());
   while (!action->done() && t < 20) {
-    auto cmd = controller.update_3d(dt);
+    controller.update_3d(dt);
     t += dt;
   }
   p = controller.get_pose().position;

@@ -80,14 +80,14 @@ Twist2 Behavior::twist_towards_velocity(const Vector2& absolute_velocity,
 
 
 
-Twist2 Behavior::cmd_twist_towards_target(float dt, bool relative) {
+Twist2 Behavior::cmd_twist_towards_target([[maybe_unused]] float dt, bool relative) {
   desired_velocity = compute_desired_velocity();
   Twist2 desired_twist = twist_towards_velocity(desired_velocity, true);
   Twist2 twist = kinematic->feasible(desired_twist);
   return to_frame(twist, relative);
 }
 
-Twist2 Behavior::cmd_twist_towards_target_orientation(float dt, bool relative) {
+Twist2 Behavior::cmd_twist_towards_target_orientation([[maybe_unused]] float dt, bool relative) {
   return {Vector2::Zero(),
           std::clamp(normalize(target_pose.orientation - pose.orientation),
                      -kinematic->get_max_angular_speed(),
@@ -95,7 +95,7 @@ Twist2 Behavior::cmd_twist_towards_target_orientation(float dt, bool relative) {
           relative};
 }
 
-Twist2 Behavior::cmd_twist_towards_stopping(float dt, bool relative) {
+Twist2 Behavior::cmd_twist_towards_stopping([[maybe_unused]] float dt, bool relative) {
   return {Vector2::Zero(), 0.0, relative};
 }
 

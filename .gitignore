@@ -58,3 +58,4 @@ xcode
 *.h5
 *.pdf
 _build
+.DS_Store

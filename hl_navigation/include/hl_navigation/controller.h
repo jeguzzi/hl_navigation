@@ -152,6 +152,7 @@ class Controller {
              bool compute_relative_twist = true,
              bool set_twist_as_automatically_actuated = true)
       : behavior(behavior),
+        speed_tolerance(1e-3),
         compute_relative_twist(compute_relative_twist),
         set_twist_as_automatically_actuated(
             set_twist_as_automatically_actuated) {}
@@ -439,7 +440,7 @@ class Controller {
     if (action && behavior) {
       const Behavior::Mode mode =
           action->running() ? action->mode() : Behavior::Mode::stop;
-      const Twist2 cmd =
+      Twist2 cmd =
           behavior->cmd_twist(time_step, compute_relative_twist, mode,
                               set_twist_as_automatically_actuated);
       if (cmd_cb) {

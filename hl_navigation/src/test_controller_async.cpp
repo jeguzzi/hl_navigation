@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "hl_navigation/behavior.h"
-#include "hl_navigation/controller.h"
 #include "hl_navigation/common.h"
+#include "hl_navigation/controller.h"
 
 using hl_navigation::Action;
 using hl_navigation::Behavior;
@@ -15,24 +15,22 @@ using hl_navigation::Holonomic;
 using hl_navigation::Twist2;
 using hl_navigation::Vector2;
 
-
-void move(Controller * controller, Vector2 target) {
+void move(Controller *controller, Vector2 target) {
   printf("Next target (%.2f, %.2f)\n", target.x(), target.y());
   auto action = controller->go_to_position(target, 0.1f);
-  action->done_cb = [controller, target=target](Action::State state) {
-      if (state==Action::State::success) {
-        move(controller, -target);
-      } else {
-          printf("Stopped\n");
-      }
+  action->done_cb = [controller, target = target](Action::State state) {
+    if (state == Action::State::success) {
+      move(controller, -target);
+    } else {
+      printf("Stopped\n");
+    }
   };
   action->running_cb = [](float time) {
     printf("In progress ... %.2f s\n", time);
   };
 }
 
-
-int main(int argc, char *argv[]) {
+int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
   auto behavior = Behavior::behavior_with_name(
       "Dummy", std::make_shared<Holonomic>(1.0, 1.0), 0.1);
   Controller controller(behavior);
