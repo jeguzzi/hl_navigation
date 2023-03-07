@@ -44,6 +44,8 @@ set(HRVO
 include_directories(include)
 
 add_library(hl_navigation SHARED
+  src/collision_computation.cpp
+  src/cached_collision_computation.cpp
   src/behavior.cpp
   src/behaviors/dummy.cpp
   src/behaviors/HL.cpp
@@ -77,12 +79,21 @@ add_executable(test_controller_async src/test_controller_async.cpp)
 target_link_libraries(test_controller_async hl_navigation)
 add_dependencies(test_controller_async hl_navigation)
 
+add_executable(test_collision src/test_collision.cpp)
+target_link_libraries(test_collision hl_navigation)
+add_dependencies(test_collision hl_navigation)
+
+add_executable(test_collision_cached src/test_cached_collision.cpp)
+target_link_libraries(test_collision_cached hl_navigation)
+add_dependencies(test_collision_cached hl_navigation)
+
 add_executable(benchmark src/benchmark.cpp)
 target_link_libraries(benchmark hl_navigation)
 add_dependencies(benchmark hl_navigation)
 
 install(TARGETS
-  test_behavior benchmark  test_controller test_controller_3d test_controller_async
+  test_behavior benchmark  test_controller test_controller_3d 
+  test_controller_async test_collision test_collision_cached
   DESTINATION lib/${PROJECT_NAME}
 )
 

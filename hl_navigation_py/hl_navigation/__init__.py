@@ -19,7 +19,9 @@ from ._hl_navigation import (
     BehaviorMode,
     Action,
     ActionState,
-    Controller
+    Controller,
+    CollisionComputation,
+    CachedCollisionComputation
 )
 
 __all__ = [
@@ -43,5 +45,7 @@ __all__ = [
     'FourWheeled',
     'Action',
     'ActionState',
-    'Controller'
+    'Controller',
+    'CollisionComputation'
+    'CachedCollisionComputation'
 ]

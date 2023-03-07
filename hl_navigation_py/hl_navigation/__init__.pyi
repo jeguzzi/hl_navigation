@@ -23,7 +23,9 @@ __all__ = [
     "Pose2",
     "Twist2",
     "TwoWheeled",
-    "Wheeled"
+    "Wheeled",
+    "CollisionComputation",
+    "CachedCollisionComputation"
 ]
 
 def behavior_with_name(arg0: str, arg1: Kinematic, arg2: float) -> Behavior:

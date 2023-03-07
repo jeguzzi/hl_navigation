@@ -11,27 +11,13 @@
 #include <vector>
 
 #include "hl_navigation/behavior.h"
+#include "hl_navigation/collision_computation.h"
 
 // TODO(J): verify if behavior for tau < step is correct (non smooth)
 
 // trajectory planning
 
 namespace hl_navigation {
-
-struct DiscCache {
-  float center_distance;
-  float radius;
-  float sensing_margin;
-  // float agent_sensing_margin;
-  // float socialMargin;
-  // float penetration;
-  Vector2 dx;
-  Vector2 va;
-  Vector2 position;
-  float C;
-  Radians gamma;
-  Radians visible_angle;
-};
 
 /**
  * @brief      Human-like obstacle avoidance behavior.
@@ -46,15 +32,6 @@ struct DiscCache {
  */
 class HLBehavior : public Behavior {
  public:
-  /**
-   * Marks yet-not-computed entries in \ref get_collision_distance_cache
-   */
-  static constexpr int UNKNOWN_DIST = -2;
-  /**
-   * Marks absence of collisions for an entry in \ref
-   * get_collision_distance_cache
-   */
-  static constexpr int NO_COLLISION = -1;
   /**
    * Default \f$\eta\f$
    */
@@ -83,8 +60,7 @@ class HLBehavior : public Behavior {
         eta(default_eta),
         aperture(default_aperture),
         resolution(std::min(default_resolution, max_resolution)),
-        neighbors_cache(),
-        static_obstacles_cache() {}
+        collision_computation() {}
   ~HLBehavior();
 
   // -------------------------- BEHAVIOR PARAMETERS
@@ -188,37 +164,17 @@ class HLBehavior : public Behavior {
   Twist2 cmd_twist(float time_step, bool relative, Mode mode = Mode::move,
                    bool set_as_actuated = true) override;
 
-  // -------------------------- INSPECTION
-
-  using CollisionMap = std::vector<std::tuple<float, float>>;
-
   /**
    * @brief      Gets the free distance to collision in \f$[-\alpha, \alpha]\f$
    * at regular intervals.
    *
    * @param[in]  assuming_static  If True, all obstacles are assumed static.
    *
-   * @return     A vector of pairs <angle, distance> of size \ref get_resolution.
-   *             Angles are in the agent frame.
+   * @return     A vector of pairs <angle, distance> of size \ref
+   * get_resolution. Angles are in the agent frame.
    */
-  CollisionMap get_collision_distance(bool assuming_static = false);
-
-  /**
-   * @brief      Gets a pointer where collision distances are cached. Similar to
-   * \ref get_collision_distance but no effort is made to compute entry not
-   * already computed by \ref cmd_twist. Negative entries means:
-   *               - \ref UNKNOWN_DIST = -2 -> distance not computed
-   *               - \ref NO_COLLISION = -1 -> no collision (up to \ref
-   * get_horizon)
-   *
-   * @param[in]  assuming_static  The assuming static
-   *
-   * @return     The collision distance cache.
-   */
-  const float *get_collision_distance_cache(bool assuming_static = false) {
-    if (assuming_static) return &static_distance_cache[0];
-    return &distance_cache[0];
-  }
+  CollisionComputation::CollisionMap get_collision_distance(
+      bool assuming_static = false);
 
  protected:
   float effective_horizon;
@@ -226,10 +182,7 @@ class HLBehavior : public Behavior {
   float eta;
   Radians aperture;
   unsigned int resolution;
-  float distance_cache[max_resolution];
-  float static_distance_cache[max_resolution];
-  std::list<DiscCache> neighbors_cache;
-  std::list<DiscCache> static_obstacles_cache;
+  CollisionComputation collision_computation;
 
   Vector2 compute_desired_velocity() override;
 
