@@ -28,7 +28,10 @@ def run(behavior_name: str = "HL") -> None:
         behavior.horizon = 1.0
         behavior.safety_margin = 0.02
         behavior.optimal_speed = 0.12
-        behavior.static_obstacles = obstacles
+        try:
+            behavior.static_obstacles = obstacles
+        except AttributeError:
+            pass
         controller = hl_navigation.Controller(behavior)
         controller.speed_tolerance = 0.01
         behavior.position = p
@@ -41,9 +44,12 @@ def run(behavior_name: str = "HL") -> None:
     for _ in range(50 * 60):
         for controller in controllers:
             this = controller.behavior
-            controller.behavior.neighbors = [
-                hl_navigation.Disc(agent.position, agent.radius, 0.0, agent.velocity)
-                for agent in agents if agent != this]
+            try:
+                controller.behavior.neighbors = [
+                    hl_navigation.Disc(agent.position, agent.radius, 0.0, agent.velocity)
+                    for agent in agents if agent != this]
+            except AttributeError:
+                pass
         for controller in controllers:
             cmd = controller.update(dt)
             controller.behavior.actuate(cmd, dt)

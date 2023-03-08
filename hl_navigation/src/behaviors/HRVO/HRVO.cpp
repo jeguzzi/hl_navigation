@@ -12,7 +12,8 @@ namespace hl_navigation {
 
 HRVOBehavior::HRVOBehavior(std::shared_ptr<Kinematic> kinematic, float radius)
     : Behavior(kinematic, radius),
-      agentIndex(0), 
+      GeometricState(),
+      agentIndex(0),
       rangeSq(0.0f),
       _HRVOAgent(std::make_unique<HRVO::Agent>()) {
   _HRVOAgent->radius_ = radius;
@@ -20,14 +21,7 @@ HRVOBehavior::HRVOBehavior(std::shared_ptr<Kinematic> kinematic, float radius)
 }
 HRVOBehavior::~HRVOBehavior() = default;
 
-bool HRVOBehavior::cache_is_valid() const {
-  return !changed(TARGET_POSITION | POSITION | VELOCITY | ORIENTATION |
-                  NEIGHBORS | STATIC_OBSTACLES | RADIUS | SAFETY_MARGIN |
-                  HORIZON | OPTIMAL_SPEED);
-}
-
 void HRVOBehavior::prepare() {
-  if (cache_is_valid()) return;
   _HRVOAgent->velocity_ = HRVO::Vector2(twist.velocity.x(), twist.velocity.y());
   _HRVOAgent->orientation_ = normalize(pose.orientation);
   _HRVOAgent->position_ = HRVO::Vector2(pose.position.x(), pose.position.y());
@@ -43,26 +37,30 @@ void HRVOBehavior::prepare() {
   _HRVOAgent->maxSpeed_ = optimal_speed;
   _HRVOAgent->uncertaintyOffset_ = 0;
 
-  _HRVOAgent->neighbors_.clear();
-  for (uint i = 0; i < _HRVOAgent->obstacles_.size(); i++) {
-    delete _HRVOAgent->obstacles_[i];
+  if (GeometricState::changed(NEIGHBORS | STATIC_OBSTACLES) ||
+      Behavior::changed(POSITION | RADIUS | SAFETY_MARGIN)) {
+    _HRVOAgent->neighbors_.clear();
+    for (uint i = 0; i < _HRVOAgent->obstacles_.size(); i++) {
+      delete _HRVOAgent->obstacles_[i];
+    }
+
+    for (uint i = 0; i < _HRVOAgent->agents_.size(); i++) {
+      delete _HRVOAgent->agents_[i];
+    }
+    _HRVOAgent->obstacles_.clear();
+    _HRVOAgent->agents_.clear();
+    agentIndex = 0;
+
+    for (const auto &n : get_neighbors()) {
+      add_neighbor(n);
+    }
+    for (const auto &o : get_static_obstacles()) {
+      add_neighbor(o);
+    }
   }
 
-  for (uint i = 0; i < _HRVOAgent->agents_.size(); i++) {
-    delete _HRVOAgent->agents_[i];
-  }
-  _HRVOAgent->obstacles_.clear();
-  _HRVOAgent->agents_.clear();
-  agentIndex = 0;
-
-  for (const auto &n : neighbors) {
-    add_neighbor(n);
-  }
-  for (const auto &o : static_obstacles) {
-    add_neighbor(o);
-  }
-
-  reset_changes();
+  GeometricState::reset_changes();
+  Behavior::reset_changes();
 }
 
 void HRVOBehavior::add_neighbor(const Disc &d) {

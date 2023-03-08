@@ -60,3 +60,5 @@ xcode
 _build
 .DS_Store
 notes
+install
+build

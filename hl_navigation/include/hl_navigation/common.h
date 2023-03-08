@@ -182,6 +182,17 @@ struct Pose2 {
   }
 };
 
+class RegisterChanges {
+ public:
+  RegisterChanges() : changes{0xFFFFFFFF} {}
+  bool changed(unsigned mask = 0xFFFFFFFF) const { return changes & mask; }
+  void reset_changes() { changes = 0; }
+  void change(unsigned mask) { changes |= mask; }
+
+ private:
+  unsigned changes;
+};
+
 }  // namespace hl_navigation
 
 #endif  // HL_NAVIGATION_COMMON_H_

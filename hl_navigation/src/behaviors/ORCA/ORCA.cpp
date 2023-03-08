@@ -18,6 +18,7 @@ namespace hl_navigation {
 
 ORCABehavior::ORCABehavior(std::shared_ptr<Kinematic> kinematic, float radius)
     : Behavior(kinematic, radius),
+      GeometricState(),
       use_effective_center(false),
       _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
   _RVOAgent->maxNeighbors_ = 1000;
@@ -27,17 +28,9 @@ ORCABehavior::ORCABehavior(std::shared_ptr<Kinematic> kinematic, float radius)
 
 ORCABehavior::~ORCABehavior() = default;
 
-// TODO(J: revision): why do I need rvo_neighbors. It is not enught to use
+// TODO(J: revision): why do I need rvo_neighbors. It is not enough to use
 // _RVOAgent->rvo_neighbors_? No, because insertObstacleNeighbor may remove some
 // entry
-
-void ORCABehavior::set_line_obstacles(const std::vector<LineSegment> &value) {
-  Behavior::set_line_obstacles(value);
-  rvo_obstacles.clear();
-  for (auto &line : line_obstacles) {
-    add_line_obstacle(line);
-  }
-}
 
 void ORCABehavior::add_line_obstacle(const LineSegment &line) {
   Vector2 pa = line.p1;  // - line.e1 * safetyMargin - line.e2 * safetyMargin;
@@ -60,7 +53,7 @@ void ORCABehavior::add_line_obstacle(const LineSegment &line) {
 
 // TODO(old) add non penetration check!
 
-void ORCABehavior::add_neighbor(const Disc &d) {
+void ORCABehavior::add_neighbor(const Disc &d, float rangeSq) {
   auto a = std::make_unique<RVO::Agent>(nullptr);
   Vector2 p = d.position;
   a->velocity_ = RVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
@@ -85,11 +78,7 @@ float ORCABehavior::get_time_horizon() const { return _RVOAgent->timeHorizon_; }
 void ORCABehavior::set_time_step(float value) { _RVOAgent->timeStep_ = value; }
 float ORCABehavior::get_time_step() const { return _RVOAgent->timeStep_; }
 
-bool ORCABehavior::cache_is_valid() const {
-  return !changed(POSITION | NEIGHBORS | STATIC_OBSTACLES | LINE_OBSTACLES |
-                  RADIUS | OPTIMAL_SPEED | RADIUS | TARGET_POSITION |
-                  SAFETY_MARGIN | HORIZON);
-}
+
 
 // TODO(J): still need the float casting?
 void ORCABehavior::prepare() {
@@ -121,26 +110,33 @@ void ORCABehavior::prepare() {
       _RVOAgent->position_;
   _RVOAgent->prefVelocity_ = t * _RVOAgent->maxSpeed_ / abs(t);
 
-  rangeSq = (horizon * 2) * (horizon * 2);
+  const float rangeSq = (horizon * 2) * (horizon * 2);
+  if (GeometricState::changed(LINE_OBSTACLES)) {
+    rvo_obstacles.clear();
+    _RVOAgent->obstacleNeighbors_.clear();
+    for (auto &line : get_line_obstacles()) {
+      add_line_obstacle(line);
+    }
 
-  _RVOAgent->agentNeighbors_.clear();
-  _RVOAgent->obstacleNeighbors_.clear();
-  rvo_neighbors.clear();
-
-  for (auto &obstacle : rvo_obstacles) {
-    _RVOAgent->insertObstacleNeighbor(obstacle.get(), rangeSq);
+    for (auto &obstacle : rvo_obstacles) {
+      _RVOAgent->insertObstacleNeighbor(obstacle.get(), rangeSq);
+    }
   }
-  for (const auto &n : neighbors) {
-    add_neighbor(n);
+  if (GeometricState::changed(STATIC_OBSTACLES | NEIGHBORS)) {
+    _RVOAgent->agentNeighbors_.clear();
+    rvo_neighbors.clear();
+    for (const auto &n : get_neighbors()) {
+      add_neighbor(n, rangeSq);
+    }
+    for (const auto &o : get_static_obstacles()) {
+      add_neighbor(o, rangeSq);
+    }
   }
-  for (const auto &o : static_obstacles) {
-    add_neighbor(o);
-  }
-  reset_changes();
+  GeometricState::reset_changes();
 }
 
 Vector2 ORCABehavior::compute_desired_velocity() {
-  if (!cache_is_valid()) prepare();
+  prepare();
   _RVOAgent->computeNewVelocity();
   return Vector2(_RVOAgent->newVelocity_.x(), _RVOAgent->newVelocity_.y());
 }

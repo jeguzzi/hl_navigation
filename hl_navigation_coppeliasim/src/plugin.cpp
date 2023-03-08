@@ -8,6 +8,7 @@
 #include "hl_navigation/common.h"
 #include "hl_navigation/controller_3d.h"
 #include "hl_navigation/kinematic.h"
+#include "hl_navigation/state/geometric.h"
 #include "simPlusPlus/Handle.h"
 #include "simPlusPlus/Plugin.h"
 #include "stubs.h"
@@ -135,24 +136,24 @@ class Plugin : public sim::Plugin {
     }
   }
 
-  // TODO(J): extend to 3d
+  // TODO(J): extend to 3dr
   void set_static_obstacles(set_static_obstacles_in *in,
                             set_static_obstacles_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (behavior) {
+    if (GeometricState * state = dynamic_cast<GeometricState *>(behavior)) {
       std::vector<Disc> obstacles;
       std::transform(in->obstacles.cbegin(), in->obstacles.cend(),
                      std::back_inserter(obstacles), [](const obstacle_t &o) {
                        return Disc(Vector2(o.position[0], o.position[1]),
                                    o.radius, o.social_margin);
                      });
-      behavior->set_static_obstacles(obstacles);
+      state->set_static_obstacles(obstacles);
     }
   }
 
   void set_neighbors(set_neighbors_in *in, set_neighbors_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (behavior) {
+    if (GeometricState * state = dynamic_cast<GeometricState *>(behavior)) {
       std::vector<Disc> obstacles;
       std::transform(in->obstacles.cbegin(), in->obstacles.cend(),
                      std::back_inserter(obstacles), [](obstacle_t o) {
@@ -160,21 +161,21 @@ class Plugin : public sim::Plugin {
                                    o.radius, o.social_margin,
                                    Vector2(o.velocity[0], o.velocity[1]));
                      });
-      behavior->set_neighbors(obstacles);
+      state->set_neighbors(obstacles);
     }
   }
 
   void set_line_obstacles(set_line_obstacles_in *in,
                           set_line_obstacles_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (behavior) {
+    if (GeometricState * state = dynamic_cast<GeometricState *>(behavior)) {
       std::vector<LineSegment> obstacles;
       std::transform(in->obstacles.cbegin(), in->obstacles.cend(),
                      std::back_inserter(obstacles), [](line_t o) {
                        return LineSegment(Vector2(o.p1[0], o.p1[1]),
                                           Vector2(o.p2[0], o.p2[1]));
                      });
-      behavior->set_line_obstacles(obstacles);
+      state->set_line_obstacles(obstacles);
     }
   }
 

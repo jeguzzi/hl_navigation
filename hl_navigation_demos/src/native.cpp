@@ -10,14 +10,16 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/controller.h"
+#include "hl_navigation/state/geometric.h"
 
 using hl_navigation::Action;
 using hl_navigation::Behavior;
 using hl_navigation::Controller;
-using hl_navigation::TwoWheeled;
-using hl_navigation::Twist2;
-using hl_navigation::Vector2;
 using hl_navigation::Disc;
+using hl_navigation::GeometricState;
+using hl_navigation::Twist2;
+using hl_navigation::TwoWheeled;
+using hl_navigation::Vector2;
 
 static void show_usage(std::string name) {
   std::vector<std::string> keys = Behavior::behavior_names();
@@ -44,8 +46,8 @@ static void go_to(Controller *controller, Vector2 target) {
 
 static void run(const char *behavior = "HL") {
   std::vector<Controller> controllers;
-  // Attention: need to reserve, else the pointer passed to go_to could be invalid
-  // an alternative could be to use shared pointers
+  // Attention: need to reserve, else the pointer passed to go_to could be
+  // invalid an alternative could be to use shared pointers
   controllers.reserve(2);
   std::vector<Behavior *> agents;
   std::vector<Disc> obstacles = {Disc({0.0f, 0.0f}, 0.1)};
@@ -57,9 +59,11 @@ static void run(const char *behavior = "HL") {
     agent->set_safety_margin(0.02);
     agent->set_optimal_speed(0.12);
     agent->set_position(Vector2(i ? -0.5f : 0.5f, 0.0f));
-    agent->set_static_obstacles(obstacles);
+    if (GeometricState *state = dynamic_cast<GeometricState *>(agent.get())) {
+      state->set_static_obstacles(obstacles);
+    }
     agents.push_back(agent.get());
-    auto & controller = controllers.emplace_back(agent);
+    auto &controller = controllers.emplace_back(agent);
     controller.set_speed_tolerance(0.01f);
     go_to(&controller, target);
   }
@@ -69,13 +73,15 @@ static void run(const char *behavior = "HL") {
   for (size_t i = 0; i < 3000; i++) {
     for (auto &controller : controllers) {
       auto agent = controller.get_behavior().get();
-      std::vector<Disc> neighbors;
-      for (auto &neighbor : agents) {
-        if (neighbor == agent) continue;
-        neighbors.emplace_back(neighbor->get_position(), 0.08, 0.0,
-                               neighbor->get_velocity(false));
+      if (GeometricState *state = dynamic_cast<GeometricState *>(agent)) {
+        std::vector<Disc> neighbors;
+        for (auto &neighbor : agents) {
+          if (neighbor == agent) continue;
+          neighbors.emplace_back(neighbor->get_position(), 0.08, 0.0,
+                                 neighbor->get_velocity(false));
+        }
+        state->set_neighbors(neighbors);
       }
-      agent->set_neighbors(neighbors);
     }
     for (auto &controller : controllers) {
       auto cmd = controller.update(dt);

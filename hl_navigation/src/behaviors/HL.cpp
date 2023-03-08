@@ -44,7 +44,7 @@ namespace hl_navigation {
 
 // TODO(J 2023): review that we modify the obstacle position
 static DiscCache make_obstacle_cache(const Vector2 &position,
-                                     Vector2 &obstacle_position,
+                                     Vector2 obstacle_position,
                                      const Vector2 &obstacle_velocity,
                                      float radius, float obstacle_radius,
                                      float safety_margin, float social_margin) {
@@ -59,7 +59,7 @@ static DiscCache make_obstacle_cache(const Vector2 &position,
 
 // TODO(J 2023): review that we modify the obstacle position
 static DiscCache make_obstacle_cache(const Vector2 &position,
-                                     Vector2 &obstacle_position, float radius,
+                                     Vector2 obstacle_position, float radius,
                                      float obstacle_radius, float safety_margin,
                                      [[maybe_unused]] float social_margin) {
   float distance;
@@ -73,7 +73,7 @@ HLBehavior::~HLBehavior() = default;
 
 CollisionComputation::CollisionMap HLBehavior::get_collision_distance(
     bool assuming_static) {
-  if (!cache_is_valid()) prepare();
+  prepare();
   return collision_computation.get_free_distance_for_sector(
       pose.orientation - aperture, 2 * aperture, resolution, effective_horizon,
       assuming_static, optimal_speed);
@@ -91,7 +91,7 @@ static inline float distance_from_target(Radians angle, float free_distance,
 // TODO(J:revision2023): check why we need effective_horizon
 // output is in absolute frame
 Vector2 HLBehavior::compute_desired_velocity() {
-  if (!cache_is_valid()) prepare();
+  prepare();
   const Vector2 delta_target = target_pose.position - pose.position;
   const Radians start_angle = polar_angle(delta_target);
   const Radians relative_start_angle = start_angle - pose.orientation;
@@ -109,8 +109,7 @@ Vector2 HLBehavior::compute_desired_velocity() {
   int out[2] = {0, 0};
   bool found = false;
   while (angle < max_angle && !(out[0] == 2 && out[1] == 2)) {
-    float distance_from_target_lower_bound =
-        fabs(sin(angle) * max_distance);
+    float distance_from_target_lower_bound = fabs(sin(angle) * max_distance);
     // distance_from_target_lower_bound=2*D*Sin(0.5*optimal_angle);
     if (optimal_distance_from_target <= distance_from_target_lower_bound) {
       break;
@@ -143,37 +142,39 @@ Vector2 HLBehavior::compute_desired_velocity() {
   return desired_speed * unit(start_angle + optimal_angle);
 }
 
-bool HLBehavior::cache_is_valid() const {
-  return !changed(HORIZON | NEIGHBORS | STATIC_OBSTACLES | POSITION | RADIUS |
-                  SAFETY_MARGIN);
-}
-
 void HLBehavior::prepare() {
   effective_horizon = horizon;
-  std::vector<DiscCache> ns;
-  ns.reserve(neighbors.size());
-  std::vector<DiscCache> ss;
-  ss.reserve(static_obstacles.size());
-  for (Disc &d : neighbors) {
-    const auto c =
-        make_obstacle_cache(pose.position, d.position, d.velocity, radius,
-                            d.radius, safety_margin, d.social_margin);
-    if (collision_computation.dynamic_may_collide(c, effective_horizon,
-                                                  optimal_speed)) {
-      ns.push_back(c);
+  if (GeometricState::changed() ||
+      Behavior::changed(POSITION | ORIENTATION | RADIUS | HORIZON |
+                        SAFETY_MARGIN)) {
+    std::vector<DiscCache> ns;
+    ns.reserve(get_neighbors().size());
+    for (const Disc &d : get_neighbors()) {
+      const auto c =
+          make_obstacle_cache(pose.position, d.position, d.velocity, radius,
+                              d.radius, safety_margin, d.social_margin);
+      if (collision_computation.dynamic_may_collide(c, effective_horizon,
+                                                    optimal_speed)) {
+        ns.push_back(c);
+      }
     }
-  }
-  for (Disc &d : static_obstacles) {
-    const auto c =
-        make_obstacle_cache(pose.position, d.position, radius, d.radius,
-                            safety_margin, d.social_margin);
-    if (collision_computation.static_may_collide(c, effective_horizon)) {
-      ns.push_back(c);
+    std::vector<DiscCache> ss;
+    ss.reserve(get_static_obstacles().size());
+
+    for (const Disc &d : get_static_obstacles()) {
+      const auto c =
+          make_obstacle_cache(pose.position, d.position, radius, d.radius,
+                              safety_margin, d.social_margin);
+      if (collision_computation.static_may_collide(c, effective_horizon)) {
+        ns.push_back(c);
+      }
     }
+    collision_computation.setup(pose, radius + safety_margin,
+                                get_line_obstacles(), std::move(ss),
+                                std::move(ns));
   }
-  collision_computation.setup(pose, radius + safety_margin, line_obstacles,
-                              std::move(ss), std::move(ns));
-  reset_changes();
+  GeometricState::reset_changes();
+  Behavior::reset_changes();
 }
 
 Twist2 HLBehavior::relax(const Twist2 &value, float dt) const {

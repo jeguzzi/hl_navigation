@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <vector>
 
-#include "hl_navigation/behavior.h"
 #include "hl_navigation/common.h"
+#include "hl_navigation/state/geometric.h"
 
 namespace hl_navigation {
 

@@ -7,12 +7,14 @@
 #include <vector>
 
 #include "hl_navigation/behavior.h"
+#include "hl_navigation/state/geometric.h"
 
 // Should also add the wheels
 
 using hl_navigation::Behavior;
 using hl_navigation::Holonomic;
 using hl_navigation::Disc;
+using hl_navigation::GeometricState;
 
 static void show_usage(std::string name) {
   std::vector<std::string> keys = Behavior::behavior_names();
@@ -53,7 +55,12 @@ int main(int argc, char* argv[]) {
   behavior->set_position({0.0f, 0.05f});
   // Go to 10, 0
   behavior->set_target_position({10.0f, 0.0f});
-  behavior->set_static_obstacles({Disc({1.5f, 0.0f}, 0.5f)});
+
+  GeometricState * geometric_state = dynamic_cast<GeometricState *>(behavior.get());
+  if(geometric_state) {
+    geometric_state->set_static_obstacles({Disc({1.5f, 0.0f}, 0.5f)});
+  }
+
   auto pose = behavior->get_pose();
   auto twist = behavior->get_twist();
   printf("Start loop @ (%.3f, %.3f, %.3f)\n", pose.position.x(),

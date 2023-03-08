@@ -160,13 +160,6 @@ PYBIND11_MODULE(_hl_navigation, m) {
            py::overload_cast<const Twist2 &, float>(&Behavior::actuate))
       .def("actuate", py::overload_cast<float>(&Behavior::actuate))
 
-      .def_property("neighbors", &Behavior::get_neighbors,
-                    &Behavior::set_neighbors)
-      .def_property("static_obstacles", &Behavior::get_static_obstacles,
-                    &Behavior::set_static_obstacles)
-      .def_property("line_obstacles", &Behavior::get_line_obstacles,
-                    &Behavior::set_line_obstacles)
-
       .def_property("heading_behavior", &Behavior::get_heading_behavior,
                     &Behavior::set_heading_behavior)
       .def_property("target_position", &Behavior::get_target_position,
@@ -192,7 +185,17 @@ PYBIND11_MODULE(_hl_navigation, m) {
   m.def("behavior_with_name", &Behavior::behavior_with_name);
   m.def("behavior_names", &Behavior::behavior_names);
 
-  py::class_<HLBehavior, Behavior, std::shared_ptr<HLBehavior>>(m, "HLBehavior")
+  py::class_<GeometricState, std::shared_ptr<GeometricState>>(m,
+                                                              "GeometricState")
+      .def_property("neighbors", &GeometricState::get_neighbors,
+                    &GeometricState::set_neighbors)
+      .def_property("static_obstacles", &GeometricState::get_static_obstacles,
+                    &GeometricState::set_static_obstacles)
+      .def_property("line_obstacles", &GeometricState::get_line_obstacles,
+                    &GeometricState::set_line_obstacles);
+
+  py::class_<HLBehavior, GeometricState, Behavior, std::shared_ptr<HLBehavior>>(
+      m, "HLBehavior")
       .def(py::init<std::shared_ptr<Kinematic>, float>(), py::arg("kinematic"),
            py::arg("radius"))
       .def_property("eta", &HLBehavior::get_eta, &HLBehavior::set_eta)
@@ -206,8 +209,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .def_property("collision_distances", &HLBehavior::get_collision_distance,
                     nullptr);
 
-  py::class_<ORCABehavior, Behavior, std::shared_ptr<ORCABehavior>>(
-      m, "ORCABehavior")
+  py::class_<ORCABehavior, GeometricState, Behavior,
+             std::shared_ptr<ORCABehavior>>(m, "ORCABehavior")
       .def(py::init<std::shared_ptr<Kinematic>, float>(), py::arg("kinematic"),
            py::arg("radius"))
       .def_property("time_horizon", &ORCABehavior::get_time_horizon,
@@ -216,8 +219,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
                     &ORCABehavior::is_using_effective_center,
                     &ORCABehavior::should_use_effective_center);
 
-  py::class_<HRVOBehavior, Behavior, std::shared_ptr<HRVOBehavior>>(
-      m, "HRVOBehavior")
+  py::class_<HRVOBehavior, GeometricState, Behavior,
+             std::shared_ptr<HRVOBehavior>>(m, "HRVOBehavior")
       .def(py::init<std::shared_ptr<Kinematic>, float>(), py::arg("kinematic"),
            py::arg("radius"));
 

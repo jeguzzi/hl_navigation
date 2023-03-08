@@ -16,94 +16,6 @@
 
 namespace hl_navigation {
 
-/**
- * @brief A dynamic obstacle of circular shape.
- */
-struct Disc {
-  /**
-   * The center of the disc in world frame
-   */
-  Vector2 position;
-  /**
-   * Velocity in world frame
-   */
-  Vector2 velocity;
-  /**
-   * Radius
-   */
-  float radius;
-  /**
-   * An additional softer margin to add to the obstacle.
-   *
-   * \warning We will probably replace \ref social_margin with a tag labeling
-   * the type of obstacle and move the related property to \ref Behavior.
-   */
-  float social_margin;
-
-  /**
-   * @brief      Constructs a new instance.
-   *
-   * @param  position       The position
-   * @param  radius         The radius
-   * @param  social_margin  The social margin
-   * @param  velocity       The velocity
-   */
-  Disc(const Vector2 &position, float radius, float social_margin = 0.0,
-       const Vector2 velocity = Vector2::Zero())
-      : position(position),
-        velocity(velocity),
-        radius(radius),
-        social_margin(social_margin) {}
-};
-
-/**
- * @brief      A static obstacle of linear shape.
- */
-struct LineSegment {
-  /**
-   * The position of the first vertex
-   */
-  Vector2 p1;
-  /**
-   * The position of the second vertex
-   */
-  Vector2 p2;
-  /**
-   * The unit vector along the segment
-   */
-  Vector2 e1;
-  /**
-   * The unit vector perpendicular to the segment. Oriented to the left with
-   * respect to `e1`
-   */
-  Vector2 e2;
-  /**
-   * The segment length
-   */
-  float length;
-
-  /**
-   * @brief      Constructs a new instance.
-   *
-   * @param[in]  p1    The first vertex
-   * @param[in]  p2    The second vertex
-   */
-  LineSegment(const Vector2 &p1, const Vector2 &p2)
-      : p1(p1),
-        p2(p2),
-        e1((p2 - p1).normalized()),
-        e2(-e1[1], e1[0]),
-        length((p2 - p1).norm()) {}
-
-  /**
-   * @brief      Constructs a copy.
-   *
-   * @param[in]  segment  The segment to copy.
-   */
-  // LineSegment(const LineSegment & segment) : LineSegment(segment.p1,
-  // segment.p2) {}
-};
-
 // helpers
 
 float obstacle_margin(float distance, float radius, float obstacle_radius,
@@ -114,7 +26,7 @@ Vector2 obstacle_relative_position(const Vector2 &position,
 
 /**
  * @brief      This class describes a generic behavior to reach a target
- * position avoiding collision with dynamic neighbors and static obstacles. Users
+ * position avoiding collision. Users
  * should not instantiate this class (as it's behavior just keeps the agent in
  * place) but one of it's concrete sub-classes.
  *
@@ -131,14 +43,13 @@ Vector2 obstacle_relative_position(const Vector2 &position,
  * B. At regular time intervals:
  *  1. update the agent's state with \ref set_pose and \ref set_twist (or other
  * convenience methods)
- *  2. update the local environmental state with \ref set_neighbors, \ref
- * set_static_obstacles, \ref set_line_obstacles
+ *  2. update the local environmental state exposed by the concrete subclass
  *  3. update the target with \ref set_target_position and/or \ref
  * set_target_orientation
  *  4. ask for a control commands with \ref cmd_twist
  *  5, actuate the control commands [not part of this API]
  */
-class Behavior {
+class Behavior : protected RegisterChanges {
   using BehaviorFactory = std::function<std::shared_ptr<Behavior>(
       std::shared_ptr<Kinematic>, float)>;
 
@@ -184,7 +95,8 @@ class Behavior {
    * @param[in]  radius     The radius of the agent.
    */
   Behavior(std::shared_ptr<Kinematic> kinematic, float radius)
-      : kinematic(kinematic),
+      : RegisterChanges(),
+        kinematic(kinematic),
         radius(radius),
         pose(),
         twist(),
@@ -195,11 +107,7 @@ class Behavior {
         rotation_tau(default_rotation_tau),
         heading_behavior(Heading::idle),
         target_pose(),
-        target_twist(),
-        static_obstacles(),
-        neighbors(),
-        line_obstacles(),
-        changes{ALL} {}
+        target_twist() {}
 
   virtual ~Behavior() = default;
 
@@ -275,7 +183,7 @@ class Behavior {
    */
   void set_radius(float value) {
     radius = std::max(0.0f, value);
-    register_change(RADIUS);
+    change(RADIUS);
   }
   /**
    * @brief      Gets the maximal speed.
@@ -322,7 +230,7 @@ class Behavior {
    */
   void set_optimal_speed(float value) {
     optimal_speed = std::clamp(value, 0.0f, get_max_speed());
-    register_change(OPTIMAL_SPEED);
+    change(OPTIMAL_SPEED);
   }
   /**
    * @brief      Gets the desired optimal angular speed.
@@ -370,7 +278,7 @@ class Behavior {
    */
   void set_safety_margin(float value) {
     safety_margin = std::max(0.0f, value);
-    register_change(SAFETY_MARGIN);
+    change(SAFETY_MARGIN);
   }
   /**
    * @brief      Gets the horizon, as the size of the portion of environment
@@ -388,7 +296,7 @@ class Behavior {
    */
   void set_horizon(float value) {
     horizon = std::max(0.0f, value);
-    register_change(HORIZON);
+    change(HORIZON);
   }
 
   //----------- AGENT STATE
@@ -406,7 +314,7 @@ class Behavior {
    */
   void set_pose(const Pose2 &value) {
     pose = value;
-    register_change(POSITION | ORIENTATION);
+    change(POSITION | ORIENTATION);
   }
   /**
    * @brief      Convenience method to get the current position in the world
@@ -423,7 +331,7 @@ class Behavior {
    */
   void set_position(const Vector2 &value) {
     pose.position = value;
-    register_change(POSITION);
+    change(POSITION);
   }
   /**
    * @brief      Convenience method to get the current orientation. See \ref
@@ -440,7 +348,7 @@ class Behavior {
    */
   void set_orientation(Radians value) {
     pose.orientation = value;
-    register_change(ORIENTATION);
+    change(ORIENTATION);
   }
   /**
    * @brief      Gets the current twist.
@@ -460,7 +368,7 @@ class Behavior {
    */
   void set_twist(const Twist2 &value) {
     twist = value;
-    register_change(VELOCITY | ANGULAR_SPEED);
+    change(VELOCITY | ANGULAR_SPEED);
   }
   /**
    * @brief      Convenience method to get the current velocity. See \ref
@@ -485,7 +393,7 @@ class Behavior {
   void set_velocity(const Vector2 &value, bool relative = false) {
     twist.velocity = value;
     twist.relative = relative;
-    register_change(VELOCITY);
+    change(VELOCITY);
   }
   /**
    * @brief      Convenience method to get the current speed. See \ref get_twist
@@ -501,7 +409,7 @@ class Behavior {
   Radians get_angular_speed() const { return twist.angular_speed; }
   void set_angular_speed(Radians value) {
     twist.angular_speed = value;
-    register_change(ANGULAR_SPEED);
+    change(ANGULAR_SPEED);
   }
   /**
    * @brief      Convenience method to get the current wheel speeds. See \ref
@@ -576,60 +484,6 @@ class Behavior {
    * @param[in]  time_step  The time step
    */
   void actuate(float time_step) { actuate(actuated_twist, time_step); }
-  //----------- ENVIRONMENT STATE
-
-  /**
-   * @brief      Gets the current list of neighbors. Positions are in the world
-   * fixed frame.
-   *
-   * @return     The neighbors.
-   */
-  const std::vector<Disc> &get_neighbors() { return neighbors; }
-  /**
-   * @brief      Sets the neighbors. Positions are in the world fixed frame.
-   *
-   * @param[in]  value
-   */
-  virtual void set_neighbors(const std::vector<Disc> &value) {
-    neighbors = value;
-    register_change(NEIGHBORS);
-  }
-  /**
-   * @brief      Gets the current list of static obstacles. Positions are in the
-   * world fixed frame.
-   *
-   * @return     The static obstacles
-   */
-  const std::vector<Disc> &get_static_obstacles() { return static_obstacles; }
-  /**
-   * @brief      Sets the static obstacles. Positions are in the world fixed
-   * frame.
-   *
-   * @param[in]  value
-   */
-  virtual void set_static_obstacles(const std::vector<Disc> &value) {
-    static_obstacles = value;
-    register_change(NEIGHBORS);
-  }
-  /**
-   * @brief      Gets the current list of line obstacles. Positions are in the
-   * world fixed frame.
-   *
-   * @return     The line obstacles
-   */
-  const std::vector<LineSegment> &get_line_obstacles() {
-    return line_obstacles;
-  }
-  /**
-   * @brief      Sets the line obstacles. Positions are in the world fixed
-   * frame.
-   *
-   * @param[in]  value
-   */
-  virtual void set_line_obstacles(const std::vector<LineSegment> &value) {
-    line_obstacles = value;
-    register_change(LINE_OBSTACLES);
-  }
 
   //----------- CONTROL
 
@@ -666,7 +520,7 @@ class Behavior {
    */
   void set_target_position(const Vector2 &value) {
     target_pose.position = value;
-    register_change(TARGET_POSITION);
+    change(TARGET_POSITION);
   }
   /**
    * @brief      Gets the target orientation.
@@ -681,7 +535,7 @@ class Behavior {
    */
   void set_target_orientation(Radians value) {
     target_pose.orientation = value;
-    register_change(TARGET_ORIENTATION);
+    change(TARGET_ORIENTATION);
   }
   /**
    * @brief      Gets the target velocity in the world fixed frame.
@@ -696,7 +550,7 @@ class Behavior {
    */
   void set_target_velocity(const Vector2 &value) {
     target_twist.velocity = value;
-    register_change(TARGET_VELOCITY);
+    change(TARGET_VELOCITY);
   }
   /**
    * @brief      Gets the target angular speed.
@@ -713,13 +567,13 @@ class Behavior {
    */
   void set_target_angular_speed(Radians value) {
     target_twist.angular_speed = value;
-    register_change(TARGET_ANGULAR_SPEED);
+    change(TARGET_ANGULAR_SPEED);
   }
   /**
    * @brief      Query the behavior to get a twist control command
    *
    * Before calling this method, update the state using methods such as
-   * \ref set_pose, \ref set_neighbors, \ref set_target_position.
+   * \ref set_pose, \ref set_target_position.
    *
    * Sub-classes may not override this method but the specialized methods
    * \ref cmd_twist_towards_target, \ref cmd_twist_towards_target_orientation,
@@ -832,11 +686,10 @@ class Behavior {
   /**
    * @brief      Gets the desired velocity.
    *
-   * @return     The desired velocity (only valid if computed) in relative frame.
+   * @return     The desired velocity (only valid if computed) in relative
+   * frame.
    */
-  Vector2 get_desired_velocity() const {
-    return desired_velocity;
-  }
+  Vector2 get_desired_velocity() const { return desired_velocity; }
 
  protected:
   enum {
@@ -848,14 +701,10 @@ class Behavior {
     TARGET_ORIENTATION = 1 << 5,
     TARGET_VELOCITY = 1 << 6,
     TARGET_ANGULAR_SPEED = 1 << 7,
-    NEIGHBORS = 1 << 8,
-    STATIC_OBSTACLES = 1 << 9,
-    LINE_OBSTACLES = 1 << 10,
-    HORIZON = 1 << 11,
-    OPTIMAL_SPEED = 1 << 12,
-    SAFETY_MARGIN = 1 << 13,
-    RADIUS = 1 << 14,
-    ALL = 1 << 15,
+    HORIZON = 1 << 8,
+    OPTIMAL_SPEED = 1 << 9,
+    SAFETY_MARGIN = 1 << 10,
+    RADIUS = 1 << 11
   };
 
   std::shared_ptr<Kinematic> kinematic;
@@ -871,14 +720,7 @@ class Behavior {
   Heading heading_behavior;
   Pose2 target_pose;
   Twist2 target_twist;
-  std::vector<Disc> static_obstacles;
-  std::vector<Disc> neighbors;
-  std::vector<LineSegment> line_obstacles;
   Vector2 desired_velocity;
-
-  bool changed(unsigned mask) const { return changes & mask; }
-  void reset_changes() { changes = 0; }
-  void register_change(unsigned mask) { changes |= mask; }
 
   static std::map<std::string, BehaviorFactory> factory;
 
@@ -904,9 +746,6 @@ class Behavior {
     }
     return false;
   }
-
- private:
-  unsigned changes;
 };
 
 }  // namespace hl_navigation

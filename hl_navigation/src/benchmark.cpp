@@ -9,10 +9,11 @@
 #include <vector>
 
 #include "hl_navigation/behavior.h"
+#include "hl_navigation/state/geometric.h"
 
 using namespace hl_navigation;
 
-static void show_usage(const std::string & name) {
+static void show_usage(const std::string &name) {
   std::vector<std::string> keys = Behavior::behavior_names();
   std::ostringstream behaviors;
   // Dump all keys
@@ -79,14 +80,16 @@ void run(const char *behavior = "HL", float radius = 4, unsigned number = 5,
       if ((g[0] == 0 && p[1] / g[1] > 1) || (g[1] == 0 && p[0] / g[0] > 1)) {
         agent->set_target_position(-p);
       }
-      std::vector<Disc> agent_neighbors;
-      std::copy(neighbors.begin(), neighbors.begin() + j,
-                std::back_inserter(agent_neighbors));
-      if (j + 1 < neighbors.size()) {
-        std::copy(neighbors.begin() + j + 1, neighbors.end(),
+      if (GeometricState * state = dynamic_cast<GeometricState *>(agent.get())) {
+        std::vector<Disc> agent_neighbors;
+        std::copy(neighbors.begin(), neighbors.begin() + j,
                   std::back_inserter(agent_neighbors));
+        if (j + 1 < neighbors.size()) {
+          std::copy(neighbors.begin() + j + 1, neighbors.end(),
+                    std::back_inserter(agent_neighbors));
+        }
+        state->set_neighbors(agent_neighbors);
       }
-      agent->set_neighbors(agent_neighbors);
       const auto twist = agent->cmd_twist(dt);
       agent->actuate(twist, dt);
       j++;

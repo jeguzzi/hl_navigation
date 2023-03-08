@@ -33,18 +33,23 @@ class Thymio(pyenki.Thymio2):
         self.behavior.horizon = 1.0
         self.controller = hl_navigation.Controller(self.behavior)
         self.controller.speed_tolerance = 0.01
-
-        self.behavior.static_obstacles = [
-            hl_navigation.Disc(position=enki2world(obstacle.position), radius=0.01 * obstacle.radius)
-            for obstacle in obstacles]
+        try:
+            self.behavior.static_obstacles = [
+                hl_navigation.Disc(position=enki2world(obstacle.position), radius=0.01 * obstacle.radius)
+                for obstacle in obstacles]
+        except AttributeError:
+            pass
 
     def controlStep(self, dt: float) -> None:
         self.behavior.orientation = self.angle
         self.behavior.position = enki2world(self.position)
         self.behavior.velocity = enki2world(self.velocity)
-        self.behavior.neighbors = [
-            hl_navigation.Disc(enki2world(thymio.position), 0.08, 0.00, enki2world(thymio.velocity))
-            for thymio in self.thymios]
+        try:
+            self.behavior.neighbors = [
+                hl_navigation.Disc(enki2world(thymio.position), 0.08, 0.00, enki2world(thymio.velocity))
+                for thymio in self.thymios]
+        except AttributeError:
+            pass
         _ = self.controller.update(dt)
         self.motor_left_target , self.motor_right_target = world2enki(self.behavior.actuated_wheel_speeds)
         if self.controller.idle:

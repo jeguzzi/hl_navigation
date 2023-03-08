@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "hl_navigation/behavior.h"
+#include "hl_navigation/state/geometric.h"
 
 namespace RVO {
 class Agent;
@@ -24,7 +25,7 @@ namespace hl_navigation {
  * A wrapper of the open-source implementation from
  * http://gamma.cs.unc.edu/RVO2/
  */
-class ORCABehavior : public Behavior {
+class ORCABehavior : public Behavior, public GeometricState {
  public:
   ORCABehavior(std::shared_ptr<Kinematic> kinematic, float radius);
   ~ORCABehavior();
@@ -75,29 +76,27 @@ class ORCABehavior : public Behavior {
     }
   }
 
+  void set_time_step(float value);
+  float get_time_step() const;
+
  protected:
   Twist2 twist_towards_velocity(const Vector2& absolute_velocity,
                                 bool relative) override;
   Twist2 cmd_twist_towards_target(float dt, bool relative) override;
   Vector2 compute_desired_velocity() override;
-  void set_line_obstacles(const std::vector<LineSegment>& value) override;
-
-  void set_time_step(float value);
-  float get_time_step() const;
-  void prepare();
 
  private:
-  void add_line_obstacle(const LineSegment& line);
-  void add_neighbor(const Disc& d);
-  void prepare_line_obstacles();
   bool use_effective_center;
   float D;
-  float rangeSq;
   std::unique_ptr<RVO::Agent> _RVOAgent;
   std::vector<std::unique_ptr<const RVO::Agent>> rvo_neighbors;
   std::vector<std::unique_ptr<const RVO::Obstacle>> rvo_obstacles;
   static const char* name;
-  bool cache_is_valid() const;
+
+  void add_line_obstacle(const LineSegment& line);
+  void add_neighbor(const Disc& d, float);
+  void prepare_line_obstacles();
+  void prepare();
 };
 
 }  // namespace hl_navigation

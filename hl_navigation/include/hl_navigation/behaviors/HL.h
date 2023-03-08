@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "hl_navigation/behavior.h"
+#include "hl_navigation/state/geometric.h"
 #include "hl_navigation/collision_computation.h"
 
 // TODO(J): verify if behavior for tau < step is correct (non smooth)
@@ -30,7 +31,7 @@ namespace hl_navigation {
  *     Robotics and Automation (ICRA), 2013 IEEE International Conference on,
  *     vol., no., pp.423,430, 6-10 May 2013
  */
-class HLBehavior : public Behavior {
+class HLBehavior : public Behavior, public GeometricState {
  public:
   /**
    * Default \f$\eta\f$
@@ -55,6 +56,7 @@ class HLBehavior : public Behavior {
 
   HLBehavior(std::shared_ptr<Kinematic> kinematic, float radius)
       : Behavior(kinematic, radius),
+        GeometricState(),
         effective_horizon(0.0f),
         tau(default_tau),
         eta(default_eta),
@@ -197,12 +199,9 @@ class HLBehavior : public Behavior {
   float feared_distance_to_collision_at_relative_angle(Radians angle);
   float static_dist_for_angle(const DiscCache *agent, Radians angle);
   float distance_to_collision_at_relative_angle(Radians angle);
-  void dump_neighbors_cache() const;
-  void dump_static_obstacles_cache() const;
 
  private:
   static const char *name;
-  bool cache_is_valid() const;
 };
 
 }  // namespace hl_navigation

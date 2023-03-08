@@ -33,6 +33,7 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/common.h"
+#include "hl_navigation/state/geometric.h"
 #include "hl_navigation/controller.h"
 
 namespace hl_navigation_sim {
@@ -53,7 +54,9 @@ class StateEstimation {
  public:
   StateEstimation(const World *world) : world(world) {}
 
-  virtual std::vector<Disc> neighbors(const Agent *agent) const { return {}; }
+  virtual void update(Agent * agent) const { };
+
+  virtual void prepare(Agent * agent) const { };
 
  protected:
   const World *world;
@@ -81,7 +84,7 @@ class Agent {
     }
     control_deadline += control_period;
     task->update(this);
-    nav_behavior->set_neighbors(state_estimation->neighbors(this));
+    state_estimation->update(this);
     nav_behavior->set_actuated_twist(cmd_twist);
     nav_behavior->set_twist(twist);
     nav_behavior->set_pose(pose);
@@ -149,8 +152,7 @@ class World {
     update_agents_strtree();
 
     for (auto &a : agents) {
-      a.nav_behavior->set_static_obstacles(obstacles);
-      a.nav_behavior->set_line_obstacles(walls);
+      a.state_estimation->prepare(&a);
     }
   }
 
@@ -169,8 +171,10 @@ class World {
     return rs;
   }
 
+  // TODO(J): complete
   std::vector<Disc *> get_obstacles(const BoundingBox &bb) const { return {}; }
 
+  // TODO(J): complete
   std::vector<LineSegment *> get_walls(const BoundingBox &bb) const {
     return {};
   }
@@ -354,7 +358,20 @@ class BoundedStateEstimation : public StateEstimation {
         field_of_view(field_of_view),
         range_of_view(range_of_view) {}
 
-  virtual std::vector<Disc> neighbors(const Agent *agent) const override {
+  void update(Agent *agent) const override {
+    if(GeometricState * state = dynamic_cast<GeometricState *>(agent->nav_behavior.get())) {
+      state->set_neighbors(neighbors(agent));
+    }
+  }
+
+  void prepare(Agent * agent) const override {
+    if(GeometricState * state = dynamic_cast<GeometricState *>(agent->nav_behavior.get())) {
+      state->set_static_obstacles(world->obstacles);
+      state->set_line_obstacles(world->walls);
+    }
+  }
+
+  virtual std::vector<Disc> neighbors(const Agent *agent) const {
     std::vector<Disc> ns;
     for (const Agent *neighbor : world->get_neighbors(bounding_box(agent))) {
       if (neighbor != agent && visible(agent, neighbor)) {
