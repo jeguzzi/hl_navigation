@@ -163,7 +163,7 @@ class GeometricState : protected RegisterChanges {
    *
    * @return     The neighbors.
    */
-  const std::vector<Neighbor>& get_neighbors() { return neighbors; }
+  const std::vector<Neighbor>& get_neighbors() const { return neighbors; }
   /**
    * @brief      Sets the neighbors. Positions are in the world fixed frame.
    *
@@ -179,14 +179,14 @@ class GeometricState : protected RegisterChanges {
    *
    * @return     The static obstacles
    */
-  const std::vector<Disc>& get_static_obstacles() { return static_obstacles; }
+  const std::vector<Disc>& get_static_obstacles() const { return static_obstacles; }
   /**
    * @brief      Sets the static obstacles. Positions are in the world fixed
    * frame.
    *
    * @param[in]  value
    */
-  virtual void set_static_obstacles(const std::vector<Disc>& value) {
+  virtual void set_static_obstacles(const std::vector<Disc>& value){
     static_obstacles = value;
     change(STATIC_OBSTACLES);
   }
@@ -196,7 +196,7 @@ class GeometricState : protected RegisterChanges {
    *
    * @return     The line obstacles
    */
-  const std::vector<LineSegment>& get_line_obstacles() {
+  const std::vector<LineSegment>& get_line_obstacles() const {
     return line_obstacles;
   }
   /**
@@ -222,6 +222,26 @@ class GeometricState : protected RegisterChanges {
   std::vector<Neighbor> neighbors;
   std::vector<LineSegment> line_obstacles;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const GeometricState& state) {
+  os << "<GeometricState:\n";
+  os << "\tline obstacles: {";
+  for (const auto & line : state.get_line_obstacles()) {
+    os << line;
+  } 
+  os << "}\n";
+  os << "\tstatic obstacles: {";
+  for (const auto & obstacle : state.get_static_obstacles()) {
+    os << obstacle;
+  } 
+  os << "}\n";
+  os << "\tneighbors: {";
+  for (const auto & neighbor : state.get_neighbors()) {
+    os << neighbor << ", ";
+  } 
+  os << "}\n>";
+  return os;
+}
 
 }  // namespace hl_navigation
 

@@ -22,6 +22,12 @@ namespace hl_navigation {
  * href="https://eigen.tuxfamily.org/dox/group__matrixtypedefs.html">Eigen</a>
  */
 using Vector2 = Eigen::Vector2f;
+
+inline std::ostream& operator<<(std::ostream& os, const Vector2 & vector) {
+  os << "Vector2(" << vector[0] << ", " << vector[1] << ")";
+  return os;
+}
+
 /**
  * Angle in radians.
  */
@@ -136,6 +142,12 @@ struct Twist2 {
   }
 };
 
+inline std::ostream& operator<<(std::ostream& os, const Twist2 & twist) {
+  os << "Twist2(" << twist.velocity << ", " << twist.angular_speed << ", "
+     << std::boolalpha << twist.relative << ")";
+  return os;
+}
+
 /**
  * @brief      Two-dimensional pose composed of planar position and
  * orientatation.
@@ -181,6 +193,11 @@ struct Pose2 {
             orientation + dt * twist.angular_speed};
   }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Pose2& pose) {
+  os << "Pose2(" << pose.position << ", " << pose.orientation << ")";
+  return os;
+}
 
 class RegisterChanges {
  public:

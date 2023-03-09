@@ -61,10 +61,11 @@ int main(int argc, char* argv[]) {
     geometric_state->set_static_obstacles({Disc({1.5f, 0.0f}, 0.5f)});
   }
 
+  std::cout << *geometric_state << std::endl;
+
   auto pose = behavior->get_pose();
   auto twist = behavior->get_twist();
-  printf("Start loop @ (%.3f, %.3f, %.3f)\n", pose.position.x(),
-         pose.position.y(), pose.orientation);
+  std::cout << "Start loop @ " << pose << " - " << twist <<std::endl;
   for (size_t i = 0; i < 30; i++) {
     // pose = behavior->get_pose();
     // printf("%.2f, %.2f, %.2f, ", pose.position.x(), pose.position.y(),
@@ -74,7 +75,6 @@ int main(int argc, char* argv[]) {
   }
   pose = behavior->get_pose();
   twist = behavior->get_twist();
-  printf("\nEnd loop @ (%.3f, %.3f), (%.3f %.3f)\n", pose.position.x(),
-         pose.position.y(), twist.velocity.x(), twist.velocity.y());
+  std::cout << "End loop @ " << pose << " - " << twist <<std::endl;
   return 0;
 }
