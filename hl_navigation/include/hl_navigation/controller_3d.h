@@ -46,17 +46,9 @@ struct Cylinder {
    */
   Vector3 position;
   /**
-   * planar velocity of the obstacle
-   */
-  Vector2 velocity;
-  /**
    * radius of the cylinder
    */
   float radius;
-  /**
-   * See \ref Disc::social_margin
-   */
-  float social_margin;
   /**
    * Height of the cylinder
    */
@@ -68,15 +60,10 @@ struct Cylinder {
    * @param[in]  position       center of the lower face
    * @param[in]  radius
    * @param[in]  height
-   * @param[in]  social_margin
-   * @param[in]  velocity       planar velocity
    */
-  Cylinder(const Vector3 position, float radius, float height = -1.0,
-           float social_margin = 0.0, Vector2 velocity = Vector2::Zero())
+  Cylinder(const Vector3 position, float radius, float height = -1.0)
       : position(position),
-        velocity(velocity),
         radius(radius),
-        social_margin(social_margin),
         height(height) {}
 
   /**
@@ -85,9 +72,49 @@ struct Cylinder {
    * @return     The projected disc.
    */
   Disc disc() const {
-    return {position.head<2>(), radius, social_margin, velocity.head<2>()};
+    return {position.head<2>(), radius};
   }
 };
+
+/**
+ * @brief      Three dimensional obstacles of a vertical cylindrical shape.
+ */
+struct Neighbor3 : Cylinder{
+  /**
+   * TODO
+   */
+  Vector2 velocity;
+  /**
+   * See \ref Neighbor::id
+   */
+  unsigned id;
+
+  /**
+   * @brief      Constructs a new instance.
+   *
+   * @param[in]  position       center of the lower face
+   * @param[in]  radius
+   * @param[in]  height
+   * @param[in]  velocity       planar velocity
+   * @param[in]  id
+   */
+    Neighbor3(const Vector3 position, float radius, float height = -1.0,
+              Vector2 velocity = Vector2::Zero(), unsigned id = 0.0)
+      : Cylinder(position, radius, height),
+        velocity(velocity),
+        id(id) {}
+
+  /**
+   * @brief      Project to the two dimensional plane
+   *
+   * @return     The projected disc.
+   */
+  Neighbor neighbor() const {
+    return Neighbor{disc(), velocity.head<2>(), id};
+  }
+};
+
+
 
 // TODO(old) complete with obstacle avoidance
 
@@ -271,7 +298,7 @@ class Controller3 : public Controller {
    *
    * @param[in]  neighbors  The neighbors
    */
-  void set_neighbors(const std::vector<Cylinder>& neighbors);
+  void set_neighbors(const std::vector<Neighbor3>& neighbors);
   /**
    * @brief      Sets the static obstacles.
    *

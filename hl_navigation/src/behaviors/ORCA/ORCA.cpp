@@ -55,10 +55,23 @@ void ORCABehavior::add_line_obstacle(const LineSegment &line) {
 
 void ORCABehavior::add_obstacle(const Disc &obstacle, float rangeSq,
                                 bool push_away, float epsilon) {
-  return add_neighbor(obstacle, rangeSq, push_away, epsilon);
+    auto a = std::make_unique<RVO::Agent>(nullptr);
+    a->velocity_ = RVO::Vector2(0, 0);
+    a->prefVelocity_ = a->velocity_;
+    Vector2 p = obstacle.position;
+    const float margin = obstacle.radius + safety_margin + radius;
+    const Vector2 delta = obstacle.position - pose.position;
+    const float distance = delta.norm() - margin;
+    if (push_away && distance < epsilon) {
+      p += delta / delta.norm() * (-distance + epsilon);
+    }
+    a->position_ = RVO::Vector2((float)p.x(), (float)p.y());
+    a->radius_ = obstacle.radius + safety_margin;
+    _RVOAgent->insertAgentNeighbor(a.get(), rangeSq);
+    rvo_neighbors.push_back(std::move(a));
 }
 
-void ORCABehavior::add_neighbor(const Disc &neighbor, float rangeSq,
+void ORCABehavior::add_neighbor(const Neighbor &neighbor, float rangeSq,
                                 bool push_away, float epsilon) {
   auto a = std::make_unique<RVO::Agent>(nullptr);
   a->velocity_ =

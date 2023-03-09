@@ -38,7 +38,7 @@ class HRVOBehavior : public Behavior, public GeometricState {
   float rangeSq;
   std::unique_ptr<HRVO::Agent> _HRVOAgent;
   static const char* name;
-  void add_neighbor(const Disc& disc, bool push_away = false,
+  void add_neighbor(const Neighbor& neighbor, bool push_away = false,
                     float epsilon = 2e-3);
   void add_obstacle(const Disc& disc, bool push_away = false,
                     float epsilon = 2e-3);

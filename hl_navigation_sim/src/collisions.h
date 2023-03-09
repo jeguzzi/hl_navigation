@@ -22,7 +22,7 @@ class CollisionsTest : public Experiment {
       : Experiment(dt, steps), behavior_name(behavior_name) {}
 
  protected:
-  void init(World& world, int seed) override {
+  void init(World& world, [[maybe_unused]] int seed) override {
     Vector2 target{10.0f, 10.0f};
     auto task = std::make_shared<WayPointsTask>(
         std::vector<Vector2>{target, -target}, true, 0.1);

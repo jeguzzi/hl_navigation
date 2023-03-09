@@ -106,7 +106,7 @@ class CachedCollisionComputation : public CollisionComputation {
   void setup(Pose2 pose_, float margin_,
              const std::vector<LineSegment> &line_segments,
              const std::vector<Disc> &static_discs,
-             const std::vector<Disc> &dynamic_discs) {
+             const std::vector<Neighbor> &dynamic_discs) {
     CollisionComputation::setup(pose_, margin_, line_segments, static_discs,
                                 dynamic_discs);
     reset();

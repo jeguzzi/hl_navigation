@@ -61,7 +61,7 @@ class CollisionComputation {
   void setup(Pose2 pose_, float margin_,
              const std::vector<LineSegment> &line_segments,
              const std::vector<Disc> &static_discs,
-             const std::vector<Disc> &dynamic_discs) {
+             const std::vector<Neighbor> &dynamic_discs) {
     line_obstacles = line_segments;
     pose = pose_;
     margin = margin_;

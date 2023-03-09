@@ -200,7 +200,7 @@ class HLBehavior : public Behavior, public GeometricState {
   float static_dist_for_angle(const DiscCache *agent, Radians angle);
   float distance_to_collision_at_relative_angle(Radians angle);
 
-  DiscCache make_neighbor_cache(const Disc &neighbor, bool push_away = false,
+  DiscCache make_neighbor_cache(const Neighbor &neighbor, bool push_away = false,
                                 float epsilon = 2e-3);
   DiscCache make_obstacle_cache(const Disc &obstacle, bool push_away = false,
                                 float epsilon = 2e-3);

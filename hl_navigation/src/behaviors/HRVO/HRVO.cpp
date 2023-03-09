@@ -69,10 +69,24 @@ void HRVOBehavior::prepare() {
 }
 
 void HRVOBehavior::add_obstacle(const Disc &d, bool push_away, float epsilon) {
-  add_neighbor(d, push_away, epsilon);
+    HRVO::Agent *a = new HRVO::Agent();
+    a->velocity_ = HRVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
+    a->prefVelocity_ = a->velocity_;
+    Vector2 p = d.position;
+    const float margin = d.radius + safety_margin + radius;
+    const Vector2 delta = d.position - pose.position;
+    const float distance = delta.norm() - margin;
+    if (push_away && distance < epsilon) {
+      p += delta / delta.norm() * (-distance + epsilon);
+    }
+    a->position_ = HRVO::Vector2((float)p.x(), (float)p.y());
+    a->radius_ = d.radius + safety_margin;
+    _HRVOAgent->agents_.push_back(a);
+    _HRVOAgent->insertAgentNeighbor(agentIndex, rangeSq);
+    agentIndex++;
 }
 
-void HRVOBehavior::add_neighbor(const Disc & neighbor, bool push_away, float epsilon) {
+void HRVOBehavior::add_neighbor(const Neighbor & neighbor, bool push_away, float epsilon) {
   HRVO::Agent *a = new HRVO::Agent();
   a->velocity_ = HRVO::Vector2((float)neighbor.velocity.x(), (float)neighbor.velocity.y());
   a->prefVelocity_ = a->velocity_;

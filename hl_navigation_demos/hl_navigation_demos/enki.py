@@ -35,7 +35,8 @@ class Thymio(pyenki.Thymio2):
         self.controller.speed_tolerance = 0.01
         try:
             self.behavior.static_obstacles = [
-                hl_navigation.Disc(position=enki2world(obstacle.position), radius=0.01 * obstacle.radius)
+                hl_navigation.Disc(position=enki2world(obstacle.position),
+                                   radius=0.01 * obstacle.radius)
                 for obstacle in obstacles]
         except AttributeError:
             pass
@@ -46,7 +47,9 @@ class Thymio(pyenki.Thymio2):
         self.behavior.velocity = enki2world(self.velocity)
         try:
             self.behavior.neighbors = [
-                hl_navigation.Disc(enki2world(thymio.position), 0.08, 0.00, enki2world(thymio.velocity))
+                hl_navigation.Neighbor(
+                        position=enki2world(thymio.position), radius=0.08,
+                        velocity=enki2world(thymio.velocity), id=0)
                 for thymio in self.thymios]
         except AttributeError:
             pass

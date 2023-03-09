@@ -39,6 +39,8 @@ endif()
 set(msg_files
   "msg/Obstacle.msg"
   "msg/Obstacles.msg"
+  "msg/Neighbor.msg"
+  "msg/Neighbors.msg"
 )
 
 set(action_files

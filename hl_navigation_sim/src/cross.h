@@ -28,7 +28,7 @@ class CrossExperiment : public Experiment {
         margin(margin) {}
 
  protected:
-  void init(World& world, int seed) override {
+  void init(World& world, [[maybe_unused]] int seed) override {
     float x = radius - margin;
     std::vector<std::tuple<Vector2, std::function<Pose2(int, int)>>> task = {
         {Vector2{radius, 0.0f},

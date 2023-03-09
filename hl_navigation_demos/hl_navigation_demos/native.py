@@ -46,7 +46,8 @@ def run(behavior_name: str = "HL") -> None:
             this = controller.behavior
             try:
                 controller.behavior.neighbors = [
-                    hl_navigation.Disc(agent.position, agent.radius, 0.0, agent.velocity)
+                    hl_navigation.Neighbor(
+                            agent.position, agent.radius, agent.velocity, 0)
                     for agent in agents if agent != this]
             except AttributeError:
                 pass

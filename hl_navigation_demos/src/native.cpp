@@ -16,6 +16,7 @@ using hl_navigation::Action;
 using hl_navigation::Behavior;
 using hl_navigation::Controller;
 using hl_navigation::Disc;
+using hl_navigation::Neighbor;
 using hl_navigation::GeometricState;
 using hl_navigation::Twist2;
 using hl_navigation::TwoWheeled;
@@ -74,11 +75,11 @@ static void run(const char *behavior = "HL") {
     for (auto &controller : controllers) {
       auto agent = controller.get_behavior().get();
       if (GeometricState *state = dynamic_cast<GeometricState *>(agent)) {
-        std::vector<Disc> neighbors;
+        std::vector<Neighbor> neighbors;
         for (auto &neighbor : agents) {
           if (neighbor == agent) continue;
-          neighbors.emplace_back(neighbor->get_position(), 0.08, 0.0,
-                                 neighbor->get_velocity(false));
+          neighbors.emplace_back(neighbor->get_position(), 0.08,
+                                 neighbor->get_velocity(false), 0);
         }
         state->set_neighbors(neighbors);
       }

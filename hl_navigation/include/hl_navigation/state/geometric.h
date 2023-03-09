@@ -1,11 +1,14 @@
 #ifndef HL_NAVIGATION_BEHAVIOR_GEOMETRIC_H
 #define HL_NAVIGATION_BEHAVIOR_GEOMETRIC_H value
 
+#include <iostream>
+
 #include "hl_navigation/common.h"
 
 namespace hl_navigation {
+
 /**
- * @brief A dynamic obstacle of circular shape.
+ * @brief A circular shape. Used to represent obstacles.
  */
 struct Disc {
   /**
@@ -21,28 +24,76 @@ struct Disc {
    */
   float radius;
   /**
-   * An additional softer margin to add to the obstacle.
-   *
-   * \warning We will probably replace \ref social_margin with a tag labeling
-   * the type of obstacle and move the related property to \ref Behavior.
-   */
-  float social_margin;
-
-  /**
    * @brief      Constructs a new instance.
    *
    * @param  position       The position
    * @param  radius         The radius
-   * @param  social_margin  The social margin
-   * @param  velocity       The velocity
    */
-  Disc(const Vector2 &position, float radius, float social_margin = 0.0,
-       const Vector2 velocity = Vector2::Zero())
-      : position(position),
-        velocity(velocity),
-        radius(radius),
-        social_margin(social_margin) {}
+  Disc(const Vector2& position, float radius)
+      : position(position), radius(radius) {}
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Disc& disc) {
+  os << "Disc(" << disc.position << ", " << disc.radius << ")";
+  return os;
+}
+
+/**
+ * @brief      A neighbor agent of circular shape.
+ */
+struct Neighbor : public Disc {
+  /**
+   * The velocity
+   */
+  Vector2 velocity;
+  /**
+   * An identifier for the id of agents or the individual agent.
+   * The interpretation is up to the behavior.
+   */
+  unsigned id;
+  /**
+   * @brief      Constructs a new instance.
+   *
+   * @param[in]  position  The position
+   * @param[in]  radius    The radius
+   * @param[in]  velocity  The velocity
+   * @param[in]  id        The identifier
+   */
+  Neighbor(const Vector2& position, float radius, const Vector2 velocity,
+           unsigned id = 0)
+      : Disc(position, radius), velocity(velocity), id(id) {}
+  /**
+   * @brief      Constructs a new instance from a disc
+   *
+   * @param[in]  Disc      The disc
+   * @param[in]  velocity  The velocity
+   * @param[in]  id      The id
+   */
+  explicit Neighbor(const Disc& disc, const Vector2 velocity = Vector2::Zero(),
+                    unsigned id = 0)
+      : Neighbor(disc.position, disc.radius, velocity, id) {}
+
+  /**
+   * @brief      Assignment operator from a disc.
+   *
+   * @param[in]  other  The other disc
+   *
+   * @return     The result of the assignment
+   */
+  Neighbor& operator=(const Disc& other) {
+    position = other.position;
+    radius = other.radius;
+    id = 0;
+    velocity = Vector2::Zero();
+    return *this;
+  }
+};
+
+inline std::ostream& operator<<(std::ostream& os, const Neighbor& disc) {
+  os << "Neighbor(Disc(" << disc.position << ", " << disc.radius << "), "
+     << disc.velocity << ", " << disc.id << ")";
+  return os;
+}
 
 /**
  * @brief      A static obstacle of linear shape.
@@ -76,7 +127,7 @@ struct LineSegment {
    * @param[in]  p1    The first vertex
    * @param[in]  p2    The second vertex
    */
-  LineSegment(const Vector2 &p1, const Vector2 &p2)
+  LineSegment(const Vector2& p1, const Vector2& p2)
       : p1(p1),
         p2(p2),
         e1((p2 - p1).normalized()),
@@ -91,6 +142,11 @@ struct LineSegment {
   // LineSegment(const LineSegment & segment) : LineSegment(segment.p1,
   // segment.p2) {}
 };
+
+inline std::ostream& operator<<(std::ostream& os, const LineSegment& line) {
+  os << "LineSegment(" << line.p1 << ", " << line.p2 << ")";
+  return os;
+}
 
 class GeometricState : protected RegisterChanges {
  public:
@@ -107,13 +163,13 @@ class GeometricState : protected RegisterChanges {
    *
    * @return     The neighbors.
    */
-  const std::vector<Disc> &get_neighbors() { return neighbors; }
+  const std::vector<Neighbor>& get_neighbors() { return neighbors; }
   /**
    * @brief      Sets the neighbors. Positions are in the world fixed frame.
    *
    * @param[in]  value
    */
-  virtual void set_neighbors(const std::vector<Disc> &value) {
+  virtual void set_neighbors(const std::vector<Neighbor>& value) {
     neighbors = value;
     change(NEIGHBORS);
   }
@@ -123,14 +179,14 @@ class GeometricState : protected RegisterChanges {
    *
    * @return     The static obstacles
    */
-  const std::vector<Disc> &get_static_obstacles() { return static_obstacles; }
+  const std::vector<Disc>& get_static_obstacles() { return static_obstacles; }
   /**
    * @brief      Sets the static obstacles. Positions are in the world fixed
    * frame.
    *
    * @param[in]  value
    */
-  virtual void set_static_obstacles(const std::vector<Disc> &value) {
+  virtual void set_static_obstacles(const std::vector<Disc>& value) {
     static_obstacles = value;
     change(STATIC_OBSTACLES);
   }
@@ -140,7 +196,7 @@ class GeometricState : protected RegisterChanges {
    *
    * @return     The line obstacles
    */
-  const std::vector<LineSegment> &get_line_obstacles() {
+  const std::vector<LineSegment>& get_line_obstacles() {
     return line_obstacles;
   }
   /**
@@ -149,7 +205,7 @@ class GeometricState : protected RegisterChanges {
    *
    * @param[in]  value
    */
-  virtual void set_line_obstacles(const std::vector<LineSegment> &value) {
+  virtual void set_line_obstacles(const std::vector<LineSegment>& value) {
     line_obstacles = value;
     change(LINE_OBSTACLES);
   }
@@ -163,7 +219,7 @@ class GeometricState : protected RegisterChanges {
 
  private:
   std::vector<Disc> static_obstacles;
-  std::vector<Disc> neighbors;
+  std::vector<Neighbor> neighbors;
   std::vector<LineSegment> line_obstacles;
 };
 

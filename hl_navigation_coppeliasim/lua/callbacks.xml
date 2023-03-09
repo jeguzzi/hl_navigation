@@ -284,7 +284,7 @@
           <param name="handle" type="int">
             <description>The controller handle</description>
           </param>
-          <param name="obstacles" type="table" item-type="obstacle_t">
+          <param name="neighbors" type="table" item-type="neighbor_t">
             <description>The obstacles</description>
           </param>
         </params>
@@ -338,14 +338,23 @@
         <param name="position" type="table" item-type="float">
             <description>The 3d position</description>
         </param>
-        <param name="velocity" type="table" item-type="float">
-            <description>The 2d or 3d velocity</description>
+        <param name="radius" type="float">
+            <description>The radius</description>
+        </param>
+    </struct>
+    <struct name="neighbor_t">
+        <description>TODO</description>
+        <param name="position" type="table" item-type="float">
+            <description>The 3d position</description>
         </param>
         <param name="radius" type="float">
             <description>The radius</description>
         </param>
-        <param name="social_margin" type="float" default="0.0">
-            <description>The social margin</description>
+        <param name="velocity" type="table" item-type="float">
+            <description>The 2d or 3d velocity</description>
+        </param>
+        <param name="id" type="int" default="0">
+            <description>The id</description>
         </param>
     </struct>
     <struct name="line_t">

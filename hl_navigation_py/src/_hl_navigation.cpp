@@ -48,13 +48,16 @@ PYBIND11_MODULE(_hl_navigation, m) {
       });
 
   py::class_<Disc>(m, "Disc")
-      .def(py::init<Vector2, float, float, Vector2>(), py::arg("position"),
-           py::arg("radius"), py::arg("social_margin") = 0.0,
-           py::arg("velocity") = Vector2(0.0, 0.0))
-      .def_readonly("position", &Disc::position)
-      .def_readonly("radius", &Disc::radius)
-      .def_readonly("social_margin", &Disc::social_margin)
-      .def_readonly("velocity", &Disc::velocity);
+      .def(py::init<Vector2, float>(), py::arg("position"), py::arg("radius"))
+      .def_readwrite("position", &Disc::position)
+      .def_readwrite("radius", &Disc::radius);
+
+  py::class_<Neighbor, Disc>(m, "Neighbor")
+      .def(py::init<Vector2, float, Vector2, int>(), py::arg("position"),
+           py::arg("radius"), py::arg("velocity") = Vector2(0.0, 0.0),
+           py::arg("id") = 0)
+      .def_readwrite("velocity", &Neighbor::velocity)
+      .def_readwrite("id", &Neighbor::id);
 
   py::class_<LineSegment>(m, "LineSegment")
       .def(py::init<Vector2, Vector2>(), py::arg("p1"), py::arg("p2"))
@@ -270,7 +273,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .def("setup",
            py::overload_cast<Pose2, float, const std::vector<LineSegment> &,
                              const std::vector<Disc> &,
-                             const std::vector<Disc> &>(
+                             const std::vector<Neighbor> &>(
                &CollisionComputation::setup))
       .def("static_free_distance", &CollisionComputation::static_free_distance,
            py::arg("angle"), py::arg("max_distance"),

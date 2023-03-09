@@ -22,7 +22,7 @@ class ThymioDemo : public Experiment {
       : Experiment(0.02, 50 * 60), behavior(behavior) {}
 
  protected:
-  void init(World& world, int seed) override {
+  void init(World& world, [[maybe_unused]] int seed) override {
     const std::vector<Vector2> targets{{1.0f, 0.0f}, {-1.0f, 0.0f}};
     for (size_t i = 0; i < 2; i++) {
       auto task = std::make_shared<WayPointsTask>(targets, true, 0.2);

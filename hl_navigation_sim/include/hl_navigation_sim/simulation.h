@@ -33,8 +33,8 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/common.h"
-#include "hl_navigation/state/geometric.h"
 #include "hl_navigation/controller.h"
+#include "hl_navigation/state/geometric.h"
 
 namespace hl_navigation_sim {
 
@@ -46,17 +46,20 @@ class World;
 
 struct Task {
   explicit Task() {}
-  virtual void update(Agent *agent) {}
+  virtual void update([[maybe_unused]] Agent *agent) {}
   virtual bool done() const { return false; }
+  virtual ~Task() = default;
 };
 
 class StateEstimation {
  public:
   explicit StateEstimation(const World *world) : world(world) {}
 
-  virtual void update(Agent * agent) const { };
+  virtual void update([[maybe_unused]]Agent *agent) const {};
 
-  virtual void prepare(Agent * agent) const { };
+  virtual void prepare([[maybe_unused]]Agent *agent) const {};
+
+  virtual ~StateEstimation() = default;
 
  protected:
   const World *world;
@@ -66,11 +69,13 @@ class Agent {
  public:
   Agent(const char *behavior_name, float mass, float radius,
         std::shared_ptr<Kinematic> kinematic, std::shared_ptr<Task> task,
-        std::shared_ptr<StateEstimation> estimation, float control_period)
-      : control_period(control_period),
-        control_deadline(0.0),
-        mass(mass),
+        std::shared_ptr<StateEstimation> estimation, float control_period,
+        unsigned id = 0)
+      : id(id),
         radius(radius),
+        mass(mass),
+        control_period(control_period),
+        control_deadline(0.0),
         task(task),
         state_estimation(estimation),
         nav_behavior(
@@ -92,15 +97,14 @@ class Agent {
     // cmd_twist = nav_behavior->get_actuated_twist(true);
   }
 
-  std::shared_ptr<Behavior> nav_behavior;
-  Controller nav_controller;
-  float radius;
+
 
   void update_physics(float dt) {
     twist = cmd_twist;  // + collision_force / mass * dt;
     pose = pose.integrate(twist, dt);
   }
-
+  unsigned id;
+  float radius;
   float mass;
   float control_period;
   float control_deadline;
@@ -111,6 +115,8 @@ class Agent {
   Vector2 collision_correction;
   std::shared_ptr<Task> task;
   std::shared_ptr<StateEstimation> state_estimation;
+  std::shared_ptr<Behavior> nav_behavior;
+  Controller nav_controller;
 };
 
 inline std::optional<Vector2> penetration(const LineSegment &line,
@@ -172,10 +178,10 @@ class World {
   }
 
   // TODO(J): complete
-  std::vector<Disc *> get_obstacles(const BoundingBox &bb) const { return {}; }
+  std::vector<Disc *> get_obstacles([[maybe_unused]] const BoundingBox &bb) const { return {}; }
 
   // TODO(J): complete
-  std::vector<LineSegment *> get_walls(const BoundingBox &bb) const {
+  std::vector<LineSegment *> get_walls([[maybe_unused]] const BoundingBox &bb) const {
     return {};
   }
 
@@ -310,25 +316,30 @@ class World {
 
 class Experiment {
  public:
-  explicit Experiment(float dt = 0.1, int steps = 1000) : dt(dt), steps(steps) {}
+  explicit Experiment(float dt = 0.1, int steps = 1000)
+      : dt(dt), steps(steps) {}
 
   void run(int seed);
 
+  virtual ~Experiment() = default;
+
  protected:
-  virtual void init(World &world, int seed) {}
+  virtual void init([[maybe_unused]] World &world, [[maybe_unused]] int seed) {}
 
   float dt;
-  int steps;
+  unsigned steps;
 };
 
 struct WayPointsTask : Task {
-  WayPointsTask(const std::vector<Eigen::Vector2f> & _waypoints, bool loop,
+  WayPointsTask(const std::vector<Eigen::Vector2f> &_waypoints, bool loop,
                 float tolerance)
       : Task(),
         waypoints(_waypoints),
         waypoint(waypoints.begin()),
         loop(loop),
         tolerance(tolerance) {}
+
+  virtual ~WayPointsTask() = default;
 
   void update(Agent *agent) override {
     if (agent->nav_controller.idle()) {
@@ -358,21 +369,25 @@ class BoundedStateEstimation : public StateEstimation {
         field_of_view(field_of_view),
         range_of_view(range_of_view) {}
 
+  virtual ~BoundedStateEstimation() = default;
+
   void update(Agent *agent) const override {
-    if(GeometricState * state = dynamic_cast<GeometricState *>(agent->nav_behavior.get())) {
+    if (GeometricState *state =
+            dynamic_cast<GeometricState *>(agent->nav_behavior.get())) {
       state->set_neighbors(neighbors(agent));
     }
   }
 
-  void prepare(Agent * agent) const override {
-    if(GeometricState * state = dynamic_cast<GeometricState *>(agent->nav_behavior.get())) {
+  void prepare(Agent *agent) const override {
+    if (GeometricState *state =
+            dynamic_cast<GeometricState *>(agent->nav_behavior.get())) {
       state->set_static_obstacles(world->obstacles);
       state->set_line_obstacles(world->walls);
     }
   }
 
-  virtual std::vector<Disc> neighbors(const Agent *agent) const {
-    std::vector<Disc> ns;
+  virtual std::vector<Neighbor> neighbors(const Agent *agent) const {
+    std::vector<Neighbor> ns;
     for (const Agent *neighbor : world->get_neighbors(bounding_box(agent))) {
       if (neighbor != agent && visible(agent, neighbor)) {
         ns.push_back(perceive_neighbor(agent, neighbor));
@@ -381,13 +396,13 @@ class BoundedStateEstimation : public StateEstimation {
     return ns;
   }
 
-  virtual Disc perceive_neighbor(const Agent *agent,
-                                 const Agent *neighbor) const {
-    return Disc(neighbor->pose.position, neighbor->radius, 0.0,
-                neighbor->twist.velocity);
+  virtual Neighbor perceive_neighbor([[maybe_unused]] const Agent *agent,
+                                     const Agent *neighbor) const {
+    return Neighbor(neighbor->pose.position, neighbor->radius,
+                    neighbor->twist.velocity, neighbor->id);
   }
 
-  virtual bool visible(const Agent *agent, const Agent *neighbor) const {
+  virtual bool visible([[maybe_unused]] const Agent *agent, [[maybe_unused]] const Agent *neighbor) const {
     return true;
   }
 

@@ -61,11 +61,11 @@ void run(const char *behavior = "HL", float radius = 4, unsigned number = 5,
     }
   }
 
-  std::vector<Disc> neighbors;
+  std::vector<Neighbor> neighbors;
   std::transform(agents.cbegin(), agents.cend(), std::back_inserter(neighbors),
                  [](auto &agent) {
-                   return Disc(agent->get_position(), 0.1, 0.0,
-                               agent->get_velocity(false));
+                   return Neighbor(agent->get_position(), 0.1,
+                                   agent->get_velocity(false), 0);
                  });
 
   for (size_t i = 0; i < 1000; i++) {
@@ -83,7 +83,7 @@ void run(const char *behavior = "HL", float radius = 4, unsigned number = 5,
         agent->set_target_position(-p);
       }
       if (GeometricState * state = dynamic_cast<GeometricState *>(agent.get())) {
-        std::vector<Disc> agent_neighbors;
+        std::vector<Neighbor> agent_neighbors;
         std::copy(neighbors.begin(), neighbors.begin() + j,
                   std::back_inserter(agent_neighbors));
         if (j + 1 < neighbors.size()) {

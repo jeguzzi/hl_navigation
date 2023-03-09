@@ -42,7 +42,7 @@ static hl_navigation::Twist2 relax(const hl_navigation::Twist2 &v0,
 
 namespace hl_navigation {
 
-DiscCache HLBehavior::make_neighbor_cache(const Disc &neighbor, bool push_away,
+DiscCache HLBehavior::make_neighbor_cache(const Neighbor &neighbor, bool push_away,
                                           float epsilon) {
   Vector2 delta = neighbor.position - pose.position;
   float margin = radius + safety_margin + neighbor.radius;
@@ -146,7 +146,7 @@ void HLBehavior::prepare() {
                         SAFETY_MARGIN)) {
     std::vector<DiscCache> ns;
     ns.reserve(get_neighbors().size());
-    for (const Disc &d : get_neighbors()) {
+    for (const Neighbor &d : get_neighbors()) {
       const auto c = make_neighbor_cache(d, true, 2e-3);
       if (collision_computation.dynamic_may_collide(c, effective_horizon,
                                                     optimal_speed)) {

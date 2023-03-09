@@ -31,11 +31,11 @@ void Experiment::run(int seed) {
     obstacles_data.push_back(obstacle.radius);
   }
   dataset.write_raw(obstacles_data.data());
-  unsigned number = world.agents.size();
+  auto number = world.agents.size();
   std::vector<size_t> dims{static_cast<size_t>(steps), number, 3};
   dataset = file.createDataSet<float>("traces", HighFive::DataSpace(dims));
   std::vector<float> data(number * 3, 0.0);
-  for (size_t i = 0; i < steps; i++) {
+  for (unsigned i = 0; i < steps; i++) {
     world.update();
     float *d = reinterpret_cast<float *>(data.data());
     for (const auto &agent : world.agents) {

@@ -25,6 +25,7 @@
 #include "hl_navigation/controller.h"
 #include "hl_navigation/controller_3d.h"
 #include "hl_navigation_msgs/action/go_to_target.hpp"
+#include "hl_navigation_msgs/msg/neighbors.hpp"
 #include "hl_navigation_msgs/msg/obstacles.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rcl_interfaces/msg/set_parameters_result.hpp"
@@ -103,10 +104,10 @@ static float yaw_from(const geometry_msgs::msg::Quaternion &q) {
                     1 - 2 * (q.y * q.y + q.z * q.z));
 }
 
-static float yaw_from(const Eigen::Quaternionf &q) {
-  return std::atan2(2 * (q.w() * q.z() + q.x() * q.y()),
-                    1 - 2 * (q.y() * q.y() + q.z() * q.z()));
-}
+// static float yaw_from(const Eigen::Quaternionf &q) {
+//   return std::atan2(2 * (q.w() * q.z() + q.x() * q.y()),
+//                     1 - 2 * (q.y() * q.y() + q.z() * q.z()));
+// }
 
 static float yaw_from(const Eigen::Isometry3f &t) {
   const auto rpy = t.linear().eulerAngles(2, 1, 0);
@@ -133,9 +134,9 @@ class ROSControllerNode : public rclcpp::Node {
   ROSControllerNode()
       : rclcpp::Node("controller"),
         nav_controller(),
+        markers_pub(*this),
         fixed_frame(""),
-        goal_handle(nullptr),
-        markers_pub(*this) {
+        goal_handle(nullptr) {
     const double rate = declare_parameter("rate", 10.0);
     update_period = 1.0 / rate;
     param_callback_handle = add_on_set_parameters_callback(
@@ -169,7 +170,7 @@ class ROSControllerNode : public rclcpp::Node {
             "obstacles", 1,
             std::bind(&ROSControllerNode::obstacles_cb, this, _1));
     neighbors_subscriber =
-        create_subscription<hl_navigation_msgs::msg::Obstacles>(
+        create_subscription<hl_navigation_msgs::msg::Neighbors>(
             "neighbors", 1,
             std::bind(&ROSControllerNode::neighbors_cb, this, _1));
     odometry_subscriber = create_subscription<nav_msgs::msg::Odometry>(
@@ -206,7 +207,7 @@ class ROSControllerNode : public rclcpp::Node {
       target_twist_subscriber;
   rclcpp::Subscription<hl_navigation_msgs::msg::Obstacles>::SharedPtr
       obstacles_subscriber;
-  rclcpp::Subscription<hl_navigation_msgs::msg::Obstacles>::SharedPtr
+  rclcpp::Subscription<hl_navigation_msgs::msg::Neighbors>::SharedPtr
       neighbors_subscriber;
   rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr stop_subscriber;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_publisher;
@@ -266,7 +267,8 @@ class ROSControllerNode : public rclcpp::Node {
                                                  const std::string &to,
                                                  const tf2::TimePoint &tp) {
     try {
-      return transform_from(tf_buffer->lookupTransform(from, to, tf2::TimePointZero).transform);
+      return transform_from(
+          tf_buffer->lookupTransform(from, to, tf2::TimePointZero).transform);
     } catch (tf2::TransformException &ex) {
       RCLCPP_ERROR(get_logger(), "No transform from %s to %s: %s", from.c_str(),
                    to.c_str(), ex.what());
@@ -356,9 +358,11 @@ class ROSControllerNode : public rclcpp::Node {
     auto odom = odom_from_msg(msg, fixed_frame);
     if (!odom) return;
     const auto &[pose, twist] = *odom;
-    RCLCPP_INFO(get_logger(), "Odom -> %.2f %.2f %.2f %.2f-- %.2f %.2f %.2f %.2f",
-                  pose.position.x(), pose.position.y(), pose.position.z(), pose.orientation,
-                  twist.velocity.x(), twist.velocity.y(), twist.velocity.z(), twist.angular_speed);
+    RCLCPP_INFO(get_logger(),
+                "Odom -> %.2f %.2f %.2f %.2f-- %.2f %.2f %.2f %.2f",
+                pose.position.x(), pose.position.y(), pose.position.z(),
+                pose.orientation, twist.velocity.x(), twist.velocity.y(),
+                twist.velocity.z(), twist.angular_speed);
     nav_controller.set_twist(twist);
     nav_controller.set_pose(pose);
   }
@@ -403,7 +407,7 @@ class ROSControllerNode : public rclcpp::Node {
     publish_cmd({});
   }
 
-  void stop_cb(const std_msgs::msg::Empty &msg) { stop(); }
+  void stop_cb([[maybe_unused]] const std_msgs::msg::Empty &msg) { stop(); }
 
   rclcpp_action::GoalResponse handle_goal(
       const rclcpp_action::GoalUUID &uuid,
@@ -502,20 +506,20 @@ class ROSControllerNode : public rclcpp::Node {
     }
   }
 
-  void neighbors_cb(const hl_navigation_msgs::msg::Obstacles &msg) {
-    std::vector<Cylinder> obstacles;
-    for (auto msg : msg.obstacles) {
-      auto position = point_from_msg(msg.top_position, fixed_frame);
+  void neighbors_cb(const hl_navigation_msgs::msg::Neighbors &msg) {
+    std::vector<Neighbor3> neighbors;
+    for (auto msg : msg.neighbors) {
+      auto position = point_from_msg(msg.obstacle.top_position, fixed_frame);
       if (!position) return;
       auto velocity = vector_from_msg(msg.velocity, fixed_frame);
       if (!velocity) return;
-      *position -= Vector3(0.0f, 0.0f, msg.height);
-      obstacles.emplace_back(*position, msg.radius, msg.height,
-                             msg.social_margin, velocity->head<2>());
+      *position -= Vector3(0.0f, 0.0f, msg.obstacle.height);
+      neighbors.emplace_back(*position, msg.obstacle.radius, msg.obstacle.height,
+                             velocity->head<2>(), msg.id);
     }
-    nav_controller.set_neighbors(obstacles);
+    nav_controller.set_neighbors(neighbors);
     if (markers_pub.enabled) {
-      markers_pub.publish_neighbors(obstacles, fixed_frame);
+      markers_pub.publish_neighbors(neighbors, fixed_frame);
     }
   }
 
@@ -637,7 +641,7 @@ class ROSControllerNode : public rclcpp::Node {
     for (const auto &param : parameters) {
       std::string name = param.get_name();
       // RCLCPP_INFO(get_logger(), "on_set_parameter %s", name.c_str());
-      if (name.find("hl.") != -1) {
+      if (name.find("hl.") != std::string::npos) {
         name = name.substr(3);
         HLBehavior *behavior = hl_behavior();
         if (!behavior) continue;
@@ -652,7 +656,7 @@ class ROSControllerNode : public rclcpp::Node {
         }
         continue;
       }
-      if (name.find("orca.") != -1) {
+      if (name.find("orca.") != std::string::npos) {
         name = name.substr(3);
         ORCABehavior *behavior = orca_behavior();
         if (!behavior) continue;

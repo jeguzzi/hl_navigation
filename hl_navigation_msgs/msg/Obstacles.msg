@@ -1,4 +1,4 @@
-# This contains all the currently localized circular obstacles with timestamps
+# Contains a list of cylindrical with timestamps
 
 std_msgs/Header header
 Obstacle[] obstacles

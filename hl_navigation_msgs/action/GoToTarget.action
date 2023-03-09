@@ -8,3 +8,4 @@ float32 orientation_tolerance 0.05
 ---
 #feedback
 float32 distance
+float32 remaining_time

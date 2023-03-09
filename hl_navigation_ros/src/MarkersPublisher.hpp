@@ -177,7 +177,7 @@ struct MarkersPublisher {
     pub->publish(msg);
   }
 
-  std_msgs::msg::ColorRGBA color_for_type(unsigned type) {
+  std_msgs::msg::ColorRGBA color_for_type([[maybe_unused]] unsigned type) {
     std_msgs::msg::ColorRGBA c;
     c.r = 1.0f;
     c.g = 1.0f;
@@ -223,9 +223,9 @@ struct MarkersPublisher {
     return marker;
   }
 
-  void publish_neighbors(const std::vector<Cylinder> obstacles,
+  void publish_neighbors(const std::vector<Neighbor3> neighbors,
                          const std::string &frame_id) {
-    publish_obstacles_(obstacles, frame_id, "neighbors");
+    publish_obstacles_(neighbors, frame_id, "neighbors");
   }
 
   void publish_obstacles(const std::vector<Cylinder> obstacles,
@@ -233,8 +233,9 @@ struct MarkersPublisher {
     publish_obstacles_(obstacles, frame_id, "obstacles");
   }
 
-  void publish_obstacles_(const std::vector<Cylinder> obstacles,
-                         const std::string &frame_id, const std::string & marker_ns) {
+  template<typename T>
+  void publish_obstacles_(const std::vector<T> obstacles,
+                          const std::string &frame_id, const std::string & marker_ns) {
     visualization_msgs::msg::MarkerArray msg;
     msg.markers.reserve(obstacles.size() + 1);
     unsigned i = 0;
