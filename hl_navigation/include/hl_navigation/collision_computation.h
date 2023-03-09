@@ -14,15 +14,14 @@
 namespace hl_navigation {
 
 struct DiscCache {
-  Vector2 relative_position;
+  Vector2 delta;
   Vector2 velocity;
   float distance;
   float C;
   Radians gamma;
   Radians visible_angle;
 
-  DiscCache(Vector2 relative_position, float margin,
-            Vector2 velocity = Vector2::Zero());
+  DiscCache(Vector2 delta, float margin, Vector2 velocity = Vector2::Zero());
 };
 
 /**
@@ -31,7 +30,6 @@ struct DiscCache {
  */
 class CollisionComputation {
  public:
-
   using CollisionMap = std::vector<std::tuple<float, float>>;
 
   static inline std::vector<LineSegment> empty = {};
@@ -76,7 +74,7 @@ class CollisionComputation {
     static_obstacles_cache.clear();
     static_obstacles_cache.reserve(static_discs.size());
     for (const auto &disc : static_discs) {
-        static_obstacles_cache.push_back(
+      static_obstacles_cache.push_back(
           {disc.position - pose.position, margin_ + disc.radius});
     }
   }
@@ -85,7 +83,7 @@ class CollisionComputation {
   float static_free_distance(Radians angle, float max_distance,
                              bool include_neighbors = true);
   // angle is absolute
-  float dynamic_free_distance(Radians angle, float max_distance, float speed);                         
+  float dynamic_free_distance(Radians angle, float max_distance, float speed);
   bool dynamic_may_collide(const DiscCache &c, float max_distance, float speed);
   bool static_may_collide(const DiscCache &c, float max_distance);
 
@@ -97,7 +95,7 @@ class CollisionComputation {
   Pose2 pose;
   float margin;
 
-    /**
+  /**
    * Marks absence of collisions for an entry in \ref
    * get_collision_distance_cache
    */
@@ -106,7 +104,8 @@ class CollisionComputation {
 
   float static_free_distance_to(const DiscCache &disc, Radians alpha);
 
-  float dynamic_free_distance_to(const DiscCache &disc, Radians alpha, float speed);
+  float dynamic_free_distance_to(const DiscCache &disc, Radians alpha,
+                                 float speed);
 
   template <typename T>
   float static_free_distance_to_collection(Radians angle, float max_distance,
@@ -134,7 +133,6 @@ class CollisionComputation {
     }
     return min_distance;
   }
-
 };
 
 }  // namespace hl_navigation

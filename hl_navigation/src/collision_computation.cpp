@@ -6,12 +6,12 @@
 
 namespace hl_navigation {
 
-DiscCache::DiscCache(Vector2 relative_position, float margin, Vector2 velocity)
-    : relative_position(relative_position),
+DiscCache::DiscCache(Vector2 delta, float margin, Vector2 velocity)
+    : delta(delta),
       velocity(velocity),
-      distance(relative_position.norm() - margin),
-      C(relative_position.squaredNorm() - margin * margin),
-      gamma(polar_angle(relative_position)),
+      distance(delta.norm() - margin),
+      C(delta.squaredNorm() - margin * margin),
+      gamma(polar_angle(delta)),
       visible_angle(M_PI_2) {}
 
 CollisionComputation::CollisionMap
@@ -87,25 +87,28 @@ float CollisionComputation::static_free_distance_to(const DiscCache &disc,
     if (abs(normalize(alpha - disc.gamma)) < disc.visible_angle) return 0;
     return no_collision;
   }
-  const float B = disc.relative_position.x() * cos(alpha) +
-                  disc.relative_position.y() * sin(alpha);
+  const float B = disc.delta.x() * cos(alpha) + disc.delta.y() * sin(alpha);
   if (B < 0) return no_collision;
   const float D = B * B - disc.C;
   if (D < 0) return no_collision;
   return B - sqrt(D);
 }
 
+// CHANGED: when colliding, instead of the same criteria as the static case,
+// i.e. do not advance towards the obstacle, we want that for small dt,
+// the relative position after dt, will be farther than now
+// i.e. |p - dv |^2 > |p|^2 => p . dv = B < -dv^2 dt < 0
+// we can impose B < 0. It is not continuous with respect to C!
 float CollisionComputation::dynamic_free_distance_to(const DiscCache &disc,
                                                      Radians alpha,
                                                      float speed) {
-  if (disc.C < 0) {
-    if (abs(normalize(alpha - disc.gamma)) < disc.visible_angle) return 0;
-    return no_collision;
-  }
+  // if (disc.C < 0) {
+  //   if (abs(normalize(alpha - disc.gamma)) < disc.visible_angle) return 0;
+  //   return no_collision;
+  // }
   Vector2 dv = speed * unit(alpha) - disc.velocity;
-  const float A = dv.squaredNorm();
   // TODO(J): use dot prod
-  // TODO(J 2023): maybe precompute minimal distance
+  // TODO(J 2023): maybe pre-compute minimal distance
   // a = optimal_speed + agent_speed
   // A = a * a
   // B = -dist * a
@@ -114,14 +117,17 @@ float CollisionComputation::dynamic_free_distance_to(const DiscCache &disc,
   // min_dist = optimal_speed * (-B - sqrt(D)) / A = optimal_speed * (dist * a -
   // r * a) (a * a)
   //          = optimal_speed * (dist - r) / (optimal_speed + agent_speed)
-  const float B =
-      disc.relative_position.x() * dv.x() + disc.relative_position.y() * dv.y();
+  const float B = disc.delta.x() * dv.x() + disc.delta.y() * dv.y();
+
+  if (disc.C < 0) {
+    // colliding
+    return B < 0 ? no_collision : 0.0;
+  }
 
   if (B < 0) return no_collision;
+  const float A = dv.squaredNorm();
   const float D = B * B - A * disc.C;
-
   if (D < 0) return no_collision;
-
   return speed * (B - sqrt(D)) / A;
 }
 
