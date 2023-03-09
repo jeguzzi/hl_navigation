@@ -52,7 +52,7 @@ struct Task {
 
 class StateEstimation {
  public:
-  StateEstimation(const World *world) : world(world) {}
+  explicit StateEstimation(const World *world) : world(world) {}
 
   virtual void update(Agent * agent) const { };
 
@@ -187,12 +187,12 @@ class World {
  protected:
   void resolve_collision(Agent *a1, Agent *a2) {
     auto delta = a1->pose.position - a2->pose.position;
-    float penetration = delta.norm() - a1->radius - a2->radius;
-    if (penetration > 0) {
+    float p = delta.norm() - a1->radius - a2->radius;
+    if (p > 0) {
       return;
     }
     auto u = delta / delta.norm();
-    auto correction = (-penetration * 0.5 + 1e-3) * u;
+    auto correction = (-p * 0.5 + 1e-3) * u;
     a1->collision_correction += correction;
     a2->collision_correction -= correction;
     float d = a1->twist.velocity.dot(-u);
@@ -203,7 +203,7 @@ class World {
     if (d > 0) {
       a2->twist.velocity -= d * u;
     }
-    // auto force = -penetration * k * delta / delta.norm();
+    // auto force = -p * k * delta / delta.norm();
     // std::cout << force << std::endl;
     // a1->collision_force += force;
     // a2->collision_force -= force;
@@ -212,12 +212,12 @@ class World {
   // TODO(J): avoid repetitions
   void resolve_collision(Agent *agent, Disc *disc) {
     auto delta = agent->pose.position - disc->position;
-    float penetration = delta.norm() - agent->radius - disc->radius;
-    if (penetration > 0) {
+    float p = delta.norm() - agent->radius - disc->radius;
+    if (p > 0) {
       return;
     }
     auto u = delta / delta.norm();
-    auto correction = (-penetration * 1.0 + 1e-3) * u;
+    auto correction = (-p * 1.0 + 1e-3) * u;
     agent->collision_correction += correction;
     float d = agent->twist.velocity.dot(-u);
     if (d > 0) {
@@ -310,7 +310,7 @@ class World {
 
 class Experiment {
  public:
-  Experiment(float dt = 0.1, int steps = 1000) : dt(dt), steps(steps) {}
+  explicit Experiment(float dt = 0.1, int steps = 1000) : dt(dt), steps(steps) {}
 
   void run(int seed);
 
@@ -322,7 +322,7 @@ class Experiment {
 };
 
 struct WayPointsTask : Task {
-  WayPointsTask(std::vector<Eigen::Vector2f> _waypoints, bool loop,
+  WayPointsTask(const std::vector<Eigen::Vector2f> & _waypoints, bool loop,
                 float tolerance)
       : Task(),
         waypoints(_waypoints),
@@ -334,7 +334,7 @@ struct WayPointsTask : Task {
     if (agent->nav_controller.idle()) {
       if (waypoint != waypoints.end()) {
         agent->nav_controller.go_to_position(*waypoint, tolerance);
-        waypoint++;
+        ++waypoint;
         if (loop && waypoint == waypoints.end()) {
           waypoint = waypoints.begin();
         }
