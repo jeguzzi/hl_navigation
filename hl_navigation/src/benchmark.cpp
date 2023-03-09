@@ -55,6 +55,8 @@ void run(const char *behavior = "HL", float radius = 4, unsigned number = 5,
       agent->set_horizon(1.0);
       agent->set_position(position(i));
       agent->set_target_position(target);
+      agent->social_margin.set_modulation(SocialMargin::LinearModulation(1.0f));
+      agent->social_margin.set(0, 0.25f);
       agents.push_back(agent);
     }
   }

@@ -94,7 +94,10 @@ class ORCABehavior : public Behavior, public GeometricState {
   static const char* name;
 
   void add_line_obstacle(const LineSegment& line);
-  void add_neighbor(const Disc& d, float);
+  void add_neighbor(const Disc& disc, float range, bool push_away = false,
+                    float epsilon = 2e-3);
+  void add_obstacle(const Disc& disc, float range, bool push_away = false,
+                    float epsilon = 2e-3);
   void prepare_line_obstacles();
   void prepare();
 };

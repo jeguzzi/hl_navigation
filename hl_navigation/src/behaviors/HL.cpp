@@ -42,31 +42,28 @@ static hl_navigation::Twist2 relax(const hl_navigation::Twist2 &v0,
 
 namespace hl_navigation {
 
-// TODO(J 2023): review that we modify the obstacle position
-static DiscCache make_obstacle_cache(const Vector2 &position,
-                                     Vector2 obstacle_position,
-                                     const Vector2 &obstacle_velocity,
-                                     float radius, float obstacle_radius,
-                                     float safety_margin, float social_margin) {
-  float distance;
-  Vector2 relative_position = obstacle_relative_position(
-      position, obstacle_position, radius, obstacle_radius, distance);
-  float margin = radius + obstacle_radius +
-                 obstacle_margin(distance, radius, obstacle_radius,
-                                 safety_margin, social_margin);
-  return {relative_position, margin, obstacle_velocity};
+DiscCache HLBehavior::make_neighbor_cache(const Disc &neighbor, bool push_away,
+                                          float epsilon) {
+  Vector2 delta = neighbor.position - pose.position;
+  float margin = radius + safety_margin + neighbor.radius;
+  float distance = delta.norm() - margin;
+  if (push_away && distance < 0) {
+    delta = delta / delta.norm() * (margin + epsilon);
+    distance = epsilon;
+  }
+  margin += social_margin.get(0, distance);
+  return {delta, margin, neighbor.velocity};
 }
 
-// TODO(J 2023): review that we modify the obstacle position
-static DiscCache make_obstacle_cache(const Vector2 &position,
-                                     Vector2 obstacle_position, float radius,
-                                     float obstacle_radius, float safety_margin,
-                                     [[maybe_unused]] float social_margin) {
-  float distance;
-  Vector2 relative_position = obstacle_relative_position(
-      position, obstacle_position, radius, obstacle_radius, distance);
-  float margin = safety_margin + radius + obstacle_radius;
-  return {relative_position, margin};
+DiscCache HLBehavior::make_obstacle_cache(const Disc &obstacle, bool push_away,
+                                          float epsilon) {
+  Vector2 delta = obstacle.position - pose.position;
+  const float margin = radius + safety_margin + obstacle.radius;
+  const float distance = delta.norm() - margin;
+  if (push_away && distance < 0) {
+    delta = delta / delta.norm() * (margin + epsilon);
+  }
+  return {delta, margin};
 }
 
 HLBehavior::~HLBehavior() = default;
@@ -150,9 +147,7 @@ void HLBehavior::prepare() {
     std::vector<DiscCache> ns;
     ns.reserve(get_neighbors().size());
     for (const Disc &d : get_neighbors()) {
-      const auto c =
-          make_obstacle_cache(pose.position, d.position, d.velocity, radius,
-                              d.radius, safety_margin, d.social_margin);
+      const auto c = make_neighbor_cache(d, true, 2e-3);
       if (collision_computation.dynamic_may_collide(c, effective_horizon,
                                                     optimal_speed)) {
         ns.push_back(c);
@@ -162,11 +157,9 @@ void HLBehavior::prepare() {
     ss.reserve(get_static_obstacles().size());
 
     for (const Disc &d : get_static_obstacles()) {
-      const auto c =
-          make_obstacle_cache(pose.position, d.position, radius, d.radius,
-                              safety_margin, d.social_margin);
+      const auto c = make_obstacle_cache(d, true, 2e-3);
       if (collision_computation.static_may_collide(c, effective_horizon)) {
-        ns.push_back(c);
+        ss.push_back(c);
       }
     }
     collision_computation.setup(pose, radius + safety_margin,

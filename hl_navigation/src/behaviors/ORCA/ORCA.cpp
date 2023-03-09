@@ -53,20 +53,36 @@ void ORCABehavior::add_line_obstacle(const LineSegment &line) {
 
 // TODO(old) add non penetration check!
 
-void ORCABehavior::add_neighbor(const Disc &d, float rangeSq) {
+void ORCABehavior::add_obstacle(const Disc &obstacle, float rangeSq,
+                                bool push_away, float epsilon) {
+  return add_neighbor(obstacle, rangeSq, push_away, epsilon);
+}
+
+void ORCABehavior::add_neighbor(const Disc &neighbor, float rangeSq,
+                                bool push_away, float epsilon) {
   auto a = std::make_unique<RVO::Agent>(nullptr);
-  Vector2 p = d.position;
-  a->velocity_ = RVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
-
-  a->position_ = RVO::Vector2((float)p.x(), (float)p.y());
-  float distance;
-
-  [[maybe_unused]] Vector2 relative_position =
-      obstacle_relative_position(pose.position, p, radius, d.radius, distance);
-  a->radius_ = d.radius + fmin(distance - d.radius - _RVOAgent->radius_ - 0.001,
-                               obstacle_margin(distance, radius, d.radius,
-                                               safety_margin, d.social_margin));
+  a->velocity_ =
+      RVO::Vector2((float)neighbor.velocity.x(), (float)neighbor.velocity.y());
   a->prefVelocity_ = a->velocity_;
+
+  Vector2 p = neighbor.position;
+  const float margin = neighbor.radius + safety_margin + radius;
+  const Vector2 delta = neighbor.position - pose.position;
+  float distance = delta.norm() - margin;
+  if (push_away && distance < epsilon) {
+    p += delta / delta.norm() * (-distance + epsilon);
+    distance = epsilon;
+  }
+  a->position_ = RVO::Vector2((float)p.x(), (float)p.y());
+  a->radius_ = neighbor.radius + safety_margin + social_margin.get(0, distance);
+  // [[maybe_unused]] Vector2 relative_position =
+  //     obstacle_relative_position(pose.position, p, radius, d.radius,
+  //     distance);
+  // a->radius_ = d.radius + fmin(distance - d.radius - _RVOAgent->radius_ -
+  // 0.001,
+  //                              obstacle_margin(distance, radius, d.radius,
+  //                                              safety_margin,
+  //                                              d.social_margin));
   _RVOAgent->insertAgentNeighbor(a.get(), rangeSq);
   rvo_neighbors.push_back(std::move(a));
 }
@@ -77,8 +93,6 @@ void ORCABehavior::set_time_horizon(float value) {
 float ORCABehavior::get_time_horizon() const { return _RVOAgent->timeHorizon_; }
 void ORCABehavior::set_time_step(float value) { _RVOAgent->timeStep_ = value; }
 float ORCABehavior::get_time_step() const { return _RVOAgent->timeStep_; }
-
-
 
 // TODO(J): still need the float casting?
 void ORCABehavior::prepare() {
@@ -126,10 +140,10 @@ void ORCABehavior::prepare() {
     _RVOAgent->agentNeighbors_.clear();
     rvo_neighbors.clear();
     for (const auto &n : get_neighbors()) {
-      add_neighbor(n, rangeSq);
+      add_neighbor(n, rangeSq, true, 2e-3);
     }
     for (const auto &o : get_static_obstacles()) {
-      add_neighbor(o, rangeSq);
+      add_obstacle(o, rangeSq, true, 2e-3);
     }
   }
   GeometricState::reset_changes();

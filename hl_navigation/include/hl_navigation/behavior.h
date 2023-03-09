@@ -13,16 +13,9 @@
 
 #include "hl_navigation/common.h"
 #include "hl_navigation/kinematic.h"
+#include "hl_navigation/social_margin.h"
 
 namespace hl_navigation {
-
-// helpers
-
-float obstacle_margin(float distance, float radius, float obstacle_radius,
-                      float safety_margin, float social_margin);
-Vector2 obstacle_relative_position(const Vector2 &position,
-                                   Vector2 &obstacle_position, float radius,
-                                   float obstacle_radius, float &distance);
 
 /**
  * @brief      This class describes a generic behavior to reach a target
@@ -79,6 +72,8 @@ class Behavior : protected RegisterChanges {
     velocity
   };
 
+  SocialMargin social_margin;
+
   /**
    * Default rotation tau
    */
@@ -96,6 +91,7 @@ class Behavior : protected RegisterChanges {
    */
   Behavior(std::shared_ptr<Kinematic> kinematic, float radius)
       : RegisterChanges(),
+        social_margin(),
         kinematic(kinematic),
         radius(radius),
         pose(),
@@ -476,6 +472,7 @@ class Behavior : protected RegisterChanges {
       twist = actuated_twist;
     }
     pose = pose.integrate(twist, time_step);
+    change(POSITION|ORIENTATION|VELOCITY|ANGULAR_SPEED);
   }
   /**
    * @brief      Convenience method to actuate the last recorded actuated twist
@@ -690,6 +687,13 @@ class Behavior : protected RegisterChanges {
    * frame.
    */
   Vector2 get_desired_velocity() const { return desired_velocity; }
+
+  /**
+   * @brief      Gets the social margin.
+   *
+   * @return     The social margin.
+   */
+  // const SocialMargin &get_social_margin() const { return social_margin; }
 
  protected:
   enum {

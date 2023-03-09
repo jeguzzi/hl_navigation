@@ -7,45 +7,6 @@
 
 namespace hl_navigation {
 
-// TODO(J 2023): review
-float obstacle_margin(float distance, float radius, float obstacle_radius,
-                      float safety_margin, float social_margin) {
-  // social_margin is now a property of the obstacle!!, so could be less than
-  // safety margin
-  social_margin = std::max(social_margin, safety_margin);
-
-  float far_margin = 1.0f;
-  float distance_to_be_separated = safety_margin + radius + obstacle_radius;
-  float distance_to_be_far = far_margin + radius + obstacle_radius;
-
-  if (distance < distance_to_be_separated) {
-    return safety_margin;
-  } else if (distance > distance_to_be_far) {
-    return social_margin;
-  } else {
-    return (social_margin - safety_margin) /
-               (distance_to_be_far - distance_to_be_separated) *
-               (distance - distance_to_be_separated) +
-           safety_margin;
-  }
-}
-
-// TODO(J 2023): review
-Vector2 obstacle_relative_position(const Vector2& position,
-                                   Vector2& obstacle_position, float radius,
-                                   float obstacle_radius, float& distance) {
-  Vector2 relative_position = obstacle_position - position;
-  distance = relative_position.norm();
-  float min_distance = (radius + obstacle_radius) + 0.002;
-  if (distance < min_distance) {
-    // too near,  cannot penetrate in an obstacle (footbot or human)
-    relative_position = relative_position / distance * min_distance;
-    obstacle_position = position + relative_position;
-    distance = min_distance;
-  }
-  return relative_position;
-}
-
 Twist2 Behavior::twist_towards_velocity(const Vector2& absolute_velocity,
                                         bool relative) {
   float delta_angle = 0.0f;

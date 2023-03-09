@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "hl_navigation/behavior.h"
-#include "hl_navigation/state/geometric.h"
 #include "hl_navigation/collision_computation.h"
+#include "hl_navigation/state/geometric.h"
 
 // TODO(J): verify if behavior for tau < step is correct (non smooth)
 
@@ -199,6 +199,11 @@ class HLBehavior : public Behavior, public GeometricState {
   float feared_distance_to_collision_at_relative_angle(Radians angle);
   float static_dist_for_angle(const DiscCache *agent, Radians angle);
   float distance_to_collision_at_relative_angle(Radians angle);
+
+  DiscCache make_neighbor_cache(const Disc &neighbor, bool push_away = false,
+                                float epsilon = 2e-3);
+  DiscCache make_obstacle_cache(const Disc &obstacle, bool push_away = false,
+                                float epsilon = 2e-3);
 
  private:
   static const char *name;
