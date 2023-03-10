@@ -20,6 +20,52 @@
 using namespace hl_navigation;
 namespace py = pybind11;
 
+template <typename T>
+static std::string to_string(const T &value) {
+  return std::to_string(value);
+}
+
+template <>
+std::string to_string(const Vector2 &value) {
+  return "(" + std::to_string(value[0]) + ", " + std::to_string(value[1]) + ")";
+}
+
+template <>
+std::string to_string(const bool &value) {
+  return value ? "True" : "False";
+}
+
+template <>
+std::string to_string(const Pose2 &value) {
+  return "Pose2(" + to_string(value.position) + ", " +
+         std::to_string(value.orientation) + ")";
+}
+
+template <>
+std::string to_string(const Twist2 &value) {
+  return "Twist2(" + to_string(value.velocity) + ", " +
+         std::to_string(value.angular_speed) + ", " +
+         to_string(value.relative) + ")";
+}
+
+template <>
+std::string to_string(const Disc &value) {
+  return "Disc(" + to_string(value.position) + ", " +
+         std::to_string(value.radius) + ")";
+}
+
+template <>
+std::string to_string(const Neighbor &value) {
+  return "Neighbor(" + to_string<Disc>(value) + ", " +
+         to_string(value.velocity) + ", " + std::to_string(value.id) + ")";
+}
+
+template <>
+std::string to_string(const LineSegment &value) {
+  return "LineSegment(" + to_string(value.p1) + ", " + to_string(value.p2) +
+         ")";
+}
+
 class PyBehavior : public Behavior {
  public:
   /* Inherit the constructors */
@@ -31,8 +77,8 @@ class PyBehavior : public Behavior {
     PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist, time_step, relative, mode,
                       set_as_actuated);
   }
-  Vector2 compute_desired_velocity() override {
-    PYBIND11_OVERRIDE(Vector2, Behavior, compute_desired_velocity);
+  Vector2 compute_desired_velocity(float time_step) override {
+    PYBIND11_OVERRIDE(Vector2, Behavior, compute_desired_velocity, time_step);
   }
   Twist2 twist_towards_velocity(const Vector2 &absolute_velocity,
                                 bool relative) override {
@@ -58,16 +104,13 @@ PYBIND11_MODULE(_hl_navigation, m) {
   py::class_<Twist2>(m, "Twist2")
       .def(py::init<Vector2, float, bool>(), py::arg("velocity"),
            py::arg("angular_speed") = 0.0f, py::arg("relative") = false)
+      .def(py::self == py::self)
+      .def(py::self != py::self)
       .def_readwrite("velocity", &Twist2::velocity)
       .def_readwrite("angular_speed", &Twist2::angular_speed)
       .def_readwrite("relative", &Twist2::relative)
       .def("rotate", &Twist2::rotate)
-      .def("__repr__", [](const Twist2 &v) {
-        return ("Twist2[" + std::to_string(v.relative) + "]<" +
-                std::to_string(v.velocity.x()) + ", " +
-                std::to_string(v.velocity.y()) + ", " +
-                std::to_string(v.angular_speed) + ">");
-      });
+      .def("__repr__", &to_string<Twist2>);
 
   py::class_<Pose2>(m, "Pose2")
       .def(py::init<Vector2, float>(), py::arg("position"),
@@ -76,23 +119,21 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .def_readwrite("orientation", &Pose2::orientation)
       .def("rotate", &Pose2::rotate)
       .def("integrate", &Pose2::integrate)
-      .def("__repr__", [](const Pose2 &v) {
-        return ("Pose2<" + std::to_string(v.position.x()) + ", " +
-                std::to_string(v.position.y()) + ", " +
-                std::to_string(v.orientation) + ">");
-      });
+      .def("__repr__", &to_string<Pose2>);
 
   py::class_<Disc>(m, "Disc")
       .def(py::init<Vector2, float>(), py::arg("position"), py::arg("radius"))
       .def_readwrite("position", &Disc::position)
-      .def_readwrite("radius", &Disc::radius);
+      .def_readwrite("radius", &Disc::radius)
+      .def("__repr__", &to_string<Disc>);
 
   py::class_<Neighbor, Disc>(m, "Neighbor")
       .def(py::init<Vector2, float, Vector2, int>(), py::arg("position"),
            py::arg("radius"), py::arg("velocity") = Vector2(0.0, 0.0),
            py::arg("id") = 0)
       .def_readwrite("velocity", &Neighbor::velocity)
-      .def_readwrite("id", &Neighbor::id);
+      .def_readwrite("id", &Neighbor::id)
+      .def("__repr__", &to_string<Neighbor>);
 
   py::class_<LineSegment>(m, "LineSegment")
       .def(py::init<Vector2, Vector2>(), py::arg("p1"), py::arg("p2"))
@@ -100,7 +141,14 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .def_readonly("p2", &LineSegment::p2)
       .def_readonly("e1", &LineSegment::e1)
       .def_readonly("e2", &LineSegment::e2)
-      .def_readonly("length", &LineSegment::length);
+      .def_readonly("length", &LineSegment::length)
+      .def("distance_from_point",
+           py::overload_cast<const Vector2 &>(&LineSegment::distance, py::const_),
+           py::arg("point"))
+      .def("distance_from_disc",
+           py::overload_cast<const Disc &, bool>(&LineSegment::distance, py::const_),
+           py::arg("disc"), py::arg("penetration") = false)
+      .def("__repr__", &to_string<LineSegment>);
 
   py::class_<Kinematic, std::shared_ptr<Kinematic>>(m, "Kinematic")
       .def_property("max_speed", &Kinematic::get_max_speed,
@@ -229,6 +277,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
 
   py::class_<GeometricState, std::shared_ptr<GeometricState>>(m,
                                                               "GeometricState")
+      .def(py::init<>())
       .def_property("neighbors", &GeometricState::get_neighbors,
                     &GeometricState::set_neighbors)
       .def_property("static_obstacles", &GeometricState::get_static_obstacles,

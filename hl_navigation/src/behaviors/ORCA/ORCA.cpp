@@ -162,8 +162,9 @@ void ORCABehavior::prepare() {
   GeometricState::reset_changes();
 }
 
-Vector2 ORCABehavior::compute_desired_velocity() {
+Vector2 ORCABehavior::compute_desired_velocity(float dt) {
   prepare();
+  set_time_step(dt);
   _RVOAgent->computeNewVelocity();
   return Vector2(_RVOAgent->newVelocity_.x(), _RVOAgent->newVelocity_.y());
 }
@@ -190,11 +191,6 @@ Twist2 ORCABehavior::twist_towards_velocity(const Vector2 &absolute_velocity,
     }
   }
   return Behavior::twist_towards_velocity(absolute_velocity, relative);
-}
-
-Twist2 ORCABehavior::cmd_twist_towards_target(float dt, bool relative) {
-  set_time_step(dt);
-  return Behavior::cmd_twist_towards_target(dt, relative);
 }
 
 const char *ORCABehavior::name = register_type<ORCABehavior>("ORCA");

@@ -186,7 +186,7 @@ class HLBehavior : public Behavior, public GeometricState {
   unsigned int resolution;
   CollisionComputation collision_computation;
 
-  Vector2 compute_desired_velocity() override;
+  Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
 
   void prepare();
   Vector2 compute_repulsive_force(bool &inside_obstacle);

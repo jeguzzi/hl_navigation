@@ -42,7 +42,7 @@ Twist2 Behavior::twist_towards_velocity(const Vector2& absolute_velocity,
 
 
 Twist2 Behavior::cmd_twist_towards_target([[maybe_unused]] float dt, bool relative) {
-  desired_velocity = compute_desired_velocity();
+  desired_velocity = compute_desired_velocity(dt);
   Twist2 desired_twist = twist_towards_velocity(desired_velocity, true);
   Twist2 twist = kinematic->feasible(desired_twist);
   return to_frame(twist, relative);

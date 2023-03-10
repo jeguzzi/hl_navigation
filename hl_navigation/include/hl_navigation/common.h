@@ -23,7 +23,7 @@ namespace hl_navigation {
  */
 using Vector2 = Eigen::Vector2f;
 
-inline std::ostream& operator<<(std::ostream& os, const Vector2 & vector) {
+inline std::ostream& operator<<(std::ostream& os, const Vector2& vector) {
   os << "Vector2(" << vector[0] << ", " << vector[1] << ")";
   return os;
 }
@@ -140,9 +140,17 @@ struct Twist2 {
   Twist2 rotate(Radians angle) const {
     return {::hl_navigation::rotate(velocity, angle), angular_speed};
   }
+
+  bool operator==(const Twist2& other) const {
+    return velocity == other.velocity && angular_speed == other.angular_speed;
+  }
+
+  bool operator!=(const Twist2& other) const {
+    return !(operator==(other));
+  }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Twist2 & twist) {
+inline std::ostream& operator<<(std::ostream& os, const Twist2& twist) {
   os << "Twist2(" << twist.velocity << ", " << twist.angular_speed << ", "
      << std::boolalpha << twist.relative << ")";
   return os;
@@ -191,6 +199,14 @@ struct Pose2 {
                                                   twist.velocity, orientation)
                                             : twist.velocity),
             orientation + dt * twist.angular_speed};
+  }
+
+  bool operator==(const Pose2& other) const {
+    return position == other.position && orientation == other.orientation;
+  }
+
+  bool operator!=(const Pose2& other) const {
+    return !(operator==(other));
   }
 };
 

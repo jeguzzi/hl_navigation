@@ -87,7 +87,7 @@ static inline float distance_from_target(Radians angle, float free_distance,
 
 // TODO(J:revision2023): check why we need effective_horizon
 // output is in absolute frame
-Vector2 HLBehavior::compute_desired_velocity() {
+Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
   prepare();
   const Vector2 delta_target = target_pose.position - pose.position;
   const Radians start_angle = polar_angle(delta_target);

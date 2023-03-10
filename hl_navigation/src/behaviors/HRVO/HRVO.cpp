@@ -120,7 +120,7 @@ void HRVOBehavior::add_neighbor(const Neighbor & neighbor, bool push_away, float
   agentIndex++;
 }
 
-Vector2 HRVOBehavior::compute_desired_velocity() {
+Vector2 HRVOBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
   prepare();
   _HRVOAgent->computeNewVelocity();
   return {_HRVOAgent->newVelocity_.x(), _HRVOAgent->newVelocity_.y()};

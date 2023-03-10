@@ -31,7 +31,7 @@ class HRVOBehavior : public Behavior, public GeometricState {
   ~HRVOBehavior();
 
  protected:
-  Vector2 compute_desired_velocity() override;
+  Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
 
  private:
   uint agentIndex;

@@ -82,8 +82,7 @@ class ORCABehavior : public Behavior, public GeometricState {
  protected:
   Twist2 twist_towards_velocity(const Vector2& absolute_velocity,
                                 bool relative) override;
-  Twist2 cmd_twist_towards_target(float dt, bool relative) override;
-  Vector2 compute_desired_velocity() override;
+  Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
 
  private:
   bool use_effective_center;

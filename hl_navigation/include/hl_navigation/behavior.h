@@ -743,7 +743,7 @@ class Behavior : protected RegisterChanges {
 
   static std::map<std::string, BehaviorFactory> factory;
 
-  virtual Vector2 compute_desired_velocity() { return Vector2::Zero(); }
+  virtual Vector2 compute_desired_velocity([[maybe_unused]] float time_step) { return Vector2::Zero(); }
   virtual Twist2 twist_towards_velocity(const Vector2 &absolute_velocity,
                                         bool relative);
   virtual Twist2 cmd_twist_towards_target(float dt, bool relative);

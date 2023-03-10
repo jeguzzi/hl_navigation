@@ -31,6 +31,12 @@ struct Disc {
    */
   Disc(const Vector2& position, float radius)
       : position(position), radius(radius) {}
+
+  bool operator==(const Disc& other) const {
+    return position == other.position && radius == other.radius;
+  }
+
+  bool operator!=(const Disc& other) const { return !(operator==(other)); }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Disc& disc) {
@@ -87,6 +93,13 @@ struct Neighbor : public Disc {
     velocity = Vector2::Zero();
     return *this;
   }
+
+  bool operator==(const Neighbor& other) const {
+    return Disc::operator==(other) && velocity == other.velocity &&
+           id == other.id;
+  }
+
+  bool operator!=(const Neighbor& other) const { return !(operator==(other)); }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Neighbor& disc) {
@@ -134,6 +147,28 @@ struct LineSegment {
         e2(-e1[1], e1[0]),
         length((p2 - p1).norm()) {}
 
+  bool operator==(const LineSegment& other) const {
+    return p1 == other.p1 && p2 == other.p2;
+  }
+
+  bool operator!=(const LineSegment& other) const {
+    return !(operator==(other));
+  }
+
+  float distance(const Vector2& point) const {
+    const Vector2 delta = point - p1;
+    const float x = delta.dot(e1);
+    if (x < 0) return delta.norm();
+    if (x > length) return (point - p2).norm();
+    return abs(delta.dot(e2));
+  }
+
+  // negative <=> penetration
+  float distance(const Disc& disc, bool penetration = false) const {
+    const float dist = distance(disc.position) - disc.radius;
+    return (penetration || dist > 0) ? dist : 0.0;
+  }
+
   /**
    * @brief      Constructs a copy.
    *
@@ -179,14 +214,16 @@ class GeometricState : protected RegisterChanges {
    *
    * @return     The static obstacles
    */
-  const std::vector<Disc>& get_static_obstacles() const { return static_obstacles; }
+  const std::vector<Disc>& get_static_obstacles() const {
+    return static_obstacles;
+  }
   /**
    * @brief      Sets the static obstacles. Positions are in the world fixed
    * frame.
    *
    * @param[in]  value
    */
-  virtual void set_static_obstacles(const std::vector<Disc>& value){
+  virtual void set_static_obstacles(const std::vector<Disc>& value) {
     static_obstacles = value;
     change(STATIC_OBSTACLES);
   }
@@ -226,19 +263,19 @@ class GeometricState : protected RegisterChanges {
 inline std::ostream& operator<<(std::ostream& os, const GeometricState& state) {
   os << "<GeometricState:\n";
   os << "\tline obstacles: {";
-  for (const auto & line : state.get_line_obstacles()) {
+  for (const auto& line : state.get_line_obstacles()) {
     os << line;
-  } 
+  }
   os << "}\n";
   os << "\tstatic obstacles: {";
-  for (const auto & obstacle : state.get_static_obstacles()) {
+  for (const auto& obstacle : state.get_static_obstacles()) {
     os << obstacle;
-  } 
+  }
   os << "}\n";
   os << "\tneighbors: {";
-  for (const auto & neighbor : state.get_neighbors()) {
+  for (const auto& neighbor : state.get_neighbors()) {
     os << neighbor << ", ";
-  } 
+  }
   os << "}\n>";
   return os;
 }

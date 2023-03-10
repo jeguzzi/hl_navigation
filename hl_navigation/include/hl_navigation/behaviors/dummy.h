@@ -22,7 +22,7 @@ public:
 
 protected:
 
-  Vector2 compute_desired_velocity() override;
+  Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
 
 private:
   static const char * name;
