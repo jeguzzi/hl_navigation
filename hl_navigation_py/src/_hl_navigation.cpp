@@ -19,6 +19,41 @@
 
 using namespace hl_navigation;
 namespace py = pybind11;
+
+class PyBehavior : public Behavior {
+ public:
+  /* Inherit the constructors */
+  using Behavior::Behavior;
+
+  /* Trampolines (need one for each virtual function) */
+  Twist2 cmd_twist(float time_step, bool relative, Mode mode = Mode::move,
+                   bool set_as_actuated = true) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist, time_step, relative, mode,
+                      set_as_actuated);
+  }
+  Vector2 compute_desired_velocity() override {
+    PYBIND11_OVERRIDE(Vector2, Behavior, compute_desired_velocity);
+  }
+  Twist2 twist_towards_velocity(const Vector2 &absolute_velocity,
+                                bool relative) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, twist_towards_velocity,
+                      absolute_velocity, relative);
+  }
+  Twist2 cmd_twist_towards_target(float time_step, bool relative) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_target, time_step,
+                      relative);
+  }
+  Twist2 cmd_twist_towards_target_orientation(float time_step,
+                                              bool relative) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_target_orientation,
+                      time_step, relative);
+  }
+  Twist2 cmd_twist_towards_stopping(float time_step, bool relative) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_stopping, time_step,
+                      relative);
+  }
+};
+
 PYBIND11_MODULE(_hl_navigation, m) {
   py::class_<Twist2>(m, "Twist2")
       .def(py::init<Vector2, float, bool>(), py::arg("velocity"),
@@ -110,7 +145,9 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .value("follow", Behavior::Mode::follow)
       .export_values();
 
-  py::class_<Behavior, std::shared_ptr<Behavior>>(m, "Behavior")
+  py::class_<Behavior, PyBehavior, std::shared_ptr<Behavior>>(m, "Behavior")
+      .def(py::init<std::shared_ptr<Kinematic>, float>(), py::arg("kinematic"),
+           py::arg("radius"))
       .def_property("kinematic", &Behavior::get_kinematic, nullptr)
       .def_property("radius", &Behavior::get_radius, &Behavior::set_radius)
       .def_property("max_speed", &Behavior::get_max_speed,
@@ -165,6 +202,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
 
       .def_property("heading_behavior", &Behavior::get_heading_behavior,
                     &Behavior::set_heading_behavior)
+      .def_property("target_pose", &Behavior::get_target_pose,
+                    &Behavior::set_target_pose)
       .def_property("target_position", &Behavior::get_target_position,
                     &Behavior::set_target_position)
       .def_property("target_orientation", &Behavior::get_target_orientation,

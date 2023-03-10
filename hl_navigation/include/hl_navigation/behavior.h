@@ -505,6 +505,21 @@ class Behavior : protected RegisterChanges {
    */
   void set_heading_behavior(Heading value) { heading_behavior = value; }
   /**
+   * @brief      Gets the target pose in the world fixed frame.
+   *
+   * @return     The target pose.
+   */
+  Pose2 get_target_pose() const { return target_pose; }
+  /**
+   * @brief      Sets the target pose in the world fixed frame.
+   *
+   * @param[in]  value
+   */
+  void set_target_pose(const Pose2 &value) {
+    target_pose = value;
+    change(TARGET_POSITION | TARGET_ORIENTATION);
+  }
+  /**
    * @brief      Gets the target position in the world fixed frame.
    *
    * @return     The target position.
