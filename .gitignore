@@ -62,3 +62,6 @@ _build
 notes
 install
 build
+notebooks
+data
+.ipynb_checkpoints
