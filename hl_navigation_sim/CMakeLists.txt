@@ -28,8 +28,8 @@ find_package(hl_navigation_py REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
 
-find_package(GEOS REQUIRED)
-# add_subdirectory(../external/geos geos)
+# find_package(GEOS REQUIRED)
+add_subdirectory(../external/geos geos)
 add_subdirectory(../external/pybind11 pybind11 EXCLUDE_FROM_ALL)
 add_subdirectory(../external/HighFive highFive)
 # find_package(pybind11_vendor REQUIRED)
