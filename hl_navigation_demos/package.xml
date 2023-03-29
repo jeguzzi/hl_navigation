@@ -16,8 +16,8 @@
   <depend>hl_navigation</depend>
   <depend>hl_navigation_sim</depend>
   <exec_depend>hl_navigation_py</exec_depend>
-  <exec_depend>hl_navigation_msgs</exec_depend>
-  <exec_depend>hl_navigation_ros</exec_depend>
+  <!-- <exec_depend>hl_navigation_msgs</exec_depend> -->
+  <!-- <exec_depend>hl_navigation_ros</exec_depend> -->
   
   <export>
     <build_type>ament_cmake</build_type>
