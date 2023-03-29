@@ -126,6 +126,6 @@ Vector2 HRVOBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
   return {_HRVOAgent->newVelocity_.x(), _HRVOAgent->newVelocity_.y()};
 }
 
-const char *HRVOBehavior::name = register_type<HRVOBehavior>("HRVO");
+// const char *HRVOBehavior::name = register_type<HRVOBehavior>("HRVO");
 
 }  // namespace hl_navigation

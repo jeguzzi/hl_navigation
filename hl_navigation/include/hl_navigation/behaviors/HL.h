@@ -1,4 +1,4 @@
-/**
+  /**
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
@@ -12,7 +12,8 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/collision_computation.h"
-#include "hl_navigation/state/geometric.h"
+#include "hl_navigation/property.h"
+#include "hl_navigation/states/geometric.h"
 
 // TODO(J): verify if behavior for tau < step is correct (non smooth)
 
@@ -31,7 +32,8 @@ namespace hl_navigation {
  *     Robotics and Automation (ICRA), 2013 IEEE International Conference on,
  *     vol., no., pp.423,430, 6-10 May 2013
  */
-class HLBehavior : public Behavior, public GeometricState {
+class HLBehavior : public Behavior,
+                   public GeometricState {
  public:
   /**
    * Default \f$\eta\f$
@@ -54,7 +56,7 @@ class HLBehavior : public Behavior, public GeometricState {
    */
   static constexpr unsigned default_resolution = 101;
 
-  HLBehavior(std::shared_ptr<Kinematic> kinematic, float radius)
+  HLBehavior(std::shared_ptr<Kinematic> kinematic = nullptr, float radius = 0.0f)
       : Behavior(kinematic, radius),
         GeometricState(),
         effective_horizon(0.0f),
@@ -63,7 +65,7 @@ class HLBehavior : public Behavior, public GeometricState {
         aperture(default_aperture),
         resolution(std::min(default_resolution, max_resolution)),
         collision_computation() {}
-  ~HLBehavior();
+  ~HLBehavior() = default;
 
   // -------------------------- BEHAVIOR PARAMETERS
 
@@ -178,6 +180,25 @@ class HLBehavior : public Behavior, public GeometricState {
   CollisionComputation::CollisionMap get_collision_distance(
       bool assuming_static = false);
 
+  virtual const Properties &get_properties() const override {
+    return properties;
+  };
+
+  static inline std::map<std::string, Property> properties =
+      Properties{
+          {"tau", make_property<float, HLBehavior>(
+                      &HLBehavior::get_tau, &HLBehavior::set_tau, default_tau, "Tau")},
+          {"eta", make_property<float, HLBehavior>(
+                      &HLBehavior::get_eta, &HLBehavior::set_eta, default_eta, "Eta")},
+          {"aperture", make_property<float, HLBehavior>(
+                           &HLBehavior::get_aperture, &HLBehavior::set_aperture,
+                           default_aperture, "Aperture angle")},
+          {"resolution", make_property<int, HLBehavior>(
+                             &HLBehavior::get_resolution,
+                             &HLBehavior::set_resolution, default_resolution, "Safety margin")},
+      } +
+      Behavior::properties;
+
  protected:
   float effective_horizon;
   float tau;
@@ -200,13 +221,18 @@ class HLBehavior : public Behavior, public GeometricState {
   float static_dist_for_angle(const DiscCache *agent, Radians angle);
   float distance_to_collision_at_relative_angle(Radians angle);
 
-  DiscCache make_neighbor_cache(const Neighbor &neighbor, bool push_away = false,
-                                float epsilon = 2e-3);
+  DiscCache make_neighbor_cache(const Neighbor &neighbor,
+                                bool push_away = false, float epsilon = 2e-3);
   DiscCache make_obstacle_cache(const Disc &obstacle, bool push_away = false,
                                 float epsilon = 2e-3);
 
+
+  std::string get_type() const override {
+    return type;
+  }
+
  private:
-  static const char *name;
+  inline static std::string type = register_type<HLBehavior>("HL");
 };
 
 }  // namespace hl_navigation

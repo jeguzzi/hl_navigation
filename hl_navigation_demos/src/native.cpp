@@ -10,20 +10,20 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/controller.h"
-#include "hl_navigation/state/geometric.h"
+#include "hl_navigation/states/geometric.h"
 
 using hl_navigation::Action;
 using hl_navigation::Behavior;
 using hl_navigation::Controller;
 using hl_navigation::Disc;
-using hl_navigation::Neighbor;
 using hl_navigation::GeometricState;
+using hl_navigation::Neighbor;
 using hl_navigation::Twist2;
 using hl_navigation::TwoWheeled;
 using hl_navigation::Vector2;
 
 static void show_usage(std::string name) {
-  std::vector<std::string> keys = Behavior::behavior_names();
+  std::vector<std::string> keys = Behavior::types();
   std::ostringstream behaviors;
   // Dump all keys
   std::copy(keys.begin(), keys.end(),
@@ -54,8 +54,10 @@ static void run(const char *behavior = "HL") {
   std::vector<Disc> obstacles = {Disc({0.0f, 0.0f}, 0.1)};
   Vector2 target{1.0, 0.0};
   for (size_t i = 0; i < 2; i++) {
-    auto agent = Behavior::behavior_with_name(
-        behavior, std::make_shared<TwoWheeled>(0.166, 0.094), 0.08);
+    auto kinematic = std::make_shared<TwoWheeled>(0.166, 0.094);
+    auto agent = Behavior::make_type(behavior);
+    agent->set_kinematic(kinematic);
+    agent->set_radius(0.08);
     agent->set_horizon(1.0);
     agent->set_safety_margin(0.02);
     agent->set_optimal_speed(0.12);

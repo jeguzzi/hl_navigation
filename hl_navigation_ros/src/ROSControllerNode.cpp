@@ -8,8 +8,10 @@
 #include <Eigen/Geometry>
 #include <chrono>
 #define _USE_MATH_DEFINES
+#include <cctype>
 #include <cmath>
 #include <memory>
+#include <type_traits>
 
 #include "./MarkersPublisher.hpp"
 #include "geometry_msgs/msg/point_stamped.hpp"
@@ -24,6 +26,7 @@
 #include "hl_navigation/behaviors/ORCA.h"
 #include "hl_navigation/controller.h"
 #include "hl_navigation/controller_3d.h"
+#include "hl_navigation/property.h"
 #include "hl_navigation_msgs/action/go_to_target.hpp"
 #include "hl_navigation_msgs/msg/neighbors.hpp"
 #include "hl_navigation_msgs/msg/obstacles.hpp"
@@ -45,15 +48,34 @@ using GoalHandleGoToTarget = rclcpp_action::ServerGoalHandle<GoToTarget>;
 
 namespace hl_navigation {
 
+template <typename T>
+struct is_ros_param_type : std::false_type {};
+template <>
+struct is_ros_param_type<bool> : std::true_type {};
+template <>
+struct is_ros_param_type<int> : std::true_type {};
+template <>
+struct is_ros_param_type<float> : std::true_type {};
+template <>
+struct is_ros_param_type<std::string> : std::true_type {};
+template <>
+struct is_ros_param_type<std::vector<bool>> : std::true_type {};
+template <>
+struct is_ros_param_type<std::vector<int>> : std::true_type {};
+template <>
+struct is_ros_param_type<std::vector<float>> : std::true_type {};
+template <>
+struct is_ros_param_type<std::vector<std::string>> : std::true_type {};
+
 static std::shared_ptr<Kinematic> make_kinematic(const std::string &name,
                                                  float max_speed,
                                                  float max_angular_speed,
                                                  float axis) {
-  if (name == "two_wheeled") {
+  if (name == "TwoWheeled") {
     return std::make_shared<TwoWheeled>(max_speed, axis);
-  } else if (name == "four_wheeled") {
+  } else if (name == "FourWheeled") {
     return std::make_shared<FourWheeled>(max_speed, axis);
-  } else if (name == "forward") {
+  } else if (name == "Forward") {
     return std::make_shared<Forward>(max_speed, max_angular_speed);
   } else {
     return std::make_shared<Holonomic>(max_speed, max_angular_speed);
@@ -129,6 +151,61 @@ static Twist3 twist_from(const geometry_msgs::msg::Twist &t) {
   return {vector_from(t.linear), static_cast<Radians>(t.angular.z), false};
 }
 
+static std::string tolower(const std::string &value) {
+  std::string r;
+  r.resize(value.size());
+  transform(value.begin(), value.end(), r.begin(), ::tolower);
+  return r;
+}
+
+// static std::optional<Property::Field> get_from_param(const Property
+// &property,
+//                                       const rclcpp::Parameter &param) {
+//   return std::visit(
+//       [&param](auto &&arg) -> std::optional<Property::Field> {
+//         using T = std::decay_t<decltype(arg)>;
+//         if constexpr (is_ros_param_type<T>) {
+//           return static_cast<T>(param.get_value<T>());
+//         } else {
+//           return std::nullopt;
+//         }
+//       },
+//       property.default_value);
+// }
+
+static std::optional<Property::Field> get_from_param(
+    const Property &property, const rclcpp::Parameter &param) {
+  return std::visit(
+      [&param](auto &&arg) -> std::optional<Property::Field> {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, bool> ||
+                      std::is_same_v<T, int> ||
+                      std::is_same_v<T, float> ||
+                      std::is_same_v<T, std::string> ||
+                      std::is_same_v<T, std::vector<bool>> ||
+                      std::is_same_v<T, std::vector<std::string>>) {
+          return static_cast<T>(param.get_value<T>());
+        } else if constexpr (std::is_same_v<T, std::vector<int>>) {
+          const auto vs = param.as_integer_array();
+          std::vector<int> rs;
+          rs.reserve(vs.size());
+          std::transform(vs.begin(), vs.end(), rs.begin(),
+                         [](auto v) { return static_cast<int>(v); });
+          return rs;
+        } else if constexpr (std::is_same_v<T, std::vector<float>>) {
+          const auto vs = param.as_double_array();
+          std::vector<float> rs;
+          rs.reserve(vs.size());
+          std::transform(vs.begin(), vs.end(), rs.begin(),
+                         [](auto v) { return static_cast<float>(v); });
+          return rs;
+        } else {
+          return std::nullopt;
+        }
+      },
+      property.default_value);
+}
+
 class ROSControllerNode : public rclcpp::Node {
  public:
   ROSControllerNode()
@@ -190,7 +267,6 @@ class ROSControllerNode : public rclcpp::Node {
  private:
   Controller3 nav_controller;
   MarkersPublisher markers_pub;
-  std::map<std::string, std::shared_ptr<Behavior>> behaviors;
   double update_period;
   bool should_publish_cmd_stamped;
   std::string fixed_frame;
@@ -514,8 +590,8 @@ class ROSControllerNode : public rclcpp::Node {
       auto velocity = vector_from_msg(msg.velocity, fixed_frame);
       if (!velocity) return;
       *position -= Vector3(0.0f, 0.0f, msg.obstacle.height);
-      neighbors.emplace_back(*position, msg.obstacle.radius, msg.obstacle.height,
-                             velocity->head<2>(), msg.id);
+      neighbors.emplace_back(*position, msg.obstacle.radius,
+                             msg.obstacle.height, velocity->head<2>(), msg.id);
     }
     nav_controller.set_neighbors(neighbors);
     if (markers_pub.enabled) {
@@ -537,39 +613,19 @@ class ROSControllerNode : public rclcpp::Node {
     }
   }
 
-  HLBehavior *hl_behavior() {
-    if (behaviors.count("HL")) {
-      return dynamic_cast<HLBehavior *>(behaviors["HL"].get());
-    }
-    return nullptr;
-  }
-
-  ORCABehavior *orca_behavior() {
-    if (behaviors.count("ORCA")) {
-      return dynamic_cast<ORCABehavior *>(behaviors["ORCA"].get());
-    }
-    return nullptr;
-  }
-
   void init_params() {
     auto param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     param_desc.read_only = true;
     auto kinematic = make_kinematic(
-        declare_parameter("kinematic.type", std::string("two_wheeled"),
+        declare_parameter("kinematic.type", std::string("TwoWheeled"),
                           param_desc),
         declare_parameter("kinematic.max_speed", 1.0, param_desc),
         declare_parameter("kinematic.max_angular_speed", 1.0, param_desc),
-        declare_parameter("kinematic.axis", 1.0, param_desc));
+        declare_parameter("kinematic.wheel_axis", 1.0, param_desc));
     const float radius = declare_parameter("radius", 0.0, param_desc);
-    for (auto const &p : Behavior::all_behaviors()) {
-      behaviors.emplace(p.first, p.second(kinematic, radius));
-    }
     should_publish_cmd_stamped =
         declare_parameter("publish_cmd_stamped", false, param_desc);
     fixed_frame = declare_parameter("frame_id", "world", param_desc);
-    param_desc = rcl_interfaces::msg::ParameterDescriptor{};
-    param_desc.description = "The name of the obstacle avoidance behavior";
-    declare_parameter("behavior", "HL", param_desc);
     declare_parameter("altitude.tau", 1.0);
     declare_parameter("altitude.optimal_speed", 0.1);
     declare_parameter("speed_tolerance", 0.05);
@@ -579,107 +635,98 @@ class ROSControllerNode : public rclcpp::Node {
     declare_parameter("horizon", 1.0);
     declare_parameter("safety_margin", 0.1);
     declare_parameter("heading", "idle");
-    declare_parameter("hl.tau", 0.5);
-    declare_parameter("hl.eta", 0.5);
-    declare_parameter("hl.aperture", 3.14);
-    declare_parameter("hl.resolution", 30);
-    declare_parameter("orca.time_horizon", 1.0);
     declare_parameter("drawing", false);
+    for (const auto &[type, properties] : Behavior::type_properties()) {
+      const std::string prefix = tolower(type) + ".";
+      for (const auto [name, property] : properties) {
+        const std::string param_name = prefix + name;
+        std::visit(
+            [&param_name, this](auto &&arg) {
+              using T = std::decay_t<decltype(arg)>;
+              if constexpr (is_ros_param_type<T>::value) {
+                declare_parameter(param_name, arg);
+              }
+            },
+            property.default_value);
+      }
+    }
+    param_desc = rcl_interfaces::msg::ParameterDescriptor{};
+    param_desc.description =
+        "The name of the obstacle avoidance behavior.\nOne of: ";
+    for (const auto &type : Behavior::types()) {
+      param_desc.description += type + ", ";
+    }
+    param_desc.description += ".";
+    declare_parameter("behavior", "HL", param_desc);
   }
 
-  void set_behavior(std::string behavior_name) {
-    RCLCPP_WARN(get_logger(), "set_behavior to %s", behavior_name.c_str());
-    if (behaviors.count(behavior_name)) {
-      nav_controller.set_behavior(behaviors[behavior_name]);
+  void set_behavior(std::string type) {
+    auto behavior = nav_controller.get_behavior();
+    if (behavior && behavior->get_type() == type) return;
+    const auto &type_properties = Behavior::type_properties();
+    if (!type_properties.count(type)) {
+      RCLCPP_WARN(get_logger(), "Unknown behavior type %s", type.c_str());
+      return;
     }
-    if (behavior_name == "ORCA") {
-      dynamic_cast<ORCABehavior *>(behaviors["ORCA"].get())
-          ->should_use_effective_center(false);
+    RCLCPP_INFO(get_logger(), "Set behavior type to %s", type.c_str());
+
+    // MAYBE: move this to the core lib
+    bool effective_center = false;
+    if (type == "ORCA-NH") {
+      type = "ORCA";
+      effective_center = true;
     }
-    if (behavior_name == "ORCA-NH") {
-      nav_controller.set_behavior(behaviors["ORCA"]);
-      dynamic_cast<ORCABehavior *>(behaviors["ORCA"].get())
+    // -- MAYBE
+
+    auto new_behavior = Behavior::make_type(type);
+
+    // MAYBE: move this to the core lib
+    if (effective_center) {
+      dynamic_cast<ORCABehavior *>(new_behavior.get())
           ->should_use_effective_center(true);
     }
-  }
+    // -- MAYBE
 
-  void set_optimal_speed(float value) {
-    for (const auto &[_, b] : behaviors) {
-      b->set_optimal_speed(value);
+    const auto &properties = type_properties.at(type);
+    const std::string prefix = tolower(type) + ".";
+    for (const auto [name, property] : properties) {
+      const std::string param_name = prefix + name;
+      const auto param = get_parameter(param_name);
+      const auto value = get_from_param(property, param);
+      if (value) {
+        new_behavior->set(name, *value);
+      }
     }
-  }
-  void set_optimal_angular_speed(float value) {
-    for (const auto &[_, b] : behaviors) {
-      b->set_optimal_angular_speed(value);
+
+    if (behavior) {
+      new_behavior->set_state_from(*behavior);
+    } else {
+      new_behavior->set_optimal_speed(
+          get_parameter("optimal_speed").as_double());
+      new_behavior->set_optimal_angular_speed(
+          get_parameter("optimal_angular_speed").as_double());
+      new_behavior->set_rotation_tau(get_parameter("rotation_tau").as_double());
+      new_behavior->set_safety_margin(
+          get_parameter("safety_margin").as_double());
+      new_behavior->set_horizon(get_parameter("horizon").as_double());
+      new_behavior->set_heading_behavior(
+          heading_from_string(get_parameter("heading").as_string()));
     }
-  }
-  void set_rotation_tau(float value) {
-    for (const auto &[_, b] : behaviors) {
-      b->set_rotation_tau(value);
-    }
-  }
-  void set_safety_margin(float value) {
-    for (const auto &[_, b] : behaviors) {
-      b->set_optimal_speed(value);
-    }
-  }
-  void set_horizon(float value) {
-    for (const auto &[_, b] : behaviors) {
-      b->set_optimal_speed(value);
-    }
-  }
-  void set_heading_behavior(Behavior::Heading value) {
-    for (const auto &[_, b] : behaviors) {
-      b->set_heading_behavior(value);
-    }
+    nav_controller.set_behavior(new_behavior);
   }
 
   rcl_interfaces::msg::SetParametersResult on_set_parameters(
       const std::vector<rclcpp::Parameter> &parameters) {
     rcl_interfaces::msg::SetParametersResult result;
     result.successful = true;
+    Behavior *b = nav_controller.get_behavior().get();
+    const std::string prefix = b ? (tolower(b->get_type()) + ".") : "";
+    const Properties &properties = b ? b->get_properties() : Properties{};
     for (const auto &param : parameters) {
       std::string name = param.get_name();
       // RCLCPP_INFO(get_logger(), "on_set_parameter %s", name.c_str());
-      if (name.find("hl.") != std::string::npos) {
-        name = name.substr(3);
-        HLBehavior *behavior = hl_behavior();
-        if (!behavior) continue;
-        if (name == "tau") {
-          behavior->set_tau(param.as_double());
-        } else if (name == "eta") {
-          behavior->set_eta(param.as_double());
-        } else if (name == "aperture") {
-          behavior->set_aperture(param.as_double());
-        } else if (name == "resolution") {
-          behavior->set_resolution(param.as_int());
-        }
-        continue;
-      }
-      if (name.find("orca.") != std::string::npos) {
-        name = name.substr(3);
-        ORCABehavior *behavior = orca_behavior();
-        if (!behavior) continue;
-        if (name == "time_horizon") {
-          behavior->set_time_horizon(param.as_double());
-        }
-        continue;
-      }
       if (name == "behavior") {
         set_behavior(param.as_string());
-      } else if (name == "optimal_speed") {
-        set_optimal_speed(param.as_double());
-      } else if (name == "optimal_angular_speed") {
-        set_optimal_angular_speed(param.as_double());
-      } else if (name == "rotation_tau") {
-        set_rotation_tau(param.as_double());
-      } else if (name == "safety_margin") {
-        set_safety_margin(param.as_double());
-      } else if (name == "horizon") {
-        set_horizon(param.as_double());
-      } else if (name == "heading") {
-        // TODO(Jerome): check value
-        set_heading_behavior(heading_from_string(param.as_string()));
       } else if (name == "altitude.enabled") {
         nav_controller.should_be_limited_to_2d(!param.as_bool());
       } else if (name == "altitude.tau") {
@@ -690,6 +737,31 @@ class ROSControllerNode : public rclcpp::Node {
         markers_pub.enabled = param.as_bool();
       } else if (name == "speed_tolerance") {
         nav_controller.set_speed_tolerance(param.as_double());
+      }
+      if (b) {
+        if (name.find(prefix) != std::string::npos) {
+          name = name.substr(prefix.size());
+          if (properties.count(name)) {
+            auto value = get_from_param(properties.at(name), param);
+            if (value) {
+              b->set(name, *value);
+            }
+          }
+        }
+        if (name == "optimal_speed") {
+          b->set_optimal_speed(param.as_double());
+        } else if (name == "optimal_angular_speed") {
+          b->set_optimal_angular_speed(param.as_double());
+        } else if (name == "rotation_tau") {
+          b->set_rotation_tau(param.as_double());
+        } else if (name == "safety_margin") {
+          b->set_safety_margin(param.as_double());
+        } else if (name == "horizon") {
+          b->set_horizon(param.as_double());
+        } else if (name == "heading") {
+          // TODO(Jerome): check value
+          b->set_heading_behavior(heading_from_string(param.as_string()));
+        }
       }
     }
     return result;

@@ -4,8 +4,6 @@ import time
 import hl_navigation
 import numpy as np
 
-# TODO(Jerome): add obstacle
-
 
 def go_to(controller: hl_navigation.Controller, target: np.ndarray) -> None:
     action = controller.go_to_position(target, 0.2)
@@ -23,8 +21,9 @@ def run(behavior_name: str = "HL") -> None:
     target = np.array((1.0, 0.0))
     obstacles = [hl_navigation.Disc((0.0, 0.0), 0.1)]
     for p in ((0.5, 0.0), (-0.5, 0.5)):
-        behavior = hl_navigation.behavior_with_name(
-            behavior_name, hl_navigation.TwoWheeled(0.166, 0.094), 0.08)
+        behavior = hl_navigation.Behavior.make_type(behavior_name)
+        behavior.kinematic = hl_navigation.kinematics.TwoWheeled(0.166, 0.094)
+        behavior.radius = 0.08
         behavior.horizon = 1.0
         behavior.safety_margin = 0.02
         behavior.optimal_speed = 0.12
@@ -35,7 +34,6 @@ def run(behavior_name: str = "HL") -> None:
         controller = hl_navigation.Controller(behavior)
         controller.speed_tolerance = 0.01
         behavior.position = p
-
         controllers.append(controller)
         agents.append(behavior)
         go_to(controller, target)

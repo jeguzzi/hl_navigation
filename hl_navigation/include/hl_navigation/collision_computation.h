@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "hl_navigation/common.h"
-#include "hl_navigation/state/geometric.h"
+#include "hl_navigation/states/geometric.h"
 
 namespace hl_navigation {
 

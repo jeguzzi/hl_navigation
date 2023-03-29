@@ -12,7 +12,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # add_compile_options(-Wall -Wextra -Wpedantic)
+  add_compile_options(-Wall -Wextra -Wpedantic -Wno-gnu-zero-variadic-macro-arguments)
 endif()
 
 # set(CMAKE_BUILD_TYPE Release)
@@ -25,12 +25,35 @@ find_package(pybind11_vendor REQUIRED)
 find_package(pybind11 REQUIRED)
 find_package(hl_navigation REQUIRED)
 
-ament_python_install_package(hl_navigation)
+include_directories(include)
 
-pybind11_add_module(_hl_navigation src/_hl_navigation.cpp)
+add_library(hl_navigation_py INTERFACE )
+target_include_directories(hl_navigation_py INTERFACE include)
+
+ament_python_install_package(hl_navigation
+  SCRIPTS_DESTINATION lib/${PROJECT_NAME}
+)
+
+pybind11_add_module(_hl_navigation src/python.cpp)
+# target_compile_options(_hl_navigation PRIVATE -fvisibility=hidden)
 target_link_libraries(_hl_navigation PRIVATE hl_navigation::hl_navigation)
 add_dependencies(_hl_navigation hl_navigation::hl_navigation)
 
 install(TARGETS _hl_navigation DESTINATION "${PYTHON_INSTALL_DIR}/hl_navigation")
+
+install(
+  DIRECTORY include/${PROJECT_NAME}
+  DESTINATION include
+)
+
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}Targets
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
 
 ament_package()

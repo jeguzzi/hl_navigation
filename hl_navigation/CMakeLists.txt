@@ -57,43 +57,22 @@ add_library(hl_navigation SHARED
   src/controller_3d.cpp
 )
 
-target_link_libraries(hl_navigation Eigen3::Eigen)
-
-ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
+target_link_libraries(hl_navigation PUBLIC Eigen3::Eigen)
 ament_export_dependencies(Eigen3)
 
+set(YAML_CPP_INSTALL ON CACHE INTERNAL "")
+add_subdirectory(../yaml-cpp yaml-cpp)
+target_link_libraries(hl_navigation PUBLIC yaml-cpp::yaml-cpp)
+ament_export_dependencies(yaml-cpp)
 
-add_executable(test_behavior src/test_behavior.cpp)
-target_link_libraries(test_behavior hl_navigation)
-add_dependencies(test_behavior hl_navigation)
+ament_export_targets(hl_navigationTargets HAS_LIBRARY_TARGET)
 
-add_executable(test_controller src/test_controller.cpp)
-target_link_libraries(test_controller hl_navigation)
-add_dependencies(test_controller hl_navigation)
-
-add_executable(test_controller_3d src/test_controller_3d.cpp)
-target_link_libraries(test_controller_3d hl_navigation)
-add_dependencies(test_controller_3d hl_navigation)
-
-add_executable(test_controller_async src/test_controller_async.cpp)
-target_link_libraries(test_controller_async hl_navigation)
-add_dependencies(test_controller_async hl_navigation)
-
-add_executable(test_collision src/test_collision.cpp)
-target_link_libraries(test_collision hl_navigation)
-add_dependencies(test_collision hl_navigation)
-
-add_executable(test_collision_cached src/test_cached_collision.cpp)
-target_link_libraries(test_collision_cached hl_navigation)
-add_dependencies(test_collision_cached hl_navigation)
-
-add_executable(benchmark src/benchmark.cpp)
-target_link_libraries(benchmark hl_navigation)
-add_dependencies(benchmark hl_navigation)
+add_executable(list src/list.cpp)
+target_link_libraries(list hl_navigation)
+add_dependencies(list hl_navigation)
 
 install(TARGETS
-  test_behavior benchmark  test_controller test_controller_3d 
-  test_controller_async test_collision test_collision_cached
+  list
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -112,7 +91,3 @@ install(
 )
 
 ament_package()
-
-# See https://www.foonathan.net/2016/03/cmake-install/
-# meglio fare uno step intermedio che separa i package (ROS/non ROS) ma che usa ament_cmake.
-# Poi eventualmente posso rimuovere ament_cmake dal package non ROS

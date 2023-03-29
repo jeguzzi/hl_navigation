@@ -15,6 +15,7 @@
   <depend>hl_navigation_msgs</depend>
   <depend>hl_navigation_ros</depend>
   <depend>hl_navigation</depend>
+  <depend>hl_navigation_sim</depend>
   <depend>hl_navigation_py</depend>
 
   <export>

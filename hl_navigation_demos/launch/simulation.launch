@@ -1,8 +1,8 @@
 <launch>
-    <include file="$(find-pkg-share hl_navigation_demo)/launch/thymio.launch">
+    <include file="$(find-pkg-share hl_navigation_demos)/launch/thymio.launch">
       <arg name="name" value="thymio_0"/>
     </include>
-    <include file="$(find-pkg-share hl_navigation_demo)/launch/thymio.launch">
+    <include file="$(find-pkg-share hl_navigation_demos)/launch/thymio.launch">
       <arg name="name" value="thymio_1"/>
     </include>
     <include file="$(find-pkg-share thymio_driver)/launch/main.launch">

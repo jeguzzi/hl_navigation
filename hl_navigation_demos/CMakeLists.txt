@@ -1,18 +1,13 @@
 cmake_minimum_required(VERSION 3.5)
 project(hl_navigation_demos)
 
-# Default to C99
-if(NOT CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 99)
-endif()
-
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # add_compile_options(-Wall -Wextra -Wpedantic)
+  add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 find_package(ament_cmake REQUIRED)
@@ -26,15 +21,20 @@ ament_target_dependencies(native_cpp hl_navigation)
 add_executable(sim_cpp src/sim.cpp)
 ament_target_dependencies(sim_cpp hl_navigation hl_navigation_sim)
 
+add_library(hl_navigation_demos SHARED src/scenario.h)
+ament_target_dependencies(hl_navigation_demos hl_navigation hl_navigation_sim)
 
 install(TARGETS
   native_cpp sim_cpp
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(PROGRAMS
-  script/ros script/enki script/native_py
-  DESTINATION lib/${PROJECT_NAME}
+install(TARGETS
+  hl_navigation_demos
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
 )
 
 install(DIRECTORY
@@ -42,8 +42,9 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
-
-ament_python_install_package(hl_navigation_demos)
+ament_python_install_package(${PROJECT_NAME}
+  SCRIPTS_DESTINATION lib/${PROJECT_NAME}
+)
 
 
 ament_package()

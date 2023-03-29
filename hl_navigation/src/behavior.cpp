@@ -62,6 +62,10 @@ Twist2 Behavior::cmd_twist_towards_stopping([[maybe_unused]] float dt, bool rela
 
 Twist2 Behavior::cmd_twist(float dt, bool relative, Mode mode,
                            bool set_as_actuated) {
+  if (!kinematic) {
+    std::cerr << "Missing kinematic" << std::endl;
+    return {};
+  }
   Twist2 twist;
   switch (mode) {
     case Mode::move:
@@ -83,6 +87,6 @@ Twist2 Behavior::cmd_twist(float dt, bool relative, Mode mode,
   return twist;
 }
 
-std::map<std::string, Behavior::BehaviorFactory> Behavior::factory = {};
+// std::map<std::string, Behavior::BehaviorFactory> Behavior::factory = {};
 
 }  // namespace hl_navigation

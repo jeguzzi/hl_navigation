@@ -23,6 +23,40 @@
           </param>
         </return>
     </command>
+    <command name="get_property">
+        <description>Get the value of one of the navigation behavior properties
+        </description>
+        <params>
+         <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="name" type="string">
+            <description>The property name</description>
+          </param>
+        </params>
+        <return>
+          <param name="value" type="property_field_t">
+            <description>The property value</description>
+          </param>
+        </return>
+    </command>
+    <command name="set_property">
+        <description>Set the value of one of the navigation behavior properties
+        </description>
+        <params>
+         <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="name" type="string">
+            <description>The property name</description>
+          </param>
+          <param name="value" type="property_field_t">
+            <description>The property value</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
 <!--     <command name="set_optimal_speed">
         <description>TODO
         </description>
@@ -380,7 +414,64 @@
         <param name="axis_length" type="float" default="0.0">
             <description>The axis length</description>
         </param>
-    </struct>           
+    </struct>  
+    <struct name="vector2_t">
+        <description>TODO</description>
+        <param name="x" type="float" default="0.0">
+          <description>x</description>
+        </param>
+        <param name="y" type="float" default="0.0">
+          <description>y</description>
+        </param>
+    </struct>            
+    <struct name="property_field_t">
+        <description>Union type to describe property values</description>
+        <param name="type" type="int">
+          <description>Enum</description>
+        </param>
+        <param name="bool_value" type="bool">
+          <description>Boolean value</description>
+        </param>
+        <param name="int_value" type="int">
+          <description>Integer value</description>
+        </param>
+        <param name="float_value" type="float">
+          <description>Floating point value</description>
+        </param>
+        <param name="string_value" type="string">
+            <description>String value</description>
+        </param>
+        <param name="vector_value" type="vector2_t">
+            <description>Vector2 value</description>
+        </param>
+        <param name="bool_list" type="table" item-type="bool">
+          <description>Boolean value</description>
+        </param>
+        <param name="int_list" type="table" item-type="int">
+          <description>Integer value</description>
+        </param>
+        <param name="float_list" type="table" item-type="float">
+          <description>Floating point value</description>
+        </param>
+        <param name="string_list" type="table" item-type="string">
+            <description>String value</description>
+        </param>
+        <param name="vector_list" type="table" item-type="vector2_t">
+            <description>Vector2 value</description>
+        </param>
+    </struct>  
+    <enum name="PropertyType" item-prefix="" base="0">
+      <item name="bool" />
+      <item name="int" />
+      <item name="float" />
+      <item name="string" />
+      <item name="vector" />
+      <item name="bool_list" />
+      <item name="int_list" />
+      <item name="float_list" />
+      <item name="string_list" />
+      <item name="vector_list" />
+    </enum>         
     <enum name="State" item-prefix="" base="0">
       <item name="idle" />
       <item name="running" />

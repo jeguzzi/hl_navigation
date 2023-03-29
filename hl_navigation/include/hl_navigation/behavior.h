@@ -6,6 +6,7 @@
 #define HL_NAVIGATION_BEHAVIOR_H_
 
 #include <algorithm>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -13,6 +14,8 @@
 
 #include "hl_navigation/common.h"
 #include "hl_navigation/kinematic.h"
+#include "hl_navigation/property.h"
+#include "hl_navigation/register.h"
 #include "hl_navigation/social_margin.h"
 
 namespace hl_navigation {
@@ -42,11 +45,15 @@ namespace hl_navigation {
  *  4. ask for a control commands with \ref cmd_twist
  *  5, actuate the control commands [not part of this API]
  */
-class Behavior : protected RegisterChanges {
-  using BehaviorFactory = std::function<std::shared_ptr<Behavior>(
-      std::shared_ptr<Kinematic>, float)>;
-
+class Behavior : virtual public HasProperties,
+                 virtual public HasRegister<Behavior>,
+                 protected RegisterChanges {
+  // using BehaviorFactory = std::function<std::shared_ptr<Behavior>(
+  //     std::shared_ptr<Kinematic>, float)>;
+ 
  public:
+
+  using HasRegister<Behavior>::C;
   /**
    * @brief      Modes for \ref cmd_twist
    */
@@ -70,7 +77,24 @@ class Behavior : protected RegisterChanges {
      * kinematics)
      */
     velocity
+
   };
+
+  static Heading heading_from_string(const std::string & value) {
+      if (value == "target_point") return Heading::target_point;
+      if (value == "target_angle") return Heading::target_angle;
+      if (value == "target_angular_speed") return Heading::target_angular_speed;
+      if (value == "velocity") return Heading::velocity;
+      return Heading::idle;
+  }
+
+  static std::string heading_to_string(const Heading & value) {
+      if (value == Heading::target_point) return "target_point";
+      if (value == Heading::target_angle) return "target_angle";
+      if (value == Heading::target_angular_speed) return "target_angular_speed";
+      if (value == Heading::velocity) return "velocity";
+      return "idle";
+  }
 
   SocialMargin social_margin;
 
@@ -89,7 +113,7 @@ class Behavior : protected RegisterChanges {
    * @param[in]  kinematic  The kinematic of the agent.
    * @param[in]  radius     The radius of the agent.
    */
-  Behavior(std::shared_ptr<Kinematic> kinematic, float radius)
+  Behavior(std::shared_ptr<Kinematic> kinematic = nullptr, float radius = 0.0f)
       : RegisterChanges(),
         social_margin(),
         kinematic(kinematic),
@@ -98,8 +122,9 @@ class Behavior : protected RegisterChanges {
         twist(),
         horizon(default_horizon),
         safety_margin(0.0f),
-        optimal_speed(kinematic->get_max_speed()),
-        optimal_angular_speed(kinematic->get_max_angular_speed()),
+        optimal_speed(kinematic ? kinematic->get_max_speed() : 0.0f),
+        optimal_angular_speed(kinematic ? kinematic->get_max_angular_speed()
+                                        : 0.0f),
         rotation_tau(default_rotation_tau),
         heading_behavior(Heading::idle),
         target_pose(),
@@ -116,36 +141,45 @@ class Behavior : protected RegisterChanges {
    *
    * @return     A behavior.
    */
-  static std::shared_ptr<Behavior> behavior_with_name(
-      const std::string &name, std::shared_ptr<Kinematic> kinematic,
-      float radius) {
-    if (factory.count(name)) {
-      return factory[name](kinematic, radius);
-    }
-    return nullptr;
-  }
+  // static std::shared_ptr<Behavior> behavior_with_name(
+  //     const std::string &name, std::shared_ptr<Kinematic> kinematic,
+  //     float radius) {
+  //   if (factory.count(name)) {
+  //     return factory[name](kinematic, radius);
+  //   }
+  //   return nullptr;
+  // }
 
   /**
    * @brief      A map to instantiate behaviors by name.
    *
    * @return     A map {name: (Kinematic, radius) -> Behavior}
    */
-  static const std::map<std::string, BehaviorFactory> &all_behaviors() {
-    return factory;
-  }
+  // static const std::map<std::string, BehaviorFactory> &all_behaviors() {
+  //   return factory;
+  // }
+
+  /**
+   * @brief      A map with all the behavior's and their properties.
+   *
+   * @return     A map {name: properties}
+   */
+  // static const std::map<std::string, Properties> &all_properties() {
+  //   return factory_properties;
+  // }
 
   /**
    * @brief      Returns the names of all registered behaviors
    *
    * @return     The available behaviors.
    */
-  static const std::vector<std::string> behavior_names() {
-    std::vector<std::string> keys;
-    std::transform(
-        factory.begin(), factory.end(), back_inserter(keys),
-        [](std::pair<std::string, BehaviorFactory> p) { return p.first; });
-    return keys;
-  }
+  // static const std::vector<std::string> behavior_names() {
+  //   std::vector<std::string> keys;
+  //   std::transform(
+  //       factory.begin(), factory.end(), back_inserter(keys),
+  //       [](std::pair<std::string, BehaviorFactory> p) { return p.first; });
+  //   return keys;
+  // }
 
   //------------ AGENT PARAMETERS
 
@@ -162,6 +196,14 @@ class Behavior : protected RegisterChanges {
    */
   void set_kinematic(std::shared_ptr<Kinematic> value) {
     if (value) {
+      if (!kinematic) {
+        if (optimal_speed == 0.0f) {
+          optimal_speed = value->get_max_speed();
+        }
+        if (optimal_angular_speed == 0.0f) {
+          optimal_angular_speed = value->get_max_angular_speed();
+        }
+      }
       kinematic = value;
     }
   }
@@ -186,13 +228,17 @@ class Behavior : protected RegisterChanges {
    *
    * @return     The maximal speed from \ref Kinematic
    */
-  float get_max_speed() const { return kinematic->get_max_speed(); }
+  float get_max_speed() const {
+    return kinematic ? kinematic->get_max_speed() : 0.0f;
+  }
   /**
    * @brief      Sets the maximal speed.
    *
    * @param[in]  value  The value to pass to \ref Kinematic.
    */
-  void set_max_speed(float value) { kinematic->set_max_speed(value); }
+  void set_max_speed(float value) {
+    if (kinematic) kinematic->set_max_speed(value);
+  }
 
   /**
    * @brief      Gets the maximal angular speed speed.
@@ -200,7 +246,7 @@ class Behavior : protected RegisterChanges {
    * @return     The maximal angular speed from \ref Kinematic
    */
   Radians get_max_angular_speed() const {
-    return kinematic->get_max_angular_speed();
+    return kinematic ? kinematic->get_max_angular_speed() : 0.0f;
   }
   /**
    * @brief      Sets the maximal angular speed speed.
@@ -208,7 +254,7 @@ class Behavior : protected RegisterChanges {
    * @param[in]  value  The value to pass to \ref Kinematic.
    */
   void set_max_angular_speed(Radians value) {
-    kinematic->set_max_angular_speed(value);
+    if (kinematic) kinematic->set_max_angular_speed(value);
   }
 
   // ---------------------- BEHAVIOR PARAMETERS
@@ -225,7 +271,11 @@ class Behavior : protected RegisterChanges {
    * @param[in]  value A positive linear speed.
    */
   void set_optimal_speed(float value) {
-    optimal_speed = std::clamp(value, 0.0f, get_max_speed());
+    if (kinematic) {
+      optimal_speed = std::clamp(value, 0.0f, get_max_speed());
+    } else {
+      optimal_speed = std::max(value, 0.0f);
+    }
     change(OPTIMAL_SPEED);
   }
   /**
@@ -240,7 +290,11 @@ class Behavior : protected RegisterChanges {
    * @param[in]  value  A positive angular speed in radians/time unit.
    */
   void set_optimal_angular_speed(Radians value) {
-    optimal_angular_speed = std::clamp(value, 0.0f, get_max_angular_speed());
+    if (kinematic) {
+      optimal_angular_speed = std::clamp(value, 0.0f, get_max_angular_speed());
+    } else {
+      optimal_angular_speed = std::max(value, 0.0f);
+    }
   }
   /**
    * @brief      Gets the relaxation time to rotate towards a desired
@@ -423,7 +477,7 @@ class Behavior : protected RegisterChanges {
    * @param[in]  value  The wheel speeds
    */
   void set_wheel_speeds(const WheelSpeeds &value) {
-    if (kinematic->is_wheeled()) {
+    if (kinematic && kinematic->is_wheeled()) {
       Wheeled *wk = dynamic_cast<Wheeled *>(kinematic.get());
       set_twist(wk->twist(value));
     }
@@ -472,7 +526,7 @@ class Behavior : protected RegisterChanges {
       twist = actuated_twist;
     }
     pose = pose.integrate(twist, time_step);
-    change(POSITION|ORIENTATION|VELOCITY|ANGULAR_SPEED);
+    change(POSITION | ORIENTATION | VELOCITY | ANGULAR_SPEED);
   }
   /**
    * @brief      Convenience method to actuate the last recorded actuated twist
@@ -490,7 +544,7 @@ class Behavior : protected RegisterChanges {
    * @return     The heading behavior.
    */
   Heading get_heading_behavior() const {
-    if (kinematic->dof() == 3) {
+    if (kinematic && kinematic->dof() == 3) {
       return heading_behavior;
     } else {
       return Heading::velocity;
@@ -671,7 +725,7 @@ class Behavior : protected RegisterChanges {
    * @return     The corresponding wheel speeds.
    */
   WheelSpeeds wheel_speeds_from_twist(const Twist2 &value) const {
-    if (kinematic->is_wheeled()) {
+    if (kinematic && kinematic->is_wheeled()) {
       Wheeled *wk = dynamic_cast<Wheeled *>(kinematic.get());
       return wk->wheel_speeds(value.relative ? value : to_relative(value));
     }
@@ -688,7 +742,7 @@ class Behavior : protected RegisterChanges {
    * @return     The corresponding twist.
    */
   Twist2 twist_from_wheel_speeds(const WheelSpeeds &value) const {
-    if (kinematic->is_wheeled()) {
+    if (kinematic && kinematic->is_wheeled()) {
       Wheeled *wk = dynamic_cast<Wheeled *>(kinematic.get());
       return wk->twist(value);
     }
@@ -709,6 +763,68 @@ class Behavior : protected RegisterChanges {
    * @return     The social margin.
    */
   // const SocialMargin &get_social_margin() const { return social_margin; }
+
+  // virtual const Properties &get_properties() const override {
+  //   return properties;
+  // };
+
+  // static inline std::map<std::string, Property> properties = Properties{
+  // {"optimal_speed", make_property<float, Behavior>(
+  //                       &Behavior::get_optimal_speed,
+  //                       &Behavior::set_optimal_speed, "Optimal Speed")},
+  // {"horizon",
+  //  make_property<float, Behavior>(&Behavior::get_horizon,
+  //                                 &Behavior::set_horizon, "Horizon")},
+  // {"rotation_tau",
+  //  make_property<float, Behavior>(&Behavior::get_rotation_tau,
+  //                                 &Behavior::set_rotation_tau,
+  //                                 "Rotation relaxation time")},
+  // {"safety_margin", make_property<float, Behavior>(
+  //                       &Behavior::get_safety_margin,
+  //                       &Behavior::set_safety_margin, "Safety margin")},
+  // };
+
+  // virtual const std::string &get_name() const = 0;
+
+  // std::string description(bool extensive = false) const {
+  //   std::ostringstream os;
+  //   os << get_type() << ":" << std::endl;
+  //   if (kinematic) {
+  //     os << "  kinematic:" << kinematic->description(extensive);
+  //   } else {
+  //     os << "  kinematic: not set [WARNING]";
+  //   }
+  //   if (extensive) {
+  //     os << std::endl;
+  //     os << "  radius = " << get_radius() << std::endl;
+  //     os << "  optimal_speed = " << get_optimal_speed() << std::endl;
+  //     os << "  optimal_angular_speed = " << get_optimal_angular_speed()
+  //        << std::endl;
+  //     os << "  horizon = " << get_horizon() << std::endl;
+  //     os << "  rotation_tau = " << get_rotation_tau() << std::endl;
+  //     os << "  safety_margin = " << get_safety_margin() << std::endl;
+  //     for (const auto &[k, v] : get_properties()) {
+  //       os << "  " << k << " = " << get(k) << "[" << v.type_name << "]"
+  //          << std::endl;
+  //     }
+  //   }
+  //   return os.str();
+  // }
+
+  void set_state_from(const Behavior &other) {
+    set_kinematic(other.get_kinematic());
+    set_radius(other.get_radius());
+    set_optimal_speed(other.get_optimal_speed());
+    set_optimal_angular_speed(other.get_optimal_angular_speed());
+    set_rotation_tau(other.get_rotation_tau());
+    set_safety_margin(other.get_safety_margin());
+    set_horizon(other.get_horizon());
+    set_heading_behavior(other.get_heading_behavior());
+    set_target_pose(other.get_target_pose());
+    set_pose(other.get_pose());
+    set_twist(other.get_twist());
+    set_actuated_twist(other.get_actuated_twist());
+  }
 
  protected:
   enum {
@@ -741,26 +857,30 @@ class Behavior : protected RegisterChanges {
   Twist2 target_twist;
   Vector2 desired_velocity;
 
-  static std::map<std::string, BehaviorFactory> factory;
+  // static inline std::map<std::string, BehaviorFactory> factory = {};
+  // static inline std::map<std::string, Properties> factory_properties = {};
 
-  virtual Vector2 compute_desired_velocity([[maybe_unused]] float time_step) { return Vector2::Zero(); }
+  virtual Vector2 compute_desired_velocity([[maybe_unused]] float time_step) {
+    return Vector2::Zero();
+  }
   virtual Twist2 twist_towards_velocity(const Vector2 &absolute_velocity,
                                         bool relative);
   virtual Twist2 cmd_twist_towards_target(float dt, bool relative);
   virtual Twist2 cmd_twist_towards_target_orientation(float dt, bool relative);
   virtual Twist2 cmd_twist_towards_stopping(float dt, bool relative);
 
-  template <typename T>
-  static const char *register_type(const char *name) {
-    factory[name] = [](std::shared_ptr<Kinematic> kinematic, float radius) {
-      return std::make_shared<T>(kinematic, radius);
-    };
-    return name;
-  }
+  // template <typename T>
+  // static std::string register_type(const std::string &name) {
+  //   factory[name] = [](std::shared_ptr<Kinematic> kinematic, float radius) {
+  //     return std::make_shared<T>(kinematic, radius);
+  //   };
+  //   factory_properties[name] = T::properties;
+  //   return name;
+  // }
 
   // ask for a relative twist in case the agent is wheeled.
   bool default_cmd_frame() {
-    if (kinematic->is_wheeled()) {
+    if (kinematic && kinematic->is_wheeled()) {
       return true;
     }
     return false;

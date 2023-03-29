@@ -2,10 +2,13 @@
 #define HL_NAVIGATION_KINEMATIC_H_
 
 #include <assert.h>
+
 #include <algorithm>
 #include <vector>
 
 #include "hl_navigation/common.h"
+#include "hl_navigation/property.h"
+#include "hl_navigation/register.h"
 
 namespace hl_navigation {
 
@@ -18,9 +21,13 @@ namespace hl_navigation {
  * - store maximal linear and angular speed
  * - store the number of degrees of freedom
  */
-class Kinematic {
+class Kinematic : virtual public HasProperties,
+                  virtual public HasRegister<Kinematic> {
  public:
-  Kinematic(float max_speed, float max_angular_speed)
+
+  using HasRegister<Kinematic>::C;
+  
+  Kinematic(float max_speed, float max_angular_speed=0.0)
       : max_speed(max_speed), max_angular_speed(max_angular_speed) {}
 
   virtual ~Kinematic() = default;
@@ -59,21 +66,70 @@ class Kinematic {
    *
    * @param[in]  value  A positive value.
    */
-  virtual void set_max_speed(float value) { max_speed = std::max(0.0f, value); }
+  void set_max_speed(float value) { max_speed = std::max(0.0f, value); }
   /**
    * @brief      Gets the maximal angular speed.
    *
    * @return     The maximal angular speed.
    */
-  float get_max_angular_speed() const { return max_angular_speed; }
+  virtual float get_max_angular_speed() const { return max_angular_speed; }
   /**
    * @brief      Sets the maximum angular speed.
    *
    * @param[in]  value  A positive value.
    */
-  virtual void set_max_angular_speed(float value) {
+  void set_max_angular_speed(float value) {
     max_angular_speed = std::max(0.0f, value);
   }
+
+  // virtual const std::string& get_name() const = 0;
+
+  // using KinematicFactory = std::function<std::shared_ptr<Kinematic>(float)>;
+
+  // static std::shared_ptr<Kinematic> kinematic_with_name(
+  //     const std::string& name, float max_speed = 0.0f) {
+  //   if (factory.count(name)) {
+  //     return factory[name](max_speed);
+  //   }
+  //   return nullptr;
+  // }
+
+  // static const std::map<std::string, KinematicFactory>& all_kinematics() {
+  //   return factory;
+  // }
+
+  // static const std::map<std::string, Properties>& all_properties() {
+  //   return factory_properties;
+  // }
+
+  // static inline std::map<std::string, KinematicFactory> factory = {};
+  // static inline std::map<std::string, Properties> factory_properties = {};
+
+  // template <typename T>
+  // static std::string register_type(const std::string& name) {
+  //   factory[name] = [](float max_speed = 0.0f) {
+  //     return std::make_shared<T>(max_speed);
+  //   };
+  //   factory_properties[name] = T::properties;
+  //   return name;
+  // }
+
+  // static inline std::map<std::string, Property> properties = Properties{};
+
+  // std::string description(bool extensive = false) const {
+  //   std::ostringstream os;
+  //   os << get_type();
+  //   if (extensive) {
+  //     os << ":" << std::endl;
+  //     os << "  max_speed = " << get_max_speed() << std::endl;
+  //     os << "  max_angular_speed = " << get_max_angular_speed() << std::endl;
+  //     for (const auto& [k, v] : get_properties()) {
+  //       os << k << " = " << get(k) << "[" << v.type_name << "]"
+  //          << std::endl;
+  //     }
+  //   }
+  //   return os.str();
+  // }
 
  private:
   /**
@@ -97,7 +153,7 @@ class Holonomic : public Kinematic {
    * @param[in]  max_speed          The maximal speed
    * @param[in]  max_angular_speed  The maximal angular speed
    */
-  Holonomic(float max_speed, float max_angular_speed)
+  Holonomic(float max_speed = 0.0f, float max_angular_speed = 0.0f)
       : Kinematic(max_speed, max_angular_speed) {}
 
   Twist2 feasible(const Twist2& twist) const override {
@@ -118,6 +174,11 @@ class Holonomic : public Kinematic {
    * @return     3
    */
   unsigned dof() const override { return 3; }
+
+  std::string get_type() const override { return type; }
+
+ private:
+  inline static std::string type = register_type<Holonomic>("Holonomic");
 };
 
 /**
@@ -132,7 +193,7 @@ class Forward : public Kinematic {
    * @param[in]  max_speed          The maximal speed
    * @param[in]  max_angular_speed  The maximal angular speed
    */
-  Forward(float max_speed, float max_angular_speed)
+  Forward(float max_speed = 0.0f, float max_angular_speed = 0.0f)
       : Kinematic(max_speed, max_angular_speed) {}
 
   Twist2 feasible(const Twist2& twist) const override {
@@ -154,6 +215,11 @@ class Forward : public Kinematic {
    * @return     2
    */
   unsigned dof() const override { return 2; }
+
+  std::string get_type() const override { return type; }
+
+ private:
+  inline static std::string type = register_type<Forward>("Forward");
 };
 
 /**
@@ -173,11 +239,13 @@ class Wheeled : public Kinematic {
    */
   bool is_wheeled() const override { return true; }
 
-  /**
-   * @brief      Ignored as the angular speed depends on the maximal wheel speed
-   * @param[in]  value  A positive value.
-   */
-  virtual void set_max_angular_speed([[maybe_unused]] float value) override {}
+  // /**
+  //  * @brief      Ignored as the angular speed depends on the maximal wheel
+  //  speed
+  //  * @param[in]  value  A positive value.
+  //  */
+  // virtual void set_max_angular_speed([[maybe_unused]] float value) override
+  // {}
 
   /**
    * @brief      Convert wheel speeds to a twist
@@ -210,6 +278,18 @@ class Wheeled : public Kinematic {
   }
 
   float get_axis() const { return axis; }
+  void set_axis(float value) {
+    if (value > 0) axis = value;
+  }
+
+  virtual const Properties& get_properties() const override {
+    return properties;
+  };
+
+  static inline std::map<std::string, Property> properties = Properties{
+      {"wheel_axis", make_property<float, Wheeled>(
+                         &Wheeled::get_axis, &Wheeled::set_axis, 0.0f, "Wheel Axis")},
+  };
 
  protected:
   float axis;
@@ -227,8 +307,8 @@ class TwoWheeled : public Wheeled {
    * @param[in]  axis               The wheel axis (i.e., the distance between
    * the wheels)
    */
-  TwoWheeled(float max_speed, float axis)
-      : Wheeled(max_speed, 2 * max_speed / axis, axis) {}
+  TwoWheeled(float max_speed = 0.0f, float axis = 0.0f)
+      : Wheeled(max_speed, (axis > 0) ? 2 * max_speed / axis : 0.0f, axis) {}
 
   /**
    * @brief      Returns the degrees of freedom
@@ -237,9 +317,23 @@ class TwoWheeled : public Wheeled {
    */
   unsigned dof() const override { return 2; }
 
-  void set_max_speed(float value) override {
-    Kinematic::set_max_speed(value);
-    Kinematic::set_max_angular_speed(2 * get_max_speed() / get_axis());
+  // void set_max_speed(float value) override {
+  //   Kinematic::set_max_speed(value);
+  //   Kinematic::set_max_angular_speed(2 * get_max_speed() / get_axis());
+  // }
+
+  /**
+   * @brief      TODO(Jerome) Gets the maximum angular speed.
+   *
+   * @param[in]  value  The value
+   *
+   * @return     The maximum angular speed.
+   */
+  float get_max_angular_speed() const override {
+    if (get_axis() > 0) {
+      return 2 * get_max_speed() / get_axis();
+    }
+    return 0.0f;
   }
 
   /**
@@ -284,6 +378,11 @@ class TwoWheeled : public Wheeled {
     }
     return {left, right};
   }
+
+  std::string get_type() const override { return type; }
+
+ private:
+  inline static std::string type = register_type<TwoWheeled>("TwoWheeled");
 };
 
 // TODO(Jerome): make it general
@@ -303,8 +402,8 @@ class FourWheeled : public Wheeled {
    * @param[in]  axis               The wheel axis (i.e., the distance between
    * the wheels)
    */
-  FourWheeled(float max_speed, float axis)
-      : Wheeled(max_speed, max_speed / axis, axis) {}
+  FourWheeled(float max_speed = 0.0f, float axis = 0.0f)
+      : Wheeled(max_speed, axis > 0 ? max_speed / axis : 0.0f, axis) {}
 
   /**
    * @brief      Returns the degrees of freedom
@@ -313,9 +412,18 @@ class FourWheeled : public Wheeled {
    */
   unsigned dof() const override { return 3; }
 
-  void set_max_speed(float value) override {
-    Kinematic::set_max_speed(value);
-    Kinematic::set_max_angular_speed(get_max_speed() / get_axis());
+  /**
+   * @brief      TODO(Jerome) Gets the maximum angular speed.
+   *
+   * @param[in]  value  The value
+   *
+   * @return     The maximum angular speed.
+   */
+  float get_max_angular_speed() const override {
+    if (get_axis() > 0) {
+      return get_max_speed() / get_axis();
+    }
+    return 0.0f;
   }
 
   /**
@@ -351,7 +459,8 @@ class FourWheeled : public Wheeled {
     float max_speed = get_max_speed();
     const float rotation =
         std::clamp(twist.angular_speed * axis, -max_speed, max_speed);
-    const float longitudinal = std::clamp(twist.velocity[0], -max_speed, max_speed);
+    const float longitudinal =
+        std::clamp(twist.velocity[0], -max_speed, max_speed);
     const float lateral = std::clamp(twist.velocity[1], -max_speed, max_speed);
     float front_left = longitudinal - lateral - rotation;
     float front_right = longitudinal + lateral + rotation;
@@ -380,6 +489,11 @@ class FourWheeled : public Wheeled {
     }
     return {front_left, rear_left, rear_right, front_right};
   }
+
+  std::string get_type() const override { return type; }
+
+ private:
+  inline static std::string name = register_type<FourWheeled>("FourWheeled");
 };
 
 }  // namespace hl_navigation

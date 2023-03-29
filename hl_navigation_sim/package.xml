@@ -12,6 +12,7 @@
   <buildtool_depend>cmake</buildtool_depend>
 
   <depend>hl_navigation</depend>
+  <depend>hl_navigation_py</depend>
 
   <export>
     <build_type>cmake</build_type>

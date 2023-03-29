@@ -1,6 +1,7 @@
 #include "plugin.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "config.h"
@@ -8,7 +9,8 @@
 #include "hl_navigation/common.h"
 #include "hl_navigation/controller_3d.h"
 #include "hl_navigation/kinematic.h"
-#include "hl_navigation/state/geometric.h"
+#include "hl_navigation/property.h"
+#include "hl_navigation/states/geometric.h"
 #include "simPlusPlus/Handle.h"
 #include "simPlusPlus/Plugin.h"
 #include "stubs.h"
@@ -29,6 +31,89 @@ static std::shared_ptr<hl_navigation::Kinematic> make_kinematic(
     default:
       return nullptr;
   }
+}
+
+static vector2_t to_vector2_t(const Vector2 &v) {
+  vector2_t value;
+  value.x = v[0];
+  value.y = v[1];
+  return value;
+}
+
+static Vector2 from_vector2_t(const vector2_t &v) { return Vector2(v.x, v.y); }
+
+static std::optional<Property::Field> from_property_field_t(
+    const property_field_t &value) {
+  std::vector<Vector2> vs;
+  switch (value.type) {
+    case 0:
+      return value.bool_value;
+    case 1:
+      return value.int_value;
+    case 2:
+      return value.float_value;
+    case 3:
+      return value.string_value;
+    case 4:
+      return from_vector2_t(value.vector_value);
+    case 5:
+      return value.bool_list;
+    case 6:
+      return value.int_list;
+    case 7:
+      return value.float_list;
+    case 8:
+      return value.string_list;
+    case 9:
+      for (const auto i : value.vector_list) {
+        vs.push_back(from_vector2_t(i));
+      }
+      return vs;
+    default:
+      std::cerr << "Unknown property_field_t type " << value.type << std::endl;
+      return std::nullopt;
+  }
+}
+
+static property_field_t to_property_field_t(const Property::Field &v) {
+  property_field_t value;
+  value.type = v.index();
+  switch (value.type) {
+    case 0:
+      value.bool_value = std::get<bool>(v);
+      break;
+    case 1:
+      value.int_value = std::get<int>(v);
+      break;
+    case 2:
+      value.float_value = std::get<float>(v);
+      break;
+    case 3:
+      value.string_value = std::get<std::string>(v);
+      break;
+    case 4:
+      value.vector_value = to_vector2_t(std::get<Vector2>(v));
+      break;
+    case 5:
+      value.bool_list = std::get<std::vector<bool>>(v);
+      break;
+    case 6:
+      value.int_list = std::get<std::vector<int>>(v);
+      break;
+    case 7:
+      value.float_list = std::get<std::vector<float>>(v);
+      break;
+    case 8:
+      value.string_list = std::get<std::vector<std::string>>(v);
+      break;
+    case 9:
+      auto rs = std::get<std::vector<Vector2>>(v);
+      for (const auto &i : rs) {
+        value.vector_list.push_back(to_vector2_t(i));
+      }
+      break;
+  }
+  return value;
 }
 
 class Plugin : public sim::Plugin {
@@ -67,7 +152,9 @@ class Plugin : public sim::Plugin {
     }
     out->handle = handle;  // TODO(J): add -1 to mark failures
     auto behavior =
-        Behavior::behavior_with_name(in->behavior, kinematic, in->radius);
+        Behavior::make_type(in->behavior);
+    behavior->set_radius(in->radius);
+    behavior->set_kinematic(kinematic);
     auto controller = std::make_unique<Controller3>(behavior);
     controllers.push_back(std::move(controller));
   }
@@ -156,7 +243,7 @@ class Plugin : public sim::Plugin {
     if (GeometricState *state = dynamic_cast<GeometricState *>(behavior)) {
       std::vector<Neighbor> obstacles;
       std::transform(in->neighbors.cbegin(), in->neighbors.cend(),
-                     std::back_inserter(obstacles), [](const neighbor_t & o) {
+                     std::back_inserter(obstacles), [](const neighbor_t &o) {
                        return Neighbor(
                            Vector2(o.position[0], o.position[1]), o.radius,
                            Vector2(o.velocity[0], o.velocity[1]), o.id);
@@ -196,7 +283,7 @@ class Plugin : public sim::Plugin {
   void set_horizon(set_horizon_in *in, set_horizon_out *out) {
     auto behavior = behavior_at_index(in->handle);
     if (behavior) {
-      behavior->set_rotation_tau(in->value);
+      behavior->set_horizon(in->value);
     }
   }
 
@@ -227,6 +314,27 @@ class Plugin : public sim::Plugin {
     auto behavior = behavior_at_index(in->handle);
     if (behavior) {
       out->speeds = behavior->get_actuated_wheel_speeds();
+    }
+  }
+
+  void set_property(set_property_in *in, set_property_out *out) {
+    auto behavior = behavior_at_index(in->handle);
+    if (behavior) {
+      auto value = from_property_field_t(in->value);
+      if (value) {
+        behavior->set(in->name, *value);
+      }
+    }
+  }
+
+  void get_property(get_property_in *in, get_property_out *out) {
+    auto behavior = behavior_at_index(in->handle);
+    if (behavior) {
+      try {
+        auto value = behavior->get(in->name);
+        out->value = to_property_field_t(value);
+      } catch (const std::exception &e) {
+      }
     }
   }
 

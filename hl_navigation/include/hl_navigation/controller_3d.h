@@ -13,9 +13,8 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/controller.h"
-#include "hl_navigation/state/geometric.h"
+#include "hl_navigation/states/geometric.h"
 
-// TODO(J): behavior ref, raw pointer or shared_ptr?
 
 namespace hl_navigation {
 

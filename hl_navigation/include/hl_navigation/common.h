@@ -23,10 +23,6 @@ namespace hl_navigation {
  */
 using Vector2 = Eigen::Vector2f;
 
-inline std::ostream& operator<<(std::ostream& os, const Vector2& vector) {
-  os << "Vector2(" << vector[0] << ", " << vector[1] << ")";
-  return os;
-}
 
 /**
  * Angle in radians.
@@ -150,11 +146,6 @@ struct Twist2 {
   }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Twist2& twist) {
-  os << "Twist2(" << twist.velocity << ", " << twist.angular_speed << ", "
-     << std::boolalpha << twist.relative << ")";
-  return os;
-}
 
 /**
  * @brief      Two-dimensional pose composed of planar position and
@@ -210,11 +201,6 @@ struct Pose2 {
   }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Pose2& pose) {
-  os << "Pose2(" << pose.position << ", " << pose.orientation << ")";
-  return os;
-}
-
 class RegisterChanges {
  public:
   RegisterChanges() : changes{0xFFFFFFFF} {}
@@ -226,6 +212,35 @@ class RegisterChanges {
   unsigned changes;
 };
 
+
+
 }  // namespace hl_navigation
+
+inline std::ostream& operator<<(std::ostream& os, const hl_navigation::Vector2& vector) {
+  os << "Vector2(" << vector[0] << ", " << vector[1] << ")";
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const hl_navigation::Twist2& twist) {
+  os << "Twist2(" << twist.velocity << ", " << twist.angular_speed << ", "
+     << std::boolalpha << twist.relative << ")";
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const hl_navigation::Pose2& pose) {
+  os << "Pose2(" << pose.position << ", " << pose.orientation << ")";
+  return os;
+}
+
+
+// namespace Eigen {
+
+// inline std::ostream& operator<<(
+//     std::ostream& os, const Matrix<float, 2, 1, 0>& vector) {
+//   os << "Vector2(" << vector[0] << ", " << vector[1] << ")";
+//   return os;
+// }
+// }  // namespace Eigen
+
 
 #endif  // HL_NAVIGATION_COMMON_H_

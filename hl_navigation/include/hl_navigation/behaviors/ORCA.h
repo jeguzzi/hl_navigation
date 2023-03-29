@@ -8,7 +8,8 @@
 #include <memory>
 
 #include "hl_navigation/behavior.h"
-#include "hl_navigation/state/geometric.h"
+#include "hl_navigation/property.h"
+#include "hl_navigation/states/geometric.h"
 
 namespace RVO {
 class Agent;
@@ -27,7 +28,8 @@ namespace hl_navigation {
  */
 class ORCABehavior : public Behavior, public GeometricState {
  public:
-  ORCABehavior(std::shared_ptr<Kinematic> kinematic, float radius);
+  ORCABehavior(std::shared_ptr<Kinematic> kinematic = nullptr,
+               float radius = 0.0f);
   ~ORCABehavior();
 
   // ---------------------------------- BEHAVIOR PARAMETERS
@@ -79,6 +81,21 @@ class ORCABehavior : public Behavior, public GeometricState {
   void set_time_step(float value);
   float get_time_step() const;
 
+  virtual const Properties &get_properties() const override {
+    return properties;
+  };
+
+  static inline std::map<std::string, Property> properties =
+      Properties{
+          {"time_horizon",
+           make_property<float, ORCABehavior>(&ORCABehavior::get_time_horizon,
+                                              &ORCABehavior::set_time_horizon,
+                                              10.0f, "Time horizon")},
+      } +
+      Behavior::properties;
+
+  std::string get_type() const override { return type; }
+
  protected:
   Twist2 twist_towards_velocity(const Vector2& absolute_velocity,
                                 bool relative) override;
@@ -90,7 +107,6 @@ class ORCABehavior : public Behavior, public GeometricState {
   std::unique_ptr<RVO::Agent> _RVOAgent;
   std::vector<std::unique_ptr<const RVO::Agent>> rvo_neighbors;
   std::vector<std::unique_ptr<const RVO::Obstacle>> rvo_obstacles;
-  static const char* name;
 
   void add_line_obstacle(const LineSegment& line);
   void add_neighbor(const Neighbor& disc, float range, bool push_away = false,
@@ -99,6 +115,9 @@ class ORCABehavior : public Behavior, public GeometricState {
                     float epsilon = 2e-3);
   void prepare_line_obstacles();
   void prepare();
+
+ private:
+  inline static std::string type = register_type<ORCABehavior>("ORCA");
 };
 
 }  // namespace hl_navigation

@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "hl_navigation/behavior.h"
-#include "hl_navigation/state/geometric.h"
+#include "hl_navigation/states/geometric.h"
 
 namespace HRVO {
 class Agent;
@@ -27,8 +27,12 @@ namespace hl_navigation {
  */
 class HRVOBehavior : public Behavior, public GeometricState {
  public:
-  HRVOBehavior(std::shared_ptr<Kinematic> kinematic, float radius);
+  HRVOBehavior(std::shared_ptr<Kinematic> kinematic = nullptr, float radius = 0.0f);
   ~HRVOBehavior();
+
+  std::string get_type() const override {
+    return type;
+  }
 
  protected:
   Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
@@ -37,12 +41,14 @@ class HRVOBehavior : public Behavior, public GeometricState {
   uint agentIndex;
   float rangeSq;
   std::unique_ptr<HRVO::Agent> _HRVOAgent;
-  static const char* name;
   void add_neighbor(const Neighbor& neighbor, bool push_away = false,
                     float epsilon = 2e-3);
   void add_obstacle(const Disc& disc, bool push_away = false,
                     float epsilon = 2e-3);
   void prepare();
+
+ private:
+  inline static std::string type = Behavior::register_type<HRVOBehavior>("HRVO");
 };
 
 }  // namespace hl_navigation

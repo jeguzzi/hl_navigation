@@ -15,7 +15,7 @@
       <arg name="drawing" value="false"/>
       <arg name="frame_id" value="world"/>
     </include>
-    <node pkg="hl_navigation_demo" exec="ros" name="waypoint_follower" output="screen">
+    <node pkg="hl_navigation_demos" exec="ros" name="waypoint_follower" output="screen">
       <param name="path" value="1.0, 0.0, -1.0, 0.0" value-sep=", "/>
       <param name="tolerance" value="0.2"/>
     </node>

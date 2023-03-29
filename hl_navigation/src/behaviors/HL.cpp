@@ -66,7 +66,7 @@ DiscCache HLBehavior::make_obstacle_cache(const Disc &obstacle, bool push_away,
   return {delta, margin};
 }
 
-HLBehavior::~HLBehavior() = default;
+// HLBehavior::~HLBehavior() = default;
 
 CollisionComputation::CollisionMap HLBehavior::get_collision_distance(
     bool assuming_static) {
@@ -189,6 +189,10 @@ Twist2 HLBehavior::relax(const Twist2 &value, float dt) const {
 
 Twist2 HLBehavior::cmd_twist(float dt, bool relative, Mode mode,
                              bool set_as_actuated) {
+  if (!kinematic) {
+    std::cerr << "Missing kinematic" << std::endl;
+    return {};
+  }
   Twist2 twist = Behavior::cmd_twist(dt, relative, mode, false);
   if (tau > 0) {
     twist = relax(twist, dt);
@@ -198,7 +202,5 @@ Twist2 HLBehavior::cmd_twist(float dt, bool relative, Mode mode,
   }
   return twist;
 }
-
-const char *HLBehavior::name = register_type<HLBehavior>("HL");
 
 }  // namespace hl_navigation

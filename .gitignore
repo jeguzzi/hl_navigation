@@ -65,3 +65,7 @@ build
 notebooks
 data
 .ipynb_checkpoints
+.sublime*
+
+docs/_build
+docs/build

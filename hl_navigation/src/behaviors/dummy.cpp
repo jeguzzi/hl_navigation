@@ -11,6 +11,8 @@ Vector2 DummyBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
   return optimal_speed * delta / delta.norm();
 }
 
-const char* DummyBehavior::name = register_type<DummyBehavior>("Dummy");
+// std::string DummyBehavior::type = register_type<DummyBehavior>("Dummy");
+
+// const char* DummyBehavior::name = register_type<DummyBehavior>("Dummy");
 
 }  // namespace hl_navigation

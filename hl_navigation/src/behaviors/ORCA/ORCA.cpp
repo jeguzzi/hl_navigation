@@ -9,9 +9,6 @@
 #include "RVO/Obstacle.h"
 #include "RVO/Vector2.h"
 
-// TODO(J:revision2023): TIME_STEP (should pass/set) and timeHorizon (should not
-// duplicate)
-
 #define DEFAULT_TIME_STEP 0.1
 
 namespace hl_navigation {
@@ -23,12 +20,12 @@ ORCABehavior::ORCABehavior(std::shared_ptr<Kinematic> kinematic, float radius)
       _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
   _RVOAgent->maxNeighbors_ = 1000;
   _RVOAgent->timeStep_ = DEFAULT_TIME_STEP;
-  _RVOAgent->timeHorizon_ = 10.0;
+  _RVOAgent->timeHorizon_ = 10.0f;
 }
 
 ORCABehavior::~ORCABehavior() = default;
 
-// TODO(J: revision): why do I need rvo_neighbors. It is not enough to use
+// DONE(J: revision): why do I need rvo_neighbors. It is not enough to use
 // _RVOAgent->rvo_neighbors_? No, because insertObstacleNeighbor may remove some
 // entry
 
@@ -107,7 +104,7 @@ float ORCABehavior::get_time_horizon() const { return _RVOAgent->timeHorizon_; }
 void ORCABehavior::set_time_step(float value) { _RVOAgent->timeStep_ = value; }
 float ORCABehavior::get_time_step() const { return _RVOAgent->timeStep_; }
 
-// TODO(J): still need the float casting?
+
 void ORCABehavior::prepare() {
   if (use_effective_center && kinematic->is_wheeled() &&
       kinematic->dof() == 2) {
@@ -193,6 +190,6 @@ Twist2 ORCABehavior::twist_towards_velocity(const Vector2 &absolute_velocity,
   return Behavior::twist_towards_velocity(absolute_velocity, relative);
 }
 
-const char *ORCABehavior::name = register_type<ORCABehavior>("ORCA");
+// const char *ORCABehavior::name = register_type<ORCABehavior>("ORCA");
 
 }  // namespace hl_navigation
