@@ -28,17 +28,16 @@ find_package(hl_navigation_py REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
 
-find_package(geos REQUIRED)
-# add_subdirectory(../external/geos geos EXCLUDE_FROM_ALL)
+find_package(GEOS REQUIRED)
+# add_subdirectory(../external/geos geos)
 add_subdirectory(../external/pybind11 pybind11 EXCLUDE_FROM_ALL)
 add_subdirectory(../external/HighFive highFive)
 # find_package(pybind11_vendor REQUIRED)
 # find_package(pybind11 REQUIRED)
 
-# Default to C++17
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-endif()
+# Force to C++17
+set(CMAKE_CXX_STANDARD 17)
+
 
 include_directories(include)
 
