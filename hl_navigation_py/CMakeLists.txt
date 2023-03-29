@@ -20,10 +20,12 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-find_package(pybind11_vendor REQUIRED)
-find_package(pybind11 REQUIRED)
 find_package(hl_navigation REQUIRED)
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+# find_package(pybind11_vendor REQUIRED)
+# find_package(pybind11 REQUIRED)
+add_subdirectory(../external/pybind11 pybind11 EXCLUDE_FROM_ALL)
 
 include_directories(include)
 

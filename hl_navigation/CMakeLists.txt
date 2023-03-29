@@ -18,10 +18,15 @@ endif()
 # set(CMAKE_BUILD_TYPE Release)
 # set(CMAKE_CXX_FLAGS_RELEASE "-Os")
 # set(CMAKE_C_FLAGS_RELEASE "-Os")
-
 # set(CMAKE_CXX_CLANG_TIDY "/usr/local/opt/llvm/bin/clang-tidy;-checks=*")
 
 find_package(ament_cmake REQUIRED)
+
+# Currently disabled as there is a target clash (uninstall)
+# add_subdirectory(../external/eigen eigen EXCLUDE_FROM_ALL)
+set(YAML_CPP_INSTALL ON CACHE INTERNAL "")
+add_subdirectory(../external/yaml-cpp yaml-cpp)
+
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 set(ORCA
@@ -60,8 +65,6 @@ add_library(hl_navigation SHARED
 target_link_libraries(hl_navigation PUBLIC Eigen3::Eigen)
 ament_export_dependencies(Eigen3)
 
-set(YAML_CPP_INSTALL ON CACHE INTERNAL "")
-add_subdirectory(../yaml-cpp yaml-cpp)
 target_link_libraries(hl_navigation PUBLIC yaml-cpp::yaml-cpp)
 ament_export_dependencies(yaml-cpp)
 

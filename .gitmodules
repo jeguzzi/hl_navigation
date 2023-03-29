@@ -1,3 +1,19 @@
 [submodule "hl_navigation_sim/HighFive"]
 	path = hl_navigation_sim/HighFive
 	url = https://github.com/BlueBrain/HighFive.git
+[submodule "external/yaml-cpp"]
+	path = external/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
+[submodule "external/HighFive"]
+	path = external/HighFive
+	url = https://github.com/BlueBrain/HighFive.git
+[submodule "external/pybind11"]
+	path = external/pybind11
+	url = https://github.com/pybind/pybind11.git
+[submodule "external/eigen"]
+	path = external/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+	branch = 3.4
+[submodule "external/geos"]
+	path = external/geos
+	url = https://github.com/libgeos/geos.git
