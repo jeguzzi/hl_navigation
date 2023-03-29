@@ -36,7 +36,8 @@ using Properties = std::map<std::string, Property>;
 inline Properties operator+(const Properties& p1, const Properties& p2) {
   std::map<std::string, Property> r = p1;
   for (const auto& [k, v] : p2) {
-    r.emplace(std::make_tuple(k, v));
+    r[k] = v;
+    // r.emplace(std::make_tuple(k, v));
   }
   return r;
 }
