@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "hl_navigation/behavior.h"
-#include "hl_navigation/behaviors/Dummy.h"
+#include "hl_navigation/behaviors/dummy.h"
 #include "hl_navigation/behaviors/HL.h"
 #include "hl_navigation/behaviors/HRVO.h"
 #include "hl_navigation/behaviors/ORCA.h"
