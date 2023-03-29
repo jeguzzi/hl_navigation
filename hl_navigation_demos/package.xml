@@ -12,12 +12,13 @@
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
-  <depend>hl_navigation_msgs</depend>
-  <depend>hl_navigation_ros</depend>
+
   <depend>hl_navigation</depend>
   <depend>hl_navigation_sim</depend>
-  <depend>hl_navigation_py</depend>
-
+  <run_depend>hl_navigation_py</run_depend>
+  <run_depend>hl_navigation_msgs</run_depend>
+  <run_depend>hl_navigation_ros</run_depend>
+  
   <export>
     <build_type>ament_cmake</build_type>
   </export>
