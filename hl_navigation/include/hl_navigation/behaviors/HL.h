@@ -123,7 +123,7 @@ class HLBehavior : public Behavior,
    * precise the motion but also the more expensive the computations.
    */
   void set_resolution(unsigned value) {
-    resolution = std::min<unsigned>(value, max_resolution);
+    resolution = std::clamp<unsigned>(value, 1, max_resolution);
   }
   /**
    * @brief      Convenience method that return the size of an angular segment
