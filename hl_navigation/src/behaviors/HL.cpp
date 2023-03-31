@@ -42,8 +42,8 @@ static hl_navigation::Twist2 relax(const hl_navigation::Twist2 &v0,
 
 namespace hl_navigation {
 
-DiscCache HLBehavior::make_neighbor_cache(const Neighbor &neighbor, bool push_away,
-                                          float epsilon) {
+DiscCache HLBehavior::make_neighbor_cache(const Neighbor &neighbor,
+                                          bool push_away, float epsilon) {
   Vector2 delta = neighbor.position - pose.position;
   float margin = radius + safety_margin + neighbor.radius;
   float distance = delta.norm() - margin;
@@ -73,9 +73,10 @@ CollisionComputation::CollisionMap HLBehavior::get_collision_distance(
   prepare();
   return collision_computation.get_free_distance_for_sector(
       pose.orientation - aperture, 2 * aperture, resolution, effective_horizon,
-      assuming_static, optimal_speed);
+      !assuming_static, optimal_speed);
 }
 
+// distance from agent center to target
 static inline float distance_from_target(Radians angle, float free_distance,
                                          float horizon) {
   if (cos(angle) * horizon < free_distance) {
@@ -97,8 +98,8 @@ Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
   // effective_horizon = horizon;
   // effective_horizon=fmin(horizon,D);
   // Vector2 effectiveTarget = agentToTarget / D * effective_horizon;
-  const float max_distance = effective_horizon - radius;
-  const Radians max_angle{1.6f};  // Radians::PI_OVER_TW0;
+  const float max_distance = effective_horizon;  // - radius;
+  const Radians max_angle{1.6f};                 // Radians::PI_OVER_TW0;
   Radians angle = 0.0f;
   // relative to target direction
   Radians optimal_angle = 0.0f;
@@ -109,7 +110,7 @@ Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
     float distance_from_target_lower_bound = fabs(sin(angle) * max_distance);
     // distance_from_target_lower_bound=2*D*Sin(0.5*optimal_angle);
     if (optimal_distance_from_target <= distance_from_target_lower_bound) {
-      break;
+      // break;
     }
     for (int i = 0; i < 2; ++i) {
       const float s_angle = i == 0 ? angle : -angle;
@@ -118,6 +119,7 @@ Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
       if (out[i] == 1 && !inside) out[i] = 2;
       if (out[i] == 0 && inside) out[i] = 1;
       if (inside) {
+        // free distance to travel before collision
         const float free_distance = collision_computation.dynamic_free_distance(
             start_angle + s_angle, max_distance, optimal_speed);
         const float dist =
