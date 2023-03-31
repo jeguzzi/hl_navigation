@@ -1,8 +1,8 @@
 #ifndef HL_NAVIGATION_YAML_CORE_H
 #define HL_NAVIGATION_YAML_CORE_H
 
-#include "hl_navigation/common.h"
 #include "hl_navigation/behavior.h"
+#include "hl_navigation/common.h"
 #include "hl_navigation/kinematic.h"
 #include "hl_navigation/states/geometric.h"
 #include "hl_navigation/yaml/register.h"
@@ -76,6 +76,7 @@ struct convert<Behavior> {
     node["horizon"] = rhs.get_horizon();
     node["radius"] = rhs.get_radius();
     node["heading"] = rhs.get_heading_behavior();
+    node["social_margin"] = rhs.social_margin;
     auto k = rhs.get_kinematic();
     if (k) {
       node["kinematic"] = *k;
@@ -104,6 +105,9 @@ struct convert<Behavior> {
     }
     if (node["heading"]) {
       rhs.set_heading_behavior(node["heading"].as<Behavior::Heading>());
+    }
+    if (node["social_margin"]) {
+      rhs.social_margin = node["social_margin"].as<SocialMargin>();
     }
     return true;
   }
@@ -155,6 +159,86 @@ struct convert<std::shared_ptr<Kinematic>> {
       convert<Kinematic>::decode(node, *rhs);
     }
     return true;
+  }
+};
+
+template <>
+struct convert<SocialMargin> {
+  static Node encode(const SocialMargin& rhs) {
+    Node node;
+    auto m = rhs.get_modulation();
+    if (m) {
+      node["modulation"] = m;
+    }
+    node["default"] = rhs.get_default_value();
+    for (const auto& [k, v] : rhs.get_values()) {
+      if (v) {
+        node["values"][k] = *v;
+      }
+    }
+    return node;
+  }
+  static bool decode(const Node& node, SocialMargin& rhs) {
+    if (node["modulation"]) {
+      rhs.set_modulation(
+          node["modulation"].as<std::shared_ptr<SocialMargin::Modulation>>());
+    }
+    if (node["values"] && node["values"].IsMap()) {
+      for (const auto& p : node["values"]) {
+        rhs.set(p.first.as<unsigned>(), p.second.as<float>());
+      }
+    }
+    if (node["default"]) {
+      rhs.set(node["default"].as<float>());
+    }
+    return true;
+  }
+};
+
+template <>
+struct convert<std::shared_ptr<SocialMargin::Modulation>> {
+  static Node encode(const std::shared_ptr<SocialMargin::Modulation>& rhs) {
+    Node node;
+    if (auto m = dynamic_cast<SocialMargin::ZeroModulation*>(rhs.get())) {
+      node["type"] = "zero";
+    } else if (auto m =
+                   dynamic_cast<SocialMargin::ConstantModulation*>(rhs.get())) {
+      node["type"] = "constant";
+    } else if (auto m =
+                   dynamic_cast<SocialMargin::LinearModulation*>(rhs.get())) {
+      node["type"] = "linear";
+      node["upper"] = m->get_upper_distance();
+    } else if (auto m = dynamic_cast<SocialMargin::QuadraticModulation*>(
+                   rhs.get())) {
+      node["type"] = "quadratic";
+      node["upper"] = m->get_upper_distance();
+    } else if (auto m =
+                   dynamic_cast<SocialMargin::LogisticModulation*>(rhs.get())) {
+      node["type"] = "logistic";
+    }
+    return node;
+  }
+
+  static bool decode(const Node& node,
+                     std::shared_ptr<SocialMargin::Modulation>& rhs) {
+    rhs = nullptr;
+    if (node["type"]) {
+      std::string type = node["type"].as<std::string>();
+      if (type == "zero") {
+        rhs = std::make_shared<SocialMargin::ZeroModulation>();
+      } else if (type == "constant") {
+        rhs = std::make_shared<SocialMargin::ConstantModulation>();
+      } else if (type == "linear") {
+        rhs = std::make_shared<SocialMargin::LinearModulation>(
+            node["upper"].as<float>(10.0));
+      } else if (type == "quadratic") {
+        rhs = std::make_shared<SocialMargin::QuadraticModulation>(
+            node["upper"].as<float>(10.0));
+      } else if (type == "logistic") {
+        rhs = std::make_shared<SocialMargin::LogisticModulation>();
+      }
+    }
+    return rhs != nullptr;
   }
 };
 

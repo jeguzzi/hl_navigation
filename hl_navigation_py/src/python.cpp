@@ -7,10 +7,10 @@
 #include <vector>
 
 #include "hl_navigation/behavior.h"
-#include "hl_navigation/behaviors/dummy.h"
 #include "hl_navigation/behaviors/HL.h"
 #include "hl_navigation/behaviors/HRVO.h"
 #include "hl_navigation/behaviors/ORCA.h"
+#include "hl_navigation/behaviors/dummy.h"
 #include "hl_navigation/cached_collision_computation.h"
 #include "hl_navigation/collision_computation.h"
 #include "hl_navigation/common.h"
@@ -269,6 +269,68 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .value("follow", Behavior::Mode::follow)
       .export_values();
 
+
+  py::class_<SocialMargin::Modulation,
+             std::shared_ptr<SocialMargin::Modulation>>(
+      m, "SocialMarginModulation")
+      .def(
+          "__call__",
+          [](const SocialMargin::Modulation *mod, float margin,
+             std::optional<float> distance) {
+            if (distance) {
+              return (*mod)(margin, *distance);
+            }
+            return (*mod)(margin);
+          },
+          py::arg("margin"), py::arg("distance") = py::none());
+
+  py::class_<SocialMargin::ZeroModulation, SocialMargin::Modulation,
+             std::shared_ptr<SocialMargin::ZeroModulation>>(
+      m, "SocialMarginZeroModulation")
+      .def(py::init<>());
+  py::class_<SocialMargin::ConstantModulation, SocialMargin::Modulation,
+             std::shared_ptr<SocialMargin::ConstantModulation>>(
+      m, "SocialMarginConstantModulation")
+      .def(py::init<>());
+  py::class_<SocialMargin::LinearModulation, SocialMargin::Modulation,
+             std::shared_ptr<SocialMargin::LinearModulation>>(
+      m, "SocialMarginLinearModulation")
+      .def(py::init<float>(), py::arg("upper_distance"));
+  py::class_<SocialMargin::QuadraticModulation, SocialMargin::Modulation,
+             std::shared_ptr<SocialMargin::QuadraticModulation>>(
+      m, "SocialMarginQuadraticModulation")
+      .def(py::init<float>(), py::arg("upper_distance"));
+  py::class_<SocialMargin::LogisticModulation, SocialMargin::Modulation,
+             std::shared_ptr<SocialMargin::LogisticModulation>>(
+      m, "SocialMarginLogisticModulation")
+      .def(py::init<>());
+
+  py::class_<SocialMargin, std::shared_ptr<SocialMargin>>(m, "SocialMargin")
+      .def_property("modulation", &SocialMargin::get_modulation,
+                    &SocialMargin::set_modulation)
+      .def(
+          "get",
+          [](SocialMargin *sm, std::optional<unsigned> type,
+             std::optional<float> distance) {
+            if (!type) {
+              return sm->get();
+            }
+            if (!distance) {
+              return sm->get(*type);
+            }
+            return sm->get(*type, *distance);
+          },
+          py::arg("type") = py::none(), py::arg("distance") = py::none())
+      .def(
+          "set",
+          [](SocialMargin *sm, float value, std::optional<unsigned> type) {
+            if (!type) {
+              return sm->set(value);
+            }
+            return sm->set(*type, value);
+          },
+          py::arg("value"), py::arg("type") = py::none());
+
   py::class_<Behavior, PyBehavior, HasRegister<Behavior>, HasProperties,
              std::shared_ptr<Behavior>>(m, "Behavior")
       .def(py::init<std::shared_ptr<Kinematic>, float>(), py::arg("kinematic"),
@@ -281,7 +343,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
                     &Behavior::set_max_speed)
       .def_property("max_angular_speed", &Behavior::get_max_angular_speed,
                     &Behavior::set_max_angular_speed)
-
+      .def_readonly("social_margin", &Behavior::social_margin)
       .def_property("optimal_speed", &Behavior::get_optimal_speed,
                     &Behavior::set_optimal_speed)
       .def_property("optimal_angular_speed",
@@ -346,7 +408,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
            py::arg("time_step"), py::arg("relative"),
            py::arg("mode") = Behavior::Mode::move,
            py::arg("set_as_actuated") = true)
-      .def_property("desired_velocity", &Behavior::get_desired_velocity, nullptr)
+      .def_property("desired_velocity", &Behavior::get_desired_velocity,
+                    nullptr)
       .def_property(
           "type", [](Behavior *obj) { return obj->get_type(); }, nullptr)
       .def("to_frame", &Behavior::to_frame)
@@ -379,8 +442,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
                     &HLBehavior::set_resolution)
       .def_property("angular_resolution", &HLBehavior::get_angular_resolution,
                     nullptr)
-      .def_property("collision_distances", &HLBehavior::get_collision_distance,
-                    nullptr);
+      .def("get_collision_distance", &HLBehavior::get_collision_distance);
 
   py::class_<ORCABehavior, GeometricState, Behavior,
              std::shared_ptr<ORCABehavior>>(m, "ORCABehavior")

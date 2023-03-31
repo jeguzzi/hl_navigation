@@ -7,7 +7,7 @@ from ._hl_navigation import (BehaviorHeading, BehaviorMode,
                              CachedCollisionComputation, CollisionComputation,
                              Controller, Disc, GeometricState)
 from ._hl_navigation import Kinematic as _Kinematic
-from ._hl_navigation import (LineSegment, Neighbor, Pose2, Twist2, dump,
+from ._hl_navigation import (SocialMargin, LineSegment, Neighbor, Pose2, Twist2, dump,
                              load_behavior, load_kinematic, load_plugins)
 
 

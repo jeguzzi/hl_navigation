@@ -3,7 +3,7 @@ from hl_navigation import load_py_plugins as _load_py_plugins
 from hl_navigation import register_property
 
 from ._hl_navigation_sim import (Agent, BoundedStateEstimation, BoundingBox,
-                                 Experiment)
+                                 Entity, Experiment, Wall, Obstacle)
 from ._hl_navigation_sim import Scenario as _Scenario
 from ._hl_navigation_sim import StateEstimation as _StateEstimation
 from ._hl_navigation_sim import Task as _Task
@@ -81,7 +81,7 @@ def load_py_plugins():
 
 
 __all__ = [
-    'Experiment', 'World', 'Agent', 'BoundedStateEstimation', 'WayPointsTask',
+    'Entity', 'Obstacle', 'Wall', 'World', 'Agent', 'BoundedStateEstimation', 'WayPointsTask',
     'Experiment', 'Scenario', 'StateEstimation', 'Task', 'BoundingBox', 'dump'
     'load_agent', 'load_state_estimation', 'load_task', 'load_world',
     'load_scenario', 'load_experiment', 'load_py_plugins'
