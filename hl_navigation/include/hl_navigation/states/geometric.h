@@ -19,7 +19,7 @@ struct Disc {
   /**
    * Velocity in world frame
    */
-  Vector2 velocity;
+  // Vector2 velocity;
   /**
    * Radius
    */

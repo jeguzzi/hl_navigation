@@ -70,8 +70,8 @@ void HRVOBehavior::prepare() {
 
 void HRVOBehavior::add_obstacle(const Disc &d, bool push_away, float epsilon) {
     HRVO::Agent *a = new HRVO::Agent();
-    a->velocity_ = HRVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
-    a->prefVelocity_ = a->velocity_;
+    // a->velocity_ = HRVO::Vector2((float)d.velocity.x(), (float)d.velocity.y());
+    // a->prefVelocity_ = a->velocity_;
     Vector2 p = d.position;
     const float margin = d.radius + safety_margin + radius;
     const Vector2 delta = d.position - pose.position;
