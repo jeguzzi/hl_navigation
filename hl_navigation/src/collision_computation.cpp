@@ -20,11 +20,17 @@ CollisionComputation::get_free_distance_for_sector(Radians from, Radians length,
                                                    float max_distance,
                                                    bool dynamic, float speed) {
   CollisionComputation::CollisionMap d;
-  if (resolution < 1) return d;
-  d.reserve(resolution);
+  d.reserve(resolution + 1);
   Radians a = from;
-  Radians da = length / static_cast<float>(resolution - 1);
-  for (size_t i = 0; i < resolution; i++, a += da) {
+  if (resolution == 0) {
+    a += length * 0.5;
+    d.push_back(std::make_tuple(
+        a, dynamic ? dynamic_free_distance(a, max_distance, speed)
+                   : static_free_distance(a, max_distance, true)));
+    return d;
+  }
+  Radians da = length / static_cast<float>(resolution);
+  for (size_t i = 0; i < resolution + 1; i++, a += da) {
     d.push_back(std::make_tuple(
         a, dynamic ? dynamic_free_distance(a, max_distance, speed)
                    : static_free_distance(a, max_distance, true)));
@@ -134,6 +140,7 @@ float CollisionComputation::dynamic_free_distance_to(const DiscCache &disc,
 bool CollisionComputation::dynamic_may_collide(const DiscCache &c,
                                                float max_distance,
                                                float speed) {
+  return true;
   return (speed * c.distance / (speed + c.velocity.norm())) < max_distance;
 }
 
