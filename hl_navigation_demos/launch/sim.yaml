@@ -1,3 +1,4 @@
+---
 steps: 3000
 time_step: 0.02
 save_directory: '.'
