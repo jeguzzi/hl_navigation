@@ -18,8 +18,31 @@ using hl_navigation_sim::Agent;
 using hl_navigation_sim::StateEstimation;
 using hl_navigation_sim::Task;
 using hl_navigation_sim::World;
+using hl_navigation_sim::Obstacle;
+using hl_navigation_sim::Wall;
 
 namespace YAML {
+
+template <>
+struct convert<Wall> {
+  static Node encode(const Wall& rhs) {
+    return convert<LineSegment>::encode(rhs.line);
+  }
+  static bool decode(const Node& node, Wall& rhs) {
+    return convert<LineSegment>::decode(node, rhs.line);
+  }
+};
+
+template <>
+struct convert<Obstacle> {
+  static Node encode(const Obstacle& rhs) {
+    return convert<Disc>::encode(rhs.disc);
+  }
+  static bool decode(const Node& node, Obstacle& rhs) {
+    return convert<Disc>::decode(node, rhs.disc);
+  }
+};
+
 
 template <>
 struct convert<Task> {
@@ -180,12 +203,12 @@ struct convert_world {
     }
     if (node["obstacles"]) {
       for (const auto& c : node["obstacles"]) {
-        rhs.obstacles.push_back(c.as<Disc>());
+        rhs.add_obstacle(c.as<Disc>());
       }
     }
     if (node["walls"]) {
       for (const auto& c : node["walls"]) {
-        rhs.walls.push_back(c.as<LineSegment>());
+        rhs.add_wall(c.as<LineSegment>());
       }
     }
     return true;

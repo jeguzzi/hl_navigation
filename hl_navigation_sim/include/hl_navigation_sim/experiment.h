@@ -86,10 +86,6 @@ struct Experiment {
     callbacks.push_back(value);
   }
 
-  float get_time() const {
-    return time_step * step;
-  }
-
   std::string get_path() const {
     if (file) {
       std::cerr << file->getPath() << " : " << file->getName() << std::endl;

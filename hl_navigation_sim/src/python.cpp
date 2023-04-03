@@ -363,7 +363,16 @@ PYBIND11_MODULE(_hl_navigation_sim, m) {
   declare_register<Scenario>(m, "Scenario");
   //  declare_register<PScenario>(m, "Scenario");
 
-  py::class_<Agent, std::shared_ptr<Agent>>(m, "NativeAgent")
+  py::class_<Entity, std::shared_ptr<Entity>>(m, "Entity")
+    .def_readonly("_uid", &Entity::uid);
+
+  py::class_<Wall, Entity, std::shared_ptr<Wall>>(m, "Wall")
+    .def_readonly("line", &Wall::line);
+
+  py::class_<Obstacle, Entity, std::shared_ptr<Obstacle>>(m, "Obstacle")
+    .def_readonly("disc", &Obstacle::disc);
+
+  py::class_<Agent, Entity, std::shared_ptr<Agent>>(m, "NativeAgent")
       .def_readwrite("id", &Agent::id)
       .def_readwrite("radius", &Agent::radius)
       .def_readwrite("control_period", &Agent::control_period)
@@ -428,7 +437,7 @@ PYBIND11_MODULE(_hl_navigation_sim, m) {
               },
               py::keep_alive<1, 2>()));
 
-  py::class_<PyAgent, Agent, std::shared_ptr<PyAgent>>(m, "Agent",
+  py::class_<PyAgent, Agent, Entity, std::shared_ptr<PyAgent>>(m, "Agent",
                                                        py::dynamic_attr())
       .def(py::init<float, const py::object &,
                     const py::object &,const py::object &,
@@ -469,6 +478,7 @@ PYBIND11_MODULE(_hl_navigation_sim, m) {
       .def_readwrite("walls", &World::walls)
       .def_readwrite("obstacles", &World::obstacles)
       .def("get_neighbors", &World::get_neighbors)
+      .def_property("time", &World::get_time, nullptr)
       .def("dump",
            [](const World &world) {
              YAML::Emitter out;
@@ -541,7 +551,6 @@ PYBIND11_MODULE(_hl_navigation_sim, m) {
       .def_readwrite("runs", &Experiment::runs)
       .def_readwrite("save_directory", &Experiment::save_directory)
       .def_readwrite("name", &Experiment::name)
-      .def_property("time", &Experiment::get_time, nullptr)
       .def_property("path", &Experiment::get_path, nullptr)
       .def("add_callback", &Experiment::add_callback)
       .def("run_once", &Experiment::run_once)

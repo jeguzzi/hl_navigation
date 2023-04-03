@@ -15,19 +15,27 @@
 #include <utility>
 #include <vector>
 
-#include "hl_navigation/yaml/yaml.h"
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/common.h"
 #include "hl_navigation/controller.h"
 #include "hl_navigation/property.h"
 #include "hl_navigation/register.h"
 #include "hl_navigation/states/geometric.h"
+#include "hl_navigation/yaml/yaml.h"
 
 namespace hl_navigation_sim {
 
 using Waypoints = std::vector<hl_navigation::Vector2>;
 using BoundingBox = geos::geom::Envelope;
 using namespace hl_navigation;
+
+struct Entity {
+  static inline unsigned _uid = 0;
+
+  Entity() : uid(_uid++) {}
+
+  unsigned uid;
+};
 
 class Agent;
 class World;
@@ -136,7 +144,7 @@ struct StateEstimation : public virtual HasProperties,
     */
 };
 
-class Agent {
+class Agent : public Entity {
  public:
   using C = std::shared_ptr<Agent>;
   using B = Behavior;
@@ -151,7 +159,8 @@ class Agent {
         std::shared_ptr<Task> task = nullptr,
         std::shared_ptr<StateEstimation> estimation = nullptr,
         float control_period = 0.0f, unsigned id = 0)
-      : id(id),
+      : Entity(),
+        id(id),
         radius(radius),
         mass(0.0f),
         control_period(control_period),
@@ -248,9 +257,7 @@ class Agent {
     }
   }
 
-  std::shared_ptr<Behavior> get_behavior() const {
-    return nav_behavior;
-  }
+  std::shared_ptr<Behavior> get_behavior() const { return nav_behavior; }
 
   void set_kinematic(const std::shared_ptr<Kinematic> &value) {
     kinematic = value;
@@ -259,21 +266,13 @@ class Agent {
     }
   }
 
-  std::shared_ptr<Kinematic> get_kinematic() const {
-    return kinematic;
-  }
+  std::shared_ptr<Kinematic> get_kinematic() const { return kinematic; }
 
-  void set_task(const std::shared_ptr<Task> &value) {
-    task = value;
-  }
+  void set_task(const std::shared_ptr<Task> &value) { task = value; }
 
-  std::shared_ptr<Task> get_task() const {
-    return task;
-  }
+  std::shared_ptr<Task> get_task() const { return task; }
 
-  Controller * get_controller() {
-    return &nav_controller;
-  }
+  Controller *get_controller() { return &nav_controller; }
 
   unsigned id;
   float radius;
@@ -284,7 +283,7 @@ class Agent {
   Twist2 twist;
   Twist2 cmd_twist;
   // Eigen::Vector2f collision_force;
-  Vector2 collision_correction;  
+  Vector2 collision_correction;
   std::shared_ptr<Task> task;
   std::shared_ptr<StateEstimation> state_estimation;
   std::shared_ptr<Behavior> nav_behavior;
@@ -306,15 +305,32 @@ inline std::optional<Vector2> penetration(const LineSegment &line,
   return std::nullopt;
 }
 
+struct Wall : Entity {
+  Wall(const Vector2 &p1, const Vector2 &p2) : Entity(), line(p1, p2) {}
+  Wall() : Entity(), line() {}
+  Wall(const LineSegment &ls) : Entity(), line(ls) {}
+  operator LineSegment() const { return line; }
+
+  LineSegment line;
+};
+
+struct Obstacle : Entity {
+  Obstacle(const Vector2 &position, float radius)
+      : Entity(), disc(position, radius) {}
+  Obstacle() : Entity(), disc() {}
+  Obstacle(const Disc &disc) : Entity(), disc(disc) {}
+  operator Disc() const { return disc; }
+
+  Disc disc;
+};
+
 class World {
-
  public:
-
   virtual ~World() = default;
 
   using A = Agent;
   explicit World()
-      : agents(), obstacles(), walls(), agent_index(nullptr), ready(false) {}
+      : agents(), obstacles(), walls(), agent_index(nullptr), ready(false), time(0.0f) {}
 
   void update(float time_step) {
     if (!ready) {
@@ -329,6 +345,7 @@ class World {
     }
     update_agents_strtree();
     update_collisions();
+    time += time_step;
   }
 
   void add_agent(const std::shared_ptr<Agent> &agent) {
@@ -382,10 +399,24 @@ class World {
     return rs;
   }
 
+  std::vector<Disc> get_obstacles() const {
+    std::vector<Disc> discs(obstacles.size());
+    std::transform(obstacles.cbegin(), obstacles.cend(), discs.begin(),
+                   [](const auto &o) { return o.disc; });
+    return discs;
+  }
+
   // TODO(J): complete
   std::vector<Disc *> get_obstacles(
       [[maybe_unused]] const BoundingBox &bb) const {
     return {};
+  }
+
+  std::vector<LineSegment > get_walls() const {
+    std::vector<LineSegment> lines(walls.size());
+    std::transform(walls.cbegin(), walls.cend(), lines.begin(),
+                   [](const auto &w) { return w.line; });
+    return lines;
   }
 
   // TODO(J): complete
@@ -412,9 +443,25 @@ class World {
   }
 #endif
 
+  void set_obstacles(const std::vector<Disc> &values) {
+    for (const auto &value : values) {
+      add_obstacle(value);
+    }
+  }
+
+  void set_walls(const std::vector<LineSegment> &values) {
+    for (const auto &value : values) {
+      add_wall(value);
+    }
+  }
+
+  float get_time() const {
+    return time;
+  }
+
   std::vector<std::shared_ptr<Agent>> agents;
-  std::vector<Disc> obstacles;
-  std::vector<LineSegment> walls;
+  std::vector<Obstacle> obstacles;
+  std::vector<Wall> walls;
   std::shared_ptr<geos::index::strtree::TemplateSTRtree<Agent *>> agent_index;
   std::shared_ptr<geos::index::strtree::TemplateSTRtree<Disc *>>
       obstacles_index;
@@ -423,6 +470,7 @@ class World {
   std::vector<geos::geom::Envelope> agent_envelops;
   std::vector<geos::geom::Envelope> static_envelops;
   bool ready;
+  float time;
 
  protected:
   void resolve_collision(Agent *a1, Agent *a2) {
@@ -523,21 +571,19 @@ class World {
             walls.size());
     // TODO(J): should coordinates be ordered?
     for (const auto &wall : walls) {
-      auto &bb = static_envelops.emplace_back(wall.p1[0], wall.p2[0],
-                                              wall.p1[1], wall.p2[1]);
-      walls_index->insert(&bb, (void *)(&wall));
+      const Vector2 &p1 = wall.line.p1;
+      const Vector2 &p2 = wall.line.p2;
+      auto &bb = static_envelops.emplace_back(p1[0], p2[0], p1[1], p2[1]);
+      walls_index->insert(&bb, (void *)(&wall.line));
     }
     for (const auto &obstacle : obstacles) {
+      const Vector2 &p = obstacle.disc.position;
+      const float r = obstacle.disc.radius;
       auto &bb =
-          static_envelops.emplace_back(obstacle.position[0] - obstacle.radius,
-                                       obstacle.position[0] + obstacle.radius,
-                                       obstacle.position[1] - obstacle.radius,
-                                       obstacle.position[1] + obstacle.radius);
-      obstacles_index->insert(&bb, (void *)(&obstacle));
+          static_envelops.emplace_back(p[0] - r, p[0] + r, p[1] - r, p[1] + r);
+      obstacles_index->insert(&bb, (void *)(&obstacle.disc));
     }
   }
-
-
 };
 
 // TODO(Jerome) replace Disk::social margin with Disk::type (unsigned)
@@ -646,8 +692,8 @@ struct BoundedStateEstimation : public StateEstimation {
     // if (GeometricState *state =
     //         dynamic_cast<GeometricState *>(agent->nav_behavior.get())) {
     if (GeometricState *state = agent->get_geometric_state()) {
-      state->set_static_obstacles(world->obstacles);
-      state->set_line_obstacles(world->walls);
+      state->set_static_obstacles(world->get_obstacles());
+      state->set_line_obstacles(world->get_walls());
     }
   }
 

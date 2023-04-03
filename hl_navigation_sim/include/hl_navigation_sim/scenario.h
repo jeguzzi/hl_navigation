@@ -48,8 +48,8 @@ struct Scenario : virtual public HasProperties,
         group->add_to_world(world);
       }
     }
-    world->obstacles = obstacles;
-    world->walls = walls;
+    world->set_obstacles(obstacles);
+    world->set_walls(walls);
     for (const auto& f : initializers) {
       f(world);
     }
