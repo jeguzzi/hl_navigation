@@ -76,7 +76,7 @@ ws.onmessage = function(event) {
 var agents = new Set();
 var entity = {};
 var NS = "http://www.w3.org/2000/svg";
-var prototypes = {'': '#{{prefix}}agent'}
+var prototypes = {'': '#{{prefix}}agent', 'thymio': '#{{prefix}}thymio'}
 
 function add_wall(id, points) {
   var e = document.createElementNS(NS,"polyline");
@@ -154,7 +154,6 @@ function add(data) {
   for (var _id in data) {
     add_entity(_id, data[_id])
   }
-  console.log(agents)
   window.requestAnimationFrame(update);
 };
 
@@ -170,7 +169,18 @@ function set_entity(_id, data) {
 
 function set(data) {
   for (var _id in data) {
-    set_entity('{{prefix}}' + _id, data[_id])
+    if (_id in entity) {
+      set_entity('{{prefix}}' + _id, data[_id])
+    } else {
+      var e = document.getElementById("{{prefix}}" + _id);
+      if (e) {
+        var e_data = data[_id];
+        for (a in e_data) {
+          console.log(`setting attributes ${a} of ${e} to ${e_data[a]}`)
+          e.setAttribute(a, e_data[a]);
+        }
+      }
+    }
   }
   window.requestAnimationFrame(update);
 };

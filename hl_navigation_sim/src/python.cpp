@@ -374,6 +374,7 @@ PYBIND11_MODULE(_hl_navigation_sim, m) {
 
   py::class_<Agent, Entity, std::shared_ptr<Agent>>(m, "NativeAgent")
       .def_readwrite("id", &Agent::id)
+      .def_readwrite("type", &Agent::type)
       .def_readwrite("radius", &Agent::radius)
       .def_readwrite("control_period", &Agent::control_period)
       .def_readwrite("pose", &Agent::pose)

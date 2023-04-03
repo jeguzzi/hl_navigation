@@ -39,6 +39,7 @@ struct ThymioDemo : public sim::Scenario {
       agent->nav_behavior->set_safety_margin(0.02);
       agent->nav_controller.set_speed_tolerance(0.01);
       agent->pose = {{i ? -0.5f : 0.5f, 0.5f}, 0.0f};
+      agent->type = "thymio";
       world->add_agent(agent);
     }
     world->obstacles.emplace_back(Vector2{0.0f, 0.0f}, 0.1f);

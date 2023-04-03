@@ -169,7 +169,7 @@ class Agent : public Entity {
         state_estimation(estimation),
         nav_behavior(behavior),
         kinematic(kinematic),
-        nav_controller(nav_behavior, false, true) {}
+        nav_controller(nav_behavior, false, true), type("") {}
 
   static std::shared_ptr<Agent> make(
       float radius = 0.0f, std::shared_ptr<Behavior> behavior = nullptr,
@@ -289,6 +289,7 @@ class Agent : public Entity {
   std::shared_ptr<Behavior> nav_behavior;
   std::shared_ptr<Kinematic> kinematic;
   Controller nav_controller;
+  std::string type;
 };
 
 inline std::optional<Vector2> penetration(const LineSegment &line,

@@ -25,7 +25,7 @@ struct AgentSampler : public Sampler<typename W::A::C>,
   using S = typename A::S;
   using Sampler<C>::sample;
 
-  explicit AgentSampler() : Sampler<C>(), number{0} {}
+  explicit AgentSampler() : Sampler<C>(), type(""), number{0} {}
 
   void add_to_world(World* world) override {
     if (W* w = dynamic_cast<W*>(world)) {
@@ -46,6 +46,7 @@ struct AgentSampler : public Sampler<typename W::A::C>,
     A* agent = get<A, C>::ptr(c);
     agent->pose = {{x ? x->sample() : 0.0f, y ? y->sample() : 0.0f},
                    theta ? theta->sample() : 0.0f};
+    agent->type = type;
     return c;
   }
 
@@ -72,6 +73,7 @@ struct AgentSampler : public Sampler<typename W::A::C>,
   std::shared_ptr<Sampler<float>> theta;
   std::shared_ptr<Sampler<float>> radius;
   std::shared_ptr<Sampler<float>> control_period;
+  std::string type;
   unsigned number;
 };
 

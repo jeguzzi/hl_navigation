@@ -275,6 +275,9 @@ struct convert<AgentSampler<W>> {
     if (rhs.number) {
       node["number"] = rhs.number;
     }
+    if (!rhs.type.empty()) {
+      node["type"] = rhs.type;
+    }
     return node;
   }
   static bool decode(const Node& node, AgentSampler<W>& rhs) {
@@ -311,6 +314,9 @@ struct convert<AgentSampler<W>> {
     }
     if (node["number"]) {
       rhs.number = node["number"].as<unsigned>(0);
+    }
+    if (node["type"]) {
+      rhs.type = node["type"].as<std::string>();
     }
     return true;
   }

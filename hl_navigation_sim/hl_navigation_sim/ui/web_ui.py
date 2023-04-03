@@ -65,7 +65,7 @@ def agent_msg(agent: Agent) -> EntityMsg:
     x, y = agent.position
     return {
         'kind': 'a',
-        'type': 'agent',
+        'type': agent.type,
         'size': agent.radius,
         'pose': pose_msg(agent)
     }
@@ -159,6 +159,12 @@ class WebUI:
 
     async def set(self, entity: Entity, **kwargs) -> None:
         msg = ['s', {entity._uid: kwargs}]
+        data = json.dumps(msg)
+        for queue in self.queues:
+            await queue.put(data)
+
+    async def set_background_color(self, color: str) -> None:
+        msg = ['s', {'svg': {'style': f"background-color:{color}"}}]
         data = json.dumps(msg)
         for queue in self.queues:
             await queue.put(data)

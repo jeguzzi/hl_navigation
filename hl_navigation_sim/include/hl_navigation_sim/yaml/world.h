@@ -120,6 +120,7 @@ struct convert<Agent> {
     node["angular_speed"] = rhs.twist.angular_speed;
     node["radius"] = rhs.radius;
     node["control_period"] = rhs.control_period;
+    node["type"] = rhs.type;
     return node;
   }
   static bool decode(const Node& node, Agent& rhs) {
@@ -157,6 +158,9 @@ struct convert<Agent> {
     }
     if (node["control_period"]) {
       rhs.control_period = node["control_period"].as<float>();
+    }
+    if (node["type"]) {
+      rhs.type = node["type"].as<std::string>();
     }
     return true;
   }

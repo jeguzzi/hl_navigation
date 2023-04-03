@@ -24,6 +24,7 @@ class ThymioDemo(sim.Scenario, name="PyThymioDemo"):  # type: ignore[call-arg]
             agent.nav_behavior.safety_margin = 0.02
             agent.nav_controller.speed_tolerance = 0.01
             agent.pose = nav.Pose2((-0.5 if i else 0.5, 0.5), 0.0)
+            agent.type = "thymio"
             world.add_agent(agent)
         world.add_obstacle(nav.Disc((0.0, 0.0), 0.1))
 

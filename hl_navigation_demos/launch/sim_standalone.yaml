@@ -2,6 +2,7 @@
 steps: 3000
 time_step: 0.02
 save_directory: '.'
+record_pose: true
 name: StandaloneYAML
 world:
   obstacles:
@@ -9,15 +10,18 @@ world:
       radius: 0.1
   agents:
     -
+      type: thymio
       number: 2
-      position: [[0.5, 0], [-0.5, 0.5]]
+      x: [0.5, -0.5]
+      y: [0, 0.5]
+      # position: [[0.5, 0], [-0.5, 0.5]]
       radius: 0.08
       control_period: 0.1
       speed_tolerance: 0.02
       kinematic:
         type: TwoWheeled
         wheel_axis: 0.094
-        maximal_speed: 0.166
+        max_speed: 0.166
       navigation_behavior:
         type: HL
         optimal_speed: 0.12
