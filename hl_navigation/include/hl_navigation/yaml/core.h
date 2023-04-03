@@ -20,8 +20,8 @@ template <>
 struct convert<LineSegment> {
   static Node encode(const LineSegment& rhs) {
     Node node;
-    node["p1"] = rhs.p1;
-    node["p2"] = rhs.p2;
+    node.push_back(rhs.p1);
+    node.push_back(rhs.p2);
     return node;
   }
   static bool decode(const Node& node, LineSegment& rhs) {
