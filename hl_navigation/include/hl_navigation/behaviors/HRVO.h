@@ -44,10 +44,18 @@ class HL_NAVIGATION_EXPORT HRVOBehavior : public Behavior,
   */
   std::string get_type() const override { return type; }
 
+  /** 
+   * @private
+  */
+  EnvironmentState * get_environment_state() override {
+    return &state;
+  }
+
  protected:
   Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
 
  private:
+  GeometricState state;
   uint agentIndex;
   float rangeSq;
   std::unique_ptr<HRVO::Agent> _HRVOAgent;

@@ -63,7 +63,7 @@ static void run(const char *behavior = "HL") {
     agent->set_safety_margin(0.02);
     agent->set_optimal_speed(0.12);
     agent->set_position(Vector2(i ? -0.5f : 0.5f, 0.0f));
-    if (GeometricState *state = dynamic_cast<GeometricState *>(agent.get())) {
+    if (GeometricState *state = dynamic_cast<GeometricState *>(agent->get_environment_state())) {
       state->set_static_obstacles(obstacles);
     }
     agents.push_back(agent.get());
@@ -77,7 +77,7 @@ static void run(const char *behavior = "HL") {
   for (size_t i = 0; i < 3000; i++) {
     for (auto &controller : controllers) {
       auto agent = controller.get_behavior().get();
-      if (GeometricState *state = dynamic_cast<GeometricState *>(agent)) {
+      if (GeometricState *state = dynamic_cast<GeometricState *>(agent->get_environment_state())) {
         std::vector<Neighbor> neighbors;
         for (auto &neighbor : agents) {
           if (neighbor == agent) continue;

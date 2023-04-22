@@ -93,7 +93,7 @@ void run(const char *behavior = "HL", const char *path_ = "", float radius = 4,
           (g[1] == 0 && p[0] / g[0] > 0.75)) {
         agent->set_target_position(-g);
       }
-      if (GeometricState *state = dynamic_cast<GeometricState *>(agent.get())) {
+      if (GeometricState *state = dynamic_cast<GeometricState *>(agent->get_environment_state())) {
         std::vector<Neighbor> agent_neighbors;
         std::copy(neighbors.begin(), neighbors.begin() + j,
                   std::back_inserter(agent_neighbors));

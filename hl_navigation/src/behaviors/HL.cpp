@@ -143,12 +143,12 @@ Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
 
 void HLBehavior::prepare() {
   effective_horizon = horizon;
-  if (GeometricState::changed() ||
+  if (state.changed() ||
       Behavior::changed(POSITION | ORIENTATION | RADIUS | HORIZON |
                         SAFETY_MARGIN)) {
     std::vector<DiscCache> ns;
-    ns.reserve(get_neighbors().size());
-    for (const Neighbor &d : get_neighbors()) {
+    ns.reserve(state.get_neighbors().size());
+    for (const Neighbor &d : state.get_neighbors()) {
       const auto c = make_neighbor_cache(d, true, 2e-3);
       if (collision_computation.dynamic_may_collide(c, effective_horizon,
                                                     optimal_speed)) {
@@ -156,19 +156,19 @@ void HLBehavior::prepare() {
       }
     }
     std::vector<DiscCache> ss;
-    ss.reserve(get_static_obstacles().size());
+    ss.reserve(state.get_static_obstacles().size());
 
-    for (const Disc &d : get_static_obstacles()) {
+    for (const Disc &d : state.get_static_obstacles()) {
       const auto c = make_obstacle_cache(d, true, 2e-3);
       if (collision_computation.static_may_collide(c, effective_horizon)) {
         ss.push_back(c);
       }
     }
     collision_computation.setup(pose, radius + safety_margin,
-                                get_line_obstacles(), std::move(ss),
+                                state.get_line_obstacles(), std::move(ss),
                                 std::move(ns));
   }
-  GeometricState::reset_changes();
+  state.reset_changes();
   Behavior::reset_changes();
 }
 

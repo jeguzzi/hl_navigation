@@ -12,7 +12,7 @@ namespace hl_navigation {
 
 HRVOBehavior::HRVOBehavior(std::shared_ptr<Kinematics> kinematics, float radius)
     : Behavior(kinematics, radius),
-      GeometricState(),
+      state(),
       agentIndex(0),
       rangeSq(0.0f),
       _HRVOAgent(std::make_unique<HRVO::Agent>()) {
@@ -42,7 +42,7 @@ void HRVOBehavior::prepare() {
   _HRVOAgent->maxSpeed_ = optimal_speed;
   _HRVOAgent->uncertaintyOffset_ = 0;
 
-  if (GeometricState::changed(NEIGHBORS | STATIC_OBSTACLES) ||
+  if (state.changed(NEIGHBORS | STATIC_OBSTACLES) ||
       Behavior::changed(POSITION | RADIUS | SAFETY_MARGIN)) {
     _HRVOAgent->neighbors_.clear();
     for (uint i = 0; i < _HRVOAgent->obstacles_.size(); i++) {
@@ -56,15 +56,15 @@ void HRVOBehavior::prepare() {
     _HRVOAgent->agents_.clear();
     agentIndex = 0;
 
-    for (const auto &n : get_neighbors()) {
+    for (const auto &n : state.get_neighbors()) {
       add_neighbor(n, true, 2e-3);
     }
-    for (const auto &o : get_static_obstacles()) {
+    for (const auto &o : state.get_static_obstacles()) {
       add_obstacle(o,true, 2e-3);
     }
   }
 
-  GeometricState::reset_changes();
+  state.reset_changes();
   Behavior::reset_changes();
 }
 

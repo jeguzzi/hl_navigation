@@ -11,9 +11,9 @@
 #include "hl_navigation_sim/world.h"
 #include "hl_navigation_sim_export.h"
 
+using hl_navigation::make_property;
 using hl_navigation::Properties;
 using hl_navigation::Property;
-using hl_navigation::make_property;
 
 namespace hl_navigation_sim {
 
@@ -22,7 +22,8 @@ namespace hl_navigation_sim {
  *
  * *Properties*: range_of_view (float)
  */
-struct HL_NAVIGATION_SIM_EXPORT BoundedStateEstimation : public StateEstimation {
+struct HL_NAVIGATION_SIM_EXPORT BoundedStateEstimation
+    : public StateEstimation {
   inline static const float default_range_of_view = 1.0f;
 
   /**
@@ -31,7 +32,7 @@ struct HL_NAVIGATION_SIM_EXPORT BoundedStateEstimation : public StateEstimation 
    * @param[in]  range_of_view_  The range of view
    */
   BoundedStateEstimation(float range_of_view_ = default_range_of_view)
-  // float field_of_view_ = 0.0f,
+      // float field_of_view_ = 0.0f,
       : StateEstimation(),
         // field_of_view(field_of_view_),
         range_of_view(range_of_view_) {}
@@ -86,16 +87,16 @@ struct HL_NAVIGATION_SIM_EXPORT BoundedStateEstimation : public StateEstimation 
   std::string get_type() const override { return type; }
 
   /**
-   * @brief      Gets the neighbors 
+   * @brief      Gets the neighbors
    *
    * @param[in]  agent  The agent
    *
    * @return     { description_of_the_return_value }
    */
-  virtual std::vector<Neighbor> neighbors_of_agent(const Agent *agent, const World * world) const;
+  virtual std::vector<Neighbor> neighbors_of_agent(const Agent *agent,
+                                                   const World *world) const;
 
  protected:
-
 #if 0
   BoundingBox bounding_box(const Agent *agent) const;
 
@@ -108,13 +109,31 @@ struct HL_NAVIGATION_SIM_EXPORT BoundedStateEstimation : public StateEstimation 
   /**
    * @private
    */
-  void update(Agent *agent, World * world) const override;
+  void update(Agent *agent, World *world) const override;
 
   /**
    * @private
    */
-  void prepare(Agent *agent, World * world) const override;
+  void prepare(Agent *agent, World *world) const override;
 
+  /**
+   * @brief      Gets the geometric state of an agent.
+   *
+   * @private
+   *
+   * @return     The geometric state or ``nullptr`` if the agent behavior does
+   * not have a environment state that is a subclass of \ref
+   * hl_navigation::GeometricState
+   */
+  GeometricState *get_geometric_state(Agent *agent) const {
+    if (agent) {
+      if (Behavior *behavior = agent->get_behavior()) {
+        return dynamic_cast<GeometricState *>(
+            behavior->get_environment_state());
+      }
+    }
+    return nullptr;
+  }
 
  private:
   // float field_of_view;

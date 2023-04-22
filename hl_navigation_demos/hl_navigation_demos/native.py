@@ -28,7 +28,7 @@ def run(behavior_name: str = "HL") -> None:
         behavior.safety_margin = 0.02
         behavior.optimal_speed = 0.12
         try:
-            behavior.static_obstacles = obstacles
+            behavior.environment_state.static_obstacles = obstacles
         except AttributeError:
             pass
         controller = hl_navigation.Controller(behavior)
@@ -43,7 +43,7 @@ def run(behavior_name: str = "HL") -> None:
         for controller in controllers:
             this = controller.behavior
             try:
-                controller.behavior.neighbors = [
+                controller.behavior.environment_state.neighbors = [
                     hl_navigation.Neighbor(
                             agent.position, agent.radius, agent.velocity, 0)
                     for agent in agents if agent != this]

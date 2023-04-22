@@ -24,8 +24,6 @@ from hl_navigation import (
     LineSegment,
     Vector2
 )
-# from hl_navigation._hl_navigation import Behavior, GeometricState
-
 
 # Jerome: what about the radius and safety margin?
 
@@ -111,7 +109,7 @@ class ExponentialPotential(Potential):
 # TODO cit "Potentials with a hard core would be more realistic"
 
 
-class SocialForceBehavior(Behavior, GeometricState, name="SocialForce"):
+class SocialForceBehavior(Behavior, name="SocialForce"):
     def __init__(
         self,
         kinematics: Optional[Kinematics] = None,
@@ -124,19 +122,22 @@ class SocialForceBehavior(Behavior, GeometricState, name="SocialForce"):
         u: Potential = ExponentialPotential(10, 0.2),
     ):
         Behavior.__init__(self, kinematics, radius)
-        GeometricState.__init__(self)
         self.tau = tau
         self.step_duration = step_duration
         self.cos_phi = np.cos(phi)
         self.c = c
         self.v = v
         self.u = u
+        self._state = GeometricState()
+
+    def get_environment_state(self) -> GeometricState:
+        return self._state
 
     def potential(self) -> Callable[[Vector2], float]:
         ps = (
-            [self.neighbor_potential(neighbor) for neighbor in self.neighbors]
-            + [self.obstacle_potential(obstacle) for obstacle in self.static_obstacles]
-            + [self.segment_potential(line) for line in self.line_obstacles]
+            [self.neighbor_potential(neighbor) for neighbor in self._state.neighbors]
+            + [self.obstacle_potential(obstacle) for obstacle in self._state.static_obstacles]
+            + [self.segment_potential(line) for line in self._state.line_obstacles]
         )
 
         def f(position: Vector2) -> float:
@@ -202,15 +203,15 @@ class SocialForceBehavior(Behavior, GeometricState, name="SocialForce"):
         # repulsion from neighbors
         force += sum(
             self.weighted(self.neighbor_repulsion_force(neighbor), e, -1)
-            for neighbor in self.neighbors
+            for neighbor in self._state.neighbors
         )
         force += sum(
             self.weighted(self.obstacle_repulsion_force(obstacle), e, -1)
-            for obstacle in self.static_obstacles
+            for obstacle in self._state.static_obstacles
         )
         force += sum(
             self.weighted(self.segment_repulsion_force(line), e, -1)
-            for line in self.line_obstacles
+            for line in self._state.line_obstacles
         )
         desired_velocity = self.actuated_twist.velocity + dt * force
         # no need to clamp norm ... this will be done the superclass

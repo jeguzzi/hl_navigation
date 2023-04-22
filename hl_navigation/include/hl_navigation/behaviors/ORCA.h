@@ -123,12 +123,20 @@ class HL_NAVIGATION_EXPORT ORCABehavior : public Behavior,
    */
   std::string get_type() const override { return type; }
 
+  /** 
+   * @private
+  */
+  EnvironmentState * get_environment_state() override {
+    return &state;
+  }
+
  protected:
   Twist2 twist_towards_velocity(const Vector2& absolute_velocity,
                                 bool relative) override;
   Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
 
  private:
+  GeometricState state;
   bool use_effective_center;
   float D;
   std::unique_ptr<RVO::Agent> _RVOAgent;

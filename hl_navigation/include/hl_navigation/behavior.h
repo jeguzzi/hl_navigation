@@ -16,8 +16,9 @@
 #include "hl_navigation/kinematics.h"
 #include "hl_navigation/property.h"
 #include "hl_navigation/register.h"
-#include "hl_navigation_export.h"
 #include "hl_navigation/social_margin.h"
+#include "hl_navigation/state.h"
+#include "hl_navigation_export.h"
 
 namespace hl_navigation {
 
@@ -34,8 +35,9 @@ namespace hl_navigation {
  * 1. select the concrete behavior, the agent's size (agents are shaped like
  *    discs), and \ref Kinematics;
  *
- * 2. configure the generic parameters: \ref set_optimal_speed, \ref set_horizon, \ref set_safety_margin
- *    \ref set_rotation_tau, and \ref set_heading_behavior;
+ * 2. configure the generic parameters: \ref set_optimal_speed, \ref
+ * set_horizon, \ref set_safety_margin \ref set_rotation_tau, and \ref
+ * set_heading_behavior;
  *
  * 3. configure the specific parameters of the concrete behavior.
  *
@@ -76,8 +78,8 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
     target_point,         /**< turn towards the target position */
     target_angle,         /**< turn towards the target orientation */
     target_angular_speed, /**< follow a target angular speed */
-    velocity /**< turn towards the velocity orientation. This is the only behavior available to
-                constrained kinematics.*/
+    velocity /**< turn towards the velocity orientation. This is the only
+                behavior available to constrained kinematics.*/
   };
 
   /**
@@ -211,7 +213,8 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
   /**
    * @brief      Gets the maximal angular speed speed.
    *
-   * @return     The maximal angular speed from \ref Kinematics::get_max_angular_speed
+   * @return     The maximal angular speed from \ref
+   * Kinematics::get_max_angular_speed
    */
   Radians get_max_angular_speed() const {
     return kinematics ? kinematics->get_max_angular_speed() : 0.0f;
@@ -219,7 +222,8 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
   /**
    * @brief      Sets the maximal angular speed speed.
    *
-   * @param[in]  value  The value to pass to \ref Kinematics::set_max_angular_speed.
+   * @param[in]  value  The value to pass to \ref
+   * Kinematics::set_max_angular_speed.
    */
   void set_max_angular_speed(Radians value) {
     if (kinematics) kinematics->set_max_angular_speed(value);
@@ -229,8 +233,8 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
 
   /**
    * @brief      Gets the desired optimal speed.
-   * 
-   * Unless configured with \ref set_optimal_speed, 
+   *
+   * Unless configured with \ref set_optimal_speed,
    * it is set to \ref get_max_speed.
    *
    * @return     The desired optimal speed.
@@ -252,9 +256,9 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
   /**
    * @brief      Gets the desired optimal angular speed.
    *
-   * Unless configured with \ref set_optimal_angular_speed, 
+   * Unless configured with \ref set_optimal_angular_speed,
    * it is set to \ref get_max_angular_speed.
-   * 
+   *
    * @return     The desired optimal angular speed.
    */
   Radians get_optimal_angular_speed() const { return optimal_angular_speed; }
@@ -307,8 +311,8 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
   /**
    * @brief      Gets the horizon: the size of the portion of environment
    *             around the agent considered when computing possible collisions.
-   *             Larger values generally lead to a more computationally expensive \ref
-   * cmd_twist but fewer deadlocks and less jamming.
+   *             Larger values generally lead to a more computationally
+   * expensive \ref cmd_twist but fewer deadlocks and less jamming.
    *
    * @return     The horizon.
    */
@@ -341,7 +345,7 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
     change(POSITION | ORIENTATION);
   }
   /**
-   * @brief      Convenience method to get the current position in the 
+   * @brief      Convenience method to get the current position in the
    * world-fixed frame. See \ref get_pose.
    *
    * @return     The position.
@@ -486,7 +490,8 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
     return wheel_speeds_from_twist(actuated_twist);
   }
   /**
-   * @brief      Actuate a twist command, integrating using \ref Pose2::integrate
+   * @brief      Actuate a twist command, integrating using \ref
+   * Pose2::integrate
    *
    * @param[in]  twist_cmd  The twist
    * @param[in]  time_step  The time step
@@ -791,6 +796,13 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    * The behavior social margin modulation
    */
   SocialMargin social_margin;
+
+  /**
+   * @brief      Gets the environment state.
+   *
+   * @return     The environment state.
+   */
+  virtual EnvironmentState *get_environment_state() { return nullptr; }
 
  protected:
   enum {

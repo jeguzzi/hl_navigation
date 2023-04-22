@@ -89,9 +89,6 @@ void World::add_entity(Entity * entity) {
 }
 
 void World::add_agent(const std::shared_ptr<Agent> &agent) {
-  // bool v1 = dynamic_cast<GeometricState *>(agent->behavior.get()) !=
-  // nullptr; std::cout << "add_agent: behavior is geometric? " <<
-  // agent->behavior << " " << v1 << std::endl;
   if (agent) {
     agents.push_back(agent);
     ready = false;

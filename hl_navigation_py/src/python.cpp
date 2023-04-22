@@ -106,6 +106,10 @@ class PyBehavior : public Behavior, virtual public PyHasRegister<Behavior> {
                       relative);
   }
 
+  EnvironmentState *get_environment_state() override {
+    PYBIND11_OVERRIDE(EnvironmentState *, Behavior, get_environment_state);
+  }
+
   // HACK(J): should not happen but as of now, it can be that get_type returns
   // ''
   const Properties &get_properties() const override {
@@ -397,7 +401,6 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .value("velocity", Behavior::Heading::velocity,
              DOC(hl_navigation_Behavior_Heading, velocity));
 
-
   py::enum_<Behavior::Mode>(behavior, "Mode", DOC(hl_navigation_Behavior_Mode))
       .value("move", Behavior::Mode::move,
              DOC(hl_navigation_Behavior_Mode, move))
@@ -526,16 +529,29 @@ PYBIND11_MODULE(_hl_navigation, m) {
           DOC(hl_navigation_HasRegister, property_type))
       .def("to_frame", &Behavior::to_frame,
            DOC(hl_navigation_Behavior, to_frame))
+      .def_property("environment_state",
+                    py::cpp_function(&Behavior::get_environment_state,
+                                     py::return_value_policy::reference),
+                    nullptr,
+                    DOC(hl_navigation_Behavior, property_environment_state))
+      .def("get_environment_state", &Behavior::get_environment_state,
+           py::return_value_policy::reference,
+           DOC(hl_navigation_Behavior, get_environment_state))
       .def("wheel_speeds_from_twist", &Behavior::wheel_speeds_from_twist,
            DOC(hl_navigation_Behavior, wheel_speeds_from_twist))
       .def("twist_from_wheel_speeds", &Behavior::twist_from_wheel_speeds,
            DOC(hl_navigation_Behavior, twist_from_wheel_speeds));
 
-  m.def("behavior_has_geometric_state", [](const Behavior *obj) {
-    return (dynamic_cast<const GeometricState *>(obj)) != nullptr;
+  m.def("behavior_has_geometric_state", [](Behavior *obj) {
+    return (dynamic_cast<GeometricState *>(obj->get_environment_state())) !=
+           nullptr;
   });
 
-  py::class_<GeometricState, std::shared_ptr<GeometricState>>(
+
+  py::class_<EnvironmentState, std::shared_ptr<EnvironmentState>>(
+      m, "EnvironmentState", DOC(hl_navigation_EnvironmentState));
+
+  py::class_<GeometricState, EnvironmentState, std::shared_ptr<GeometricState>>(
       m, "GeometricState", DOC(hl_navigation_GeometricState))
       .def(py::init<>(), DOC(hl_navigation_GeometricState, GeometricState))
       .def_property("neighbors", &GeometricState::get_neighbors,
@@ -549,7 +565,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
                     &GeometricState::set_line_obstacles,
                     DOC(hl_navigation_GeometricState, property_line_obstacles));
 
-  py::class_<HLBehavior, GeometricState, Behavior, std::shared_ptr<HLBehavior>>(
+  py::class_<HLBehavior, Behavior, std::shared_ptr<HLBehavior>>(
       m, "HLBehavior", DOC(hl_navigation_HLBehavior))
       .def(py::init<std::shared_ptr<Kinematics>, float>(),
            py::arg("kinematics") = py::none(), py::arg("radius") = 0.0f,
@@ -570,9 +586,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .def("get_collision_distance", &HLBehavior::get_collision_distance,
            DOC(hl_navigation_HLBehavior, get_collision_distance));
 
-  py::class_<ORCABehavior, GeometricState, Behavior,
-             std::shared_ptr<ORCABehavior>>(m, "ORCABehavior",
-                                            DOC(hl_navigation_ORCABehavior))
+  py::class_<ORCABehavior, Behavior, std::shared_ptr<ORCABehavior>>(
+      m, "ORCABehavior", DOC(hl_navigation_ORCABehavior))
       .def(py::init<std::shared_ptr<Kinematics>, float>(),
            py::arg("kinematics") = py::none(), py::arg("radius") = 0.0f,
            DOC(hl_navigation_ORCABehavior, ORCABehavior))
@@ -584,9 +599,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
                     &ORCABehavior::should_use_effective_center,
                     DOC(hl_navigation_ORCABehavior, is_using_effective_center));
 
-  py::class_<HRVOBehavior, GeometricState, Behavior,
-             std::shared_ptr<HRVOBehavior>>(m, "HRVOBehavior",
-                                            DOC(hl_navigation_HRVOBehavior))
+  py::class_<HRVOBehavior, Behavior, std::shared_ptr<HRVOBehavior>>(
+      m, "HRVOBehavior", DOC(hl_navigation_HRVOBehavior))
       .def(py::init<std::shared_ptr<Kinematics>, float>(),
            py::arg("kinematics") = py::none(), py::arg("radius") = 0.0f,
            DOC(hl_navigation_HRVOBehavior, HRVOBehavior));

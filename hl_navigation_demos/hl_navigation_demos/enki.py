@@ -38,7 +38,7 @@ class Thymio(pyenki.Thymio2):
         self.controller = hl_navigation.Controller(self.behavior)
         self.controller.speed_tolerance = 0.01
         try:
-            self.behavior.static_obstacles = [
+            self.behavior.environment_state.static_obstacles = [
                 hl_navigation.Disc(position=enki2world(obstacle.position),
                                    radius=0.01 * obstacle.radius)
                 for obstacle in obstacles
@@ -51,7 +51,7 @@ class Thymio(pyenki.Thymio2):
         self.behavior.position = enki2world(self.position)
         self.behavior.velocity = enki2world(self.velocity)
         try:
-            self.behavior.neighbors = [
+            self.behavior.environment_state.neighbors = [
                 hl_navigation.Neighbor(position=enki2world(thymio.position),
                                        radius=0.08,
                                        velocity=enki2world(thymio.velocity),

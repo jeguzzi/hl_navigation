@@ -22,7 +22,7 @@ def main(behavior_name: str = 'HL') -> None:
     behavior.horizon = 5.0
     behavior.position = (0.0, 0.05)
     behavior.target_position = (10.0, 0.0)
-    behavior.static_obstacles = [nav.Disc(position=(1.5, 0.0), radius=0.5)]
+    behavior.environment_state.static_obstacles = [nav.Disc(position=(1.5, 0.0), radius=0.5)]
     for _ in range(30):
         cmd = behavior.cmd_twist(dt, True)
         behavior.actuate(cmd, dt)

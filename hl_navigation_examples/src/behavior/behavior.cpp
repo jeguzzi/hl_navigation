@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
   // Go to 10, 0
   behavior->set_target_position({10.0f, 0.0f});
 
-  GeometricState * geometric_state = dynamic_cast<GeometricState *>(behavior.get());
+  GeometricState * geometric_state = dynamic_cast<GeometricState *>(behavior->get_environment_state());
   if(geometric_state) {
     geometric_state->set_static_obstacles({Disc({1.5f, 0.0f}, 0.5f)});
   }

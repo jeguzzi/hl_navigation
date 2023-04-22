@@ -13,8 +13,9 @@ static bool overlaps(float a1, float a2, float b1, float b2) {
 
 void Controller3::set_neighbors(const std::vector<Neighbor3>& neighbors) {
   if (!behavior) return;
-  GeometricState * geometric_state = dynamic_cast<GeometricState *>(behavior.get());
-  if(!geometric_state) return;
+  GeometricState* geometric_state =
+      dynamic_cast<GeometricState*>(behavior->get_environment_state());
+  if (!geometric_state) return;
 
   std::vector<Neighbor> neighbors_2d;
   for (const auto& cylinder : neighbors) {
@@ -41,12 +42,12 @@ void Controller3::set_neighbors(const std::vector<Neighbor3>& neighbors) {
   geometric_state->set_neighbors(neighbors_2d);
 }
 
-
 // TODO(Jerome): dry up
 void Controller3::set_static_obstacles(const std::vector<Cylinder>& neighbors) {
   if (!behavior) return;
-  GeometricState * geometric_state = dynamic_cast<GeometricState *>(behavior.get());
-  if(!geometric_state) return;
+  GeometricState* geometric_state =
+      dynamic_cast<GeometricState*>(behavior->get_environment_state());
+  if (!geometric_state) return;
   std::vector<Disc> obstacles_2d;
   for (const auto& cylinder : neighbors) {
     if (!limit_to_2d && altitude.value_set && cylinder.height > 0) {
@@ -71,6 +72,5 @@ void Controller3::set_static_obstacles(const std::vector<Cylinder>& neighbors) {
   }
   geometric_state->set_static_obstacles(obstacles_2d);
 }
-
 
 }  // namespace hl_navigation

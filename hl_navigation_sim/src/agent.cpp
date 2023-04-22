@@ -12,9 +12,6 @@ void Agent::update(float dt, float time, World * world) {
     return;
   }
   control_deadline += control_period;
-  // bool v1 = dynamic_cast<GeometricState *>(behavior.get()) != nullptr;
-  // std::cout << "Agent::update: behavior is geometric? " << behavior <<
-  // " " << v1 << std::endl;
 
   if (task) task->update(this, world, time);
   if (state_estimation) state_estimation->update(this, world);

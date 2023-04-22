@@ -22,10 +22,10 @@ using hl_navigation::Behavior;
 using hl_navigation::Controller;
 using hl_navigation::GeometricState;
 using hl_navigation::Kinematics;
+using hl_navigation::Neighbor;
 using hl_navigation::Pose2;
 using hl_navigation::Twist2;
 using hl_navigation::Vector2;
-using hl_navigation::Neighbor;
 
 namespace hl_navigation_sim {
 
@@ -130,7 +130,9 @@ class HL_NAVIGATION_SIM_EXPORT Agent : public Entity {
    *
    * @return     The neighbor representation
    */
-  Neighbor as_neighbor() const { return Neighbor(pose.position, radius, twist.velocity, id); }
+  Neighbor as_neighbor() const {
+    return Neighbor(pose.position, radius, twist.velocity, id);
+  }
 
   /**
    * @brief      Sets the state estimation.
@@ -255,19 +257,6 @@ class HL_NAVIGATION_SIM_EXPORT Agent : public Entity {
    */
   std::set<std::string> tags;
 
-  /**
-   * @brief      Gets the geometric state if any, i.e., if the behavior is a
-   * subclass of \ref hl_navigation::GeometricState
-   *
-   * @private 
-   * 
-   * @return     The geometric state or ``nullptr`` if the behavior is not
-   * a subclass of \ref hl_navigation::GeometricState
-   */
-  virtual GeometricState *get_geometric_state() const {
-    return dynamic_cast<GeometricState *>(behavior.get());
-  }
-
  private:
   std::shared_ptr<Task> task;
   std::shared_ptr<StateEstimation> state_estimation;
@@ -284,7 +273,7 @@ class HL_NAVIGATION_SIM_EXPORT Agent : public Entity {
    * @param[in]  time    The current time
    * @param[in]  world    The that the agent is part of
    */
-  void update(float dt, float time, World * world);
+  void update(float dt, float time, World *world);
 
   /**
    * @brief      Actuate the current agent control command.

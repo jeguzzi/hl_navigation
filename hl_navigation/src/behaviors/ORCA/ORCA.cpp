@@ -15,7 +15,7 @@ namespace hl_navigation {
 
 ORCABehavior::ORCABehavior(std::shared_ptr<Kinematics> kinematics, float radius)
     : Behavior(kinematics, radius),
-      GeometricState(),
+      state(),
       use_effective_center(false),
       _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
   _RVOAgent->maxNeighbors_ = 1000;
@@ -134,10 +134,10 @@ void ORCABehavior::prepare() {
   _RVOAgent->prefVelocity_ = t * _RVOAgent->maxSpeed_ / abs(t);
 
   const float rangeSq = (horizon * 2) * (horizon * 2);
-  if (GeometricState::changed(LINE_OBSTACLES)) {
+  if (state.changed(LINE_OBSTACLES)) {
     rvo_obstacles.clear();
     _RVOAgent->obstacleNeighbors_.clear();
-    for (auto &line : get_line_obstacles()) {
+    for (auto &line : state.get_line_obstacles()) {
       add_line_obstacle(line);
     }
 
@@ -145,17 +145,17 @@ void ORCABehavior::prepare() {
       _RVOAgent->insertObstacleNeighbor(obstacle.get(), rangeSq);
     }
   }
-  if (GeometricState::changed(STATIC_OBSTACLES | NEIGHBORS)) {
+  if (state.changed(STATIC_OBSTACLES | NEIGHBORS)) {
     _RVOAgent->agentNeighbors_.clear();
     rvo_neighbors.clear();
-    for (const auto &n : get_neighbors()) {
+    for (const auto &n : state.get_neighbors()) {
       add_neighbor(n, rangeSq, true, 2e-3);
     }
-    for (const auto &o : get_static_obstacles()) {
+    for (const auto &o : state.get_static_obstacles()) {
       add_obstacle(o, rangeSq, true, 2e-3);
     }
   }
-  GeometricState::reset_changes();
+  state.reset_changes();
 }
 
 Vector2 ORCABehavior::compute_desired_velocity(float dt) {

@@ -64,13 +64,13 @@ class HL_NAVIGATION_EXPORT HLBehavior : public Behavior, public GeometricState {
   HLBehavior(std::shared_ptr<Kinematics> kinematics = nullptr,
              float radius = 0.0f)
       : Behavior(kinematics, radius),
-        GeometricState(),
         effective_horizon(0.0f),
         tau(default_tau),
         eta(default_eta),
         aperture(default_aperture),
         resolution(std::min(default_resolution, max_resolution)),
-        collision_computation() {}
+        collision_computation(),
+        state() {}
   ~HLBehavior() = default;
 
   // -------------------------- BEHAVIOR PARAMETERS
@@ -185,6 +185,12 @@ class HL_NAVIGATION_EXPORT HLBehavior : public Behavior, public GeometricState {
   */
   std::string get_type() const override { return type; }
 
+  /** @private
+  */
+  EnvironmentState * get_environment_state() override {
+    return &state;
+  }
+
  protected:
   float effective_horizon;
   float tau;
@@ -192,6 +198,7 @@ class HL_NAVIGATION_EXPORT HLBehavior : public Behavior, public GeometricState {
   Radians aperture;
   unsigned int resolution;
   CollisionComputation collision_computation;
+  GeometricState state;
 
   /**
    * @brief      Override \ref Behavior::cmd_twist adding target velocity

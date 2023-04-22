@@ -227,7 +227,7 @@ class Plugin : public sim::Plugin {
   void set_static_obstacles(set_static_obstacles_in *in,
                             set_static_obstacles_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior)) {
+    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior.get_environment_state())) {
       std::vector<Disc> obstacles;
       std::transform(in->obstacles.cbegin(), in->obstacles.cend(),
                      std::back_inserter(obstacles), [](const obstacle_t &o) {
@@ -240,7 +240,7 @@ class Plugin : public sim::Plugin {
 
   void set_neighbors(set_neighbors_in *in, set_neighbors_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior)) {
+    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior.get_environment_state())) {
       std::vector<Neighbor> obstacles;
       std::transform(in->neighbors.cbegin(), in->neighbors.cend(),
                      std::back_inserter(obstacles), [](const neighbor_t &o) {
@@ -255,7 +255,7 @@ class Plugin : public sim::Plugin {
   void set_line_obstacles(set_line_obstacles_in *in,
                           set_line_obstacles_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior)) {
+    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior.get_environment_state())) {
       std::vector<LineSegment> obstacles;
       std::transform(in->obstacles.cbegin(), in->obstacles.cend(),
                      std::back_inserter(obstacles), [](line_t o) {

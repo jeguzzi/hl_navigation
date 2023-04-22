@@ -9,31 +9,25 @@
 
 namespace hl_navigation_sim {
 
-void BoundedStateEstimation::update(Agent *agent, World * world) const {
-  // bool v1 = dynamic_cast<GeometricState *>(agent->behavior.get()) !=
-  // nullptr; std::cout << "SE::update: behavior is geometric? " <<
-  // agent->behavior << " " << v1 << std::endl; GeometricState *state =
-  //     dynamic_cast<GeometricState *>(agent->behavior.get());
-  GeometricState *state = agent->get_geometric_state();
-  if (state) {
+void BoundedStateEstimation::update(Agent *agent, World *world) const {
+  if (GeometricState *state = get_geometric_state(agent)) {
     state->set_neighbors(neighbors_of_agent(agent, world));
-  } else {
-    std::cerr << "Not a geometric state" << std::endl;
-    // << typeid(*agent->behavior.get()).name() << std::endl;
   }
 }
 
-void BoundedStateEstimation::prepare(Agent *agent, World * world) const {
-  // if (GeometricState *state =
-  //         dynamic_cast<GeometricState *>(agent->behavior.get())) {
-  if (GeometricState *state = agent->get_geometric_state()) {
+void BoundedStateEstimation::prepare(Agent *agent, World *world) const {
+  if (GeometricState *state = get_geometric_state(agent)) {
     state->set_static_obstacles(world->get_discs());
     state->set_line_obstacles(world->get_line_obstacles());
+  } else {
+    std::cerr << "Agent does not have a geometric environmental state despite "
+                 "that it is using a geometric state estimation"
+              << std::endl;
   }
 }
 
 std::vector<Neighbor> BoundedStateEstimation::neighbors_of_agent(
-    const Agent *agent, const World * world) const {
+    const Agent *agent, const World *world) const {
   return world->get_neighbors(agent, range_of_view);
 }
 

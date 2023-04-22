@@ -179,13 +179,13 @@ class PyAgent : public Agent {
     Agent::set_task(obj.cast<std::shared_ptr<Task>>());
   }
 
-  GeometricState *get_geometric_state() const override {
-    try {
-      return py_behavior.cast<GeometricState *>();
-    } catch (const py::cast_error &e) {
-      return nullptr;
-    }
-  }
+  // GeometricState *get_geometric_state() const override {
+  //   try {
+  //     return py_behavior.cast<GeometricState *>();
+  //   } catch (const py::cast_error &e) {
+  //     return nullptr;
+  //   }
+  // }
 
  private:
   py::object py_kinematics;

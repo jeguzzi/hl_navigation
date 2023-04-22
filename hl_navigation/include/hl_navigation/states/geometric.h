@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "hl_navigation/common.h"
+#include "hl_navigation/state.h"
 #include "hl_navigation_export.h"
 
 namespace hl_navigation {
@@ -195,10 +196,10 @@ inline std::ostream& operator<<(std::ostream& os, const LineSegment& line) {
   return os;
 }
 
-class HL_NAVIGATION_EXPORT GeometricState : protected TrackChanges {
+class HL_NAVIGATION_EXPORT GeometricState : public TrackChanges, virtual public EnvironmentState {
  public:
   GeometricState()
-      : TrackChanges(), static_obstacles(), neighbors(), line_obstacles() {}
+      : EnvironmentState(), TrackChanges(), static_obstacles(), neighbors(), line_obstacles() {}
 
   virtual ~GeometricState() = default;
 
