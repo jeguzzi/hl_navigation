@@ -10,8 +10,13 @@ Welcome to hl_navigation's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   hl_navigation_api
-   hl_navigation_py_api
+   playground
+   introduction
+   installation
+   tutorials/index
+   guides/index
+   reference
+
 
 Indices and tables
 ==================
