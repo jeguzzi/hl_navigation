@@ -14,6 +14,8 @@ namespace hl_navigation {
  * @brief      Dummy behavior that ignores obstacles.
  *
  * Mainly useful to test the interaction with other components
+ * 
+ * *State*: empty
  */
 class HL_NAVIGATION_EXPORT DummyBehavior : public Behavior {
  public:

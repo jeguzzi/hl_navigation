@@ -25,9 +25,10 @@ namespace hl_navigation {
  *
  * A wrapper of the open-source implementation from
  * http://gamma.cs.unc.edu/HRVO/
+ * 
+ * *State*: \ref GeometricState 
  */
-class HL_NAVIGATION_EXPORT HRVOBehavior : public Behavior,
-                                          public GeometricState {
+class HL_NAVIGATION_EXPORT HRVOBehavior : public Behavior {
  public:
   /**
    * @brief      Contruct a new instance

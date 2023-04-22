@@ -42,7 +42,7 @@ void HRVOBehavior::prepare() {
   _HRVOAgent->maxSpeed_ = optimal_speed;
   _HRVOAgent->uncertaintyOffset_ = 0;
 
-  if (state.changed(NEIGHBORS | STATIC_OBSTACLES) ||
+  if (state.changed(GeometricState::NEIGHBORS | GeometricState::STATIC_OBSTACLES) ||
       Behavior::changed(POSITION | RADIUS | SAFETY_MARGIN)) {
     _HRVOAgent->neighbors_.clear();
     for (uint i = 0; i < _HRVOAgent->obstacles_.size(); i++) {

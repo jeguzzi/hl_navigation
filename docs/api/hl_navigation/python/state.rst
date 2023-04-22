@@ -2,6 +2,12 @@
 Environment State
 =================
 
+Base class
+==========
+
+.. autoclass:: hl_navigation._hl_navigation.EnvironmentState
+    :members:
+
 Geometric
 =========
 

@@ -260,7 +260,6 @@ class HL_NAVIGATION_EXPORT GeometricState : public TrackChanges, virtual public 
     change(LINE_OBSTACLES);
   }
 
- protected:
   enum {
     NEIGHBORS = 1 << 0,
     STATIC_OBSTACLES = 1 << 1,

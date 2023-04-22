@@ -2,6 +2,17 @@
 Environment State
 =================
 
+Base class
+==========
+
+.. code-block:: cpp
+   
+   #include "hl_navigation/state.h"
+
+.. doxygenstruct:: hl_navigation::EnvironmentState
+    :members:
+
+
 Geometric
 =========
 

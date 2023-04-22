@@ -134,7 +134,7 @@ void ORCABehavior::prepare() {
   _RVOAgent->prefVelocity_ = t * _RVOAgent->maxSpeed_ / abs(t);
 
   const float rangeSq = (horizon * 2) * (horizon * 2);
-  if (state.changed(LINE_OBSTACLES)) {
+  if (state.changed(GeometricState::LINE_OBSTACLES)) {
     rvo_obstacles.clear();
     _RVOAgent->obstacleNeighbors_.clear();
     for (auto &line : state.get_line_obstacles()) {
@@ -145,7 +145,7 @@ void ORCABehavior::prepare() {
       _RVOAgent->insertObstacleNeighbor(obstacle.get(), rangeSq);
     }
   }
-  if (state.changed(STATIC_OBSTACLES | NEIGHBORS)) {
+  if (state.changed(GeometricState::STATIC_OBSTACLES | GeometricState::NEIGHBORS)) {
     _RVOAgent->agentNeighbors_.clear();
     rvo_neighbors.clear();
     for (const auto &n : state.get_neighbors()) {

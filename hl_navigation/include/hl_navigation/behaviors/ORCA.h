@@ -28,9 +28,10 @@ namespace hl_navigation {
  * http://gamma.cs.unc.edu/RVO2/
  *
  * *Properties*: time_horizon (int), effective_center (bool)
+ * 
+ * *State*: \ref GeometricState 
  */
-class HL_NAVIGATION_EXPORT ORCABehavior : public Behavior,
-                                          public GeometricState {
+class HL_NAVIGATION_EXPORT ORCABehavior : public Behavior {
  public:
   /**
    * @brief      Contruct a new instance

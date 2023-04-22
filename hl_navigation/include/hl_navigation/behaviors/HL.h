@@ -31,8 +31,10 @@ namespace hl_navigation {
  *     vol., no., pp.423,430, 6-10 May 2013
  *     
  * *Properties*: tau (float), eta (float), aperture (float), resolution(int)  
+ * 
+ * *State*: \ref GeometricState 
  */
-class HL_NAVIGATION_EXPORT HLBehavior : public Behavior, public GeometricState {
+class HL_NAVIGATION_EXPORT HLBehavior : public Behavior {
  public:
   /**
    * Default \f$\eta\f$
