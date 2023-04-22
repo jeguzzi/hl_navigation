@@ -101,11 +101,7 @@ struct convert<Behavior> {
     if (k) {
       node["kinematics"] = *k;
     }
-    try {
-      const GeometricState& state = dynamic_cast<const GeometricState&>(rhs);
-      node["social_margin"] = state.social_margin;
-    } catch (std::bad_cast) {
-    }
+    node["social_margin"] = rhs.social_margin;
     return node;
   }
   static bool decode(const Node& node, Behavior& rhs) {
@@ -132,11 +128,7 @@ struct convert<Behavior> {
       rhs.set_heading_behavior(node["heading"].as<Behavior::Heading>());
     }
     if (node["social_margin"]) {
-      try {
-        GeometricState& state = dynamic_cast<GeometricState&>(rhs);
-        state.social_margin = node["social_margin"].as<SocialMargin>();
-      } catch (std::bad_cast) {
-      }
+      rhs.social_margin = node["social_margin"].as<SocialMargin>();
     }
     return true;
   }

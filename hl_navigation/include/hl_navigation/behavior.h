@@ -17,6 +17,7 @@
 #include "hl_navigation/property.h"
 #include "hl_navigation/register.h"
 #include "hl_navigation_export.h"
+#include "hl_navigation/social_margin.h"
 
 namespace hl_navigation {
 
@@ -131,6 +132,7 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
   Behavior(std::shared_ptr<Kinematics> kinematics = nullptr,
            float radius = 0.0f)
       : TrackChanges(),
+        social_margin(),
         kinematics(kinematics),
         radius(radius),
         pose(),
@@ -784,6 +786,11 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
     }
     return {};
   }
+
+  /**
+   * The behavior social margin modulation
+   */
+  SocialMargin social_margin;
 
  protected:
   enum {

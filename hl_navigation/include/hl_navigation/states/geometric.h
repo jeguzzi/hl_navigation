@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "hl_navigation/common.h"
-#include "hl_navigation/social_margin.h"
 #include "hl_navigation_export.h"
 
 namespace hl_navigation {
@@ -199,7 +198,7 @@ inline std::ostream& operator<<(std::ostream& os, const LineSegment& line) {
 class HL_NAVIGATION_EXPORT GeometricState : protected TrackChanges {
  public:
   GeometricState()
-      : TrackChanges(), social_margin(), static_obstacles(), neighbors(), line_obstacles() {}
+      : TrackChanges(), static_obstacles(), neighbors(), line_obstacles() {}
 
   virtual ~GeometricState() = default;
 
@@ -259,8 +258,6 @@ class HL_NAVIGATION_EXPORT GeometricState : protected TrackChanges {
     line_obstacles = value;
     change(LINE_OBSTACLES);
   }
-
-  SocialMargin social_margin;
 
  protected:
   enum {

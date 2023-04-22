@@ -450,6 +450,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
                     DOC(hl_navigation_Behavior, property_orientation))
       .def_property("default_cmd_frame", &Behavior::default_cmd_frame, nullptr,
                     DOC(hl_navigation_Behavior, default_cmd_frame))
+      .def_readonly("social_margin", &Behavior::social_margin,
+                    DOC(hl_navigation_Behavior, social_margin))
       .def_property(
           "twist", [](const Behavior &self) { return self.get_twist(); },
           &Behavior::set_twist, DOC(hl_navigation_Behavior, property_twist))
@@ -510,7 +512,6 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .def_property("target_angular_speed", &Behavior::get_target_angular_speed,
                     &Behavior::set_target_angular_speed,
                     DOC(hl_navigation_Behavior, property_target_angular_speed))
-
       .def("cmd_twist",
            py::overload_cast<float, Behavior::Mode, std::optional<bool>, bool>(
                &Behavior::cmd_twist),
@@ -537,8 +538,6 @@ PYBIND11_MODULE(_hl_navigation, m) {
   py::class_<GeometricState, std::shared_ptr<GeometricState>>(
       m, "GeometricState", DOC(hl_navigation_GeometricState))
       .def(py::init<>(), DOC(hl_navigation_GeometricState, GeometricState))
-      .def_readonly("social_margin", &GeometricState::social_margin,
-                    DOC(hl_navigation_GeometricState, social_margin))
       .def_property("neighbors", &GeometricState::get_neighbors,
                     &GeometricState::set_neighbors,
                     DOC(hl_navigation_GeometricState, property_neighbors))
