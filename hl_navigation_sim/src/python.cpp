@@ -7,16 +7,23 @@
 
 #include <vector>
 
+#include "docstrings.h"
 #include "hl_navigation/behavior.h"
-#include "hl_navigation/kinematic.h"
+#include "hl_navigation/kinematics.h"
 #include "hl_navigation/yaml/yaml.h"
 #include "hl_navigation_py/register.h"
 #include "hl_navigation_py/yaml.h"
 #include "hl_navigation_sim/experiment.h"
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim/scenarios/antipodal.h"
+#include "hl_navigation_sim/scenarios/corridor.h"
+#include "hl_navigation_sim/scenarios/cross.h"
+#include "hl_navigation_sim/scenarios/cross_torus.h"
 #include "hl_navigation_sim/scenarios/simple.h"
-#include "hl_navigation_sim/scenarios/simple_with_init.h"
+#include "hl_navigation_sim/state_estimation.h"
+#include "hl_navigation_sim/state_estimations/geometric_bounded.h"
+#include "hl_navigation_sim/task.h"
+#include "hl_navigation_sim/tasks/waypoints.h"
 #include "hl_navigation_sim/world.h"
 #include "hl_navigation_sim/yaml/experiment.h"
 #include "hl_navigation_sim/yaml/scenario.h"
@@ -48,19 +55,19 @@ struct PyBehavior : public Behavior {
   }
 };
 
-struct PyKinematic : public Kinematic {
+struct PyKinematics : public Kinematics {
   using C = py::object;
-  using Native = Kinematic;
+  using Native = Kinematics;
 
   static py::object make_type(const std::string &type) {
     py::module_ nav = py::module_::import("hl_navigation");
-    return nav.attr("Kinematic").attr("make_type")(type);
+    return nav.attr("Kinematics").attr("make_type")(type);
   }
 
   // Should cache
   static std::map<std::string, Properties> type_properties() {
     py::module_ nav = py::module_::import("hl_navigation");
-    auto value = nav.attr("Kinematic").attr("type_properties");
+    auto value = nav.attr("Kinematics").attr("type_properties");
     return value.cast<std::map<std::string, Properties>>();
   }
 };
@@ -71,8 +78,8 @@ struct PyTask : Task, virtual PyHasRegister<Task> {
   using PyHasRegister<Task>::C;
   using Native = Task;
 
-  void update(Agent *agent) override {
-    PYBIND11_OVERRIDE(void, Task, update, agent);
+  void update(Agent *agent, World *world, float time) override {
+    PYBIND11_OVERRIDE(void, Task, update, agent, world, time);
   }
 
   bool done() const override { PYBIND11_OVERRIDE(bool, Task, done); }
@@ -93,12 +100,12 @@ struct PyStateEstimation : StateEstimation,
   using PyHasRegister<StateEstimation>::C;
   using Native = StateEstimation;
 
-  void update(Agent *agent) const override {
-    PYBIND11_OVERRIDE(void, StateEstimation, update, agent);
+  void update(Agent *agent, World *world) const override {
+    PYBIND11_OVERRIDE(void, StateEstimation, update, agent, world);
   }
 
-  void prepare(Agent *agent) const override {
-    PYBIND11_OVERRIDE(void, StateEstimation, prepare, agent);
+  void prepare(Agent *agent, World *world) const override {
+    PYBIND11_OVERRIDE(void, StateEstimation, prepare, agent, world);
   }
 
   const Properties &get_properties() const override {
@@ -113,7 +120,7 @@ struct PyStateEstimation : StateEstimation,
 class PyAgent : public Agent {
  public:
   using B = PyBehavior;
-  using K = PyKinematic;
+  using K = PyKinematics;
   using T = PyTask;
   using S = PyStateEstimation;
 
@@ -122,12 +129,12 @@ class PyAgent : public Agent {
   using C = py::object;
 
   PyAgent(float radius = 0.0f, const py::object &behavior = py::none(),
-          const py::object &kinematic = py::none(),
+          const py::object &kinematics = py::none(),
           const py::object &task = py::none(),
           const py::object &estimation = py::none(),
           float control_period = 0.0f, unsigned id = 0)
       : Agent(radius, nullptr, nullptr, nullptr, nullptr, control_period, id) {
-    set_kinematic(kinematic);
+    set_kinematics(kinematics);
     set_behavior(behavior);
     set_state_estimation(estimation);
     set_task(task);
@@ -135,16 +142,16 @@ class PyAgent : public Agent {
 
   static py::object make(float radius = 0.0f,
                          const py::object &behavior = py::none(),
-                         const py::object &kinematic = py::none(),
+                         const py::object &kinematics = py::none(),
                          const py::object &task = py::none(),
                          const py::object &estimation = py::none(),
                          float control_period = 0.0f, unsigned id = 0) {
-    auto a = std::make_shared<PyAgent>(radius, behavior, kinematic, task,
+    auto a = std::make_shared<PyAgent>(radius, behavior, kinematics, task,
                                        estimation, control_period, id);
 #if 0
     auto a = std::make_shared<PyAgent>(radius, nullptr, nullptr, nullptr,
                                        nullptr, control_period, id);
-    a->set_kinematic(kinematic);
+    a->set_kinematics(kinematics);
     a->set_behavior(behavior);
     a->set_state_estimation(estimation);
     a->set_task(task);
@@ -152,17 +159,9 @@ class PyAgent : public Agent {
     return py::cast(a);
   }
 
-  GeometricState *get_geometric_state() const override {
-    try {
-      return py_behavior.cast<GeometricState *>();
-    } catch (const py::cast_error &e) {
-      return nullptr;
-    }
-  }
-
-  void set_kinematic(const py::object &obj) {
-    py_kinematic = obj;
-    Agent::set_kinematic(obj.cast<std::shared_ptr<Kinematic>>());
+  void set_kinematics(const py::object &obj) {
+    py_kinematics = obj;
+    Agent::set_kinematics(obj.cast<std::shared_ptr<Kinematics>>());
   }
 
   void set_behavior(const py::object &obj) {
@@ -180,8 +179,16 @@ class PyAgent : public Agent {
     Agent::set_task(obj.cast<std::shared_ptr<Task>>());
   }
 
+  GeometricState *get_geometric_state() const override {
+    try {
+      return py_behavior.cast<GeometricState *>();
+    } catch (const py::cast_error &e) {
+      return nullptr;
+    }
+  }
+
  private:
-  py::object py_kinematic;
+  py::object py_kinematics;
   py::object py_behavior;
   py::object py_state_estimation;
   py::object py_task;
@@ -200,6 +207,19 @@ struct PyWorld : public World {
     py_agents.push_back(value);
     std::shared_ptr<Agent> agent = value.cast<std::shared_ptr<Agent>>();
     World::add_agent(agent);
+  }
+};
+
+struct PyGroup : public virtual Scenario::Group {
+  /* Inherit the constructors */
+  PyGroup(){};
+
+  void add_to_world(World *world) override {
+    PYBIND11_OVERRIDE_PURE(void, Scenario::Group, add_to_world, world);
+  }
+
+  void reset() override {
+    PYBIND11_OVERRIDE_PURE(void, Scenario::Group, reset);
   }
 };
 
@@ -252,20 +272,20 @@ struct convert<PyAgent> {
   }
   static bool decode(const Node &node, PyAgent &rhs) {
     if (convert<Agent>::decode(node, static_cast<Agent &>(rhs))) {
-      if (!rhs.nav_behavior && node["navigation_behavior"]) {
-        auto value = load_node<PyBehavior>(node["navigation_behavior"]);
+      if (!rhs.get_behavior() && node["behavior"]) {
+        auto value = load_node_py<PyBehavior>(node["behavior"]);
         rhs.set_behavior(value);
       }
-      if (!rhs.kinematic && node["kinematic"]) {
-        auto value = load_node<PyKinematic>(node["kinematic"]);
-        rhs.set_kinematic(value);
+      if (!rhs.get_kinematics() && node["kinematics"]) {
+        auto value = load_node_py<PyKinematics>(node["kinematics"]);
+        rhs.set_kinematics(value);
       }
-      if (!rhs.task && node["task"]) {
-        auto value = load_node<PyTask>(node["task"]);
+      if (!rhs.get_task() && node["task"]) {
+        auto value = load_node_py<PyTask>(node["task"]);
         rhs.set_task(value);
       }
-      if (!rhs.state_estimation && node["state_estimation"]) {
-        auto value = load_node<PyStateEstimation>(node["state_estimation"]);
+      if (!rhs.get_state_estimation() && node["state_estimation"]) {
+        auto value = load_node_py<PyStateEstimation>(node["state_estimation"]);
         rhs.set_state_estimation(value);
       }
       return true;
@@ -318,14 +338,14 @@ std::string dump_scenario(Scenario *sampler) {
 // TODO(move to PyExperiment that creates a PyWorld instead of a World)
 // Experiment load_experiment(const Node &node) {
 //   Experiment experiment;
-//   convert_experiment<PyAgent, PyBehavior, PyKinematic, PyTask,
+//   convert_experiment<PyAgent, PyBehavior, PyKinematics, PyTask,
 //                      PyStateEstimation, PyWorld>::decode(node, experiment);
 //   return experiment;
 // };
 
 // std::string dump_experiment(const Experiment *experiment) {
 //   if (!experiment) return "";
-//   // const auto node = convert_experiment<PyAgent, PyBehavior, PyKinematic,
+//   // const auto node = convert_experiment<PyAgent, PyBehavior, PyKinematics,
 //   // PyTask,
 //   //                    PyStateEstimation,
 //   //                    PyWorld>::encode(*experiment);
@@ -340,14 +360,14 @@ struct convert<PyExperiment> {
   static Node encode(const PyExperiment &rhs) {
     Node node = convert_experiment::encode(rhs);
     if (rhs.scenario) {
-      node["world"] = convert_scenario<PyWorld>::encode(*rhs.scenario);
+      node["scenario"] = convert_scenario<PyWorld>::encode(*rhs.scenario);
     }
     return node;
   }
   static bool decode(const Node &node, PyExperiment &rhs) {
     if (convert_experiment::decode(node, rhs)) {
-      if (node["world"]) {
-        rhs.set_scenario(load_scenario(node["world"]));
+      if (node["scenario"]) {
+        rhs.set_scenario(load_scenario(node["scenario"]));
       }
       return true;
     }
@@ -357,274 +377,748 @@ struct convert<PyExperiment> {
 
 }  // namespace YAML
 
+static unsigned empty_unsigned_buffer[1];
+static py::memoryview empty_unsigned_view = py::memoryview::from_buffer(
+    empty_unsigned_buffer, {0}, {static_cast<unsigned>(sizeof(unsigned))});
+
+static float empty_float_buffer[1];
+static py::memoryview empty_float_view = py::memoryview::from_buffer(
+    empty_float_buffer, {0}, {static_cast<unsigned>(sizeof(float))});
+
+static py::memoryview trace_view(const Trace *trace, const float *data) {
+  const std::array<ssize_t, 3> shape{trace->steps, trace->number, 3};
+  const std::array<ssize_t, 3> strides{
+      static_cast<ssize_t>(sizeof(float) * 3 * trace->number),
+      3 * sizeof(float), sizeof(float)};
+  return py::memoryview::from_buffer(data, shape, strides);
+}
+
 PYBIND11_MODULE(_hl_navigation_sim, m) {
   declare_register<StateEstimation>(m, "StateEstimation");
   declare_register<Task>(m, "Task");
   declare_register<Scenario>(m, "Scenario");
   //  declare_register<PScenario>(m, "Scenario");
 
-  py::class_<Entity, std::shared_ptr<Entity>>(m, "Entity")
-    .def_readonly("_uid", &Entity::uid);
+  py::class_<Entity, std::shared_ptr<Entity>>(m, "Entity",
+                                              DOC(hl_navigation_sim_Entity))
+      .def_readonly("_uid", &Entity::uid, DOC(hl_navigation_sim_Entity, uid));
 
-  py::class_<Wall, Entity, std::shared_ptr<Wall>>(m, "Wall")
-    .def_readonly("line", &Wall::line);
+  py::class_<Wall, Entity, std::shared_ptr<Wall>>(m, "Wall",
+                                                  DOC(hl_navigation_sim_Wall))
+      .def(py::init<Vector2, Vector2>(), py::arg("p1"), py::arg("p2"),
+           DOC(hl_navigation_sim_Wall, Wall))
+      .def(py::init<LineSegment>(), py::arg("line"),
+           DOC(hl_navigation_sim_Wall, Wall, 3))
+      .def_readwrite("line", &Wall::line, DOC(hl_navigation_sim_Wall, line));
 
-  py::class_<Obstacle, Entity, std::shared_ptr<Obstacle>>(m, "Obstacle")
-    .def_readonly("disc", &Obstacle::disc);
+  py::class_<Obstacle, Entity, std::shared_ptr<Obstacle>>(
+      m, "Obstacle", DOC(hl_navigation_sim_Obstacle))
+      .def(py::init<Vector2, float>(), py::arg("position"), py::arg("radius"),
+           DOC(hl_navigation_sim_Obstacle, Obstacle))
+      .def(py::init<Disc>(), py::arg("disc"),
+           DOC(hl_navigation_sim_Obstacle, Obstacle, 3))
+      .def_readwrite("disc", &Obstacle::disc,
+                     DOC(hl_navigation_sim_Obstacle, disc));
 
-  py::class_<Agent, Entity, std::shared_ptr<Agent>>(m, "NativeAgent")
-      .def_readwrite("id", &Agent::id)
-      .def_readwrite("type", &Agent::type)
-      .def_readwrite("radius", &Agent::radius)
-      .def_readwrite("control_period", &Agent::control_period)
-      .def_readwrite("pose", &Agent::pose)
+  py::class_<BoundingBox>(m, "BoundingBox", "A rectangular region")
+      .def(py::init<float, float, float, float>(), py::arg("min_x"),
+           py::arg("max_x"), py::arg("min_y"), py::arg("max_x"),
+           R"doc(
+Creates a rectangular region
+
+:param min_x:
+    Minimal x coordinates
+:param max_x:
+    Maximal x coordinate
+:param min_y:
+    Minimal y coordinate
+:param max_y:
+    Maximal y coordinate
+           )doc");
+
+  py::class_<Agent, Entity, std::shared_ptr<Agent>>(
+      m, "NativeAgent", DOC(hl_navigation_sim_Agent))
+      .def_readwrite("id", &Agent::id, DOC(hl_navigation_sim_Agent, id))
+      .def_readwrite("type", &Agent::type, DOC(hl_navigation_sim_Agent, type))
+      .def_readwrite("radius", &Agent::radius,
+                     DOC(hl_navigation_sim_Agent, radius))
+      .def_readwrite("control_period", &Agent::control_period,
+                     DOC(hl_navigation_sim_Agent, control_period))
+      .def_readwrite("pose", &Agent::pose, DOC(hl_navigation_sim_Agent, pose))
+      .def_readwrite("twist", &Agent::twist,
+                     DOC(hl_navigation_sim_Agent, twist))
+      .def_readwrite("cmd_twist", &Agent::cmd_twist,
+                     DOC(hl_navigation_sim_Agent, cmd_twist))
+      .def_readonly("tags", &Agent::tags, DOC(hl_navigation_sim_Agent, tags))
       .def_property(
           "position", [](const Agent *agent) { return agent->pose.position; },
           [](Agent *agent, const Vector2 &value) {
             agent->pose.position = value;
-          })
+          },
+          "Position")
       .def_property(
           "orientation",
           [](const Agent *agent) { return agent->pose.orientation; },
           [](Agent *agent, const float value) {
             agent->pose.orientation = value;
-          })
-      .def_readwrite("twist", &Agent::twist)
+          },
+          "Orientation")
       .def_property(
           "velocity", [](const Agent *agent) { return agent->twist.velocity; },
           [](Agent *agent, const Vector2 &value) {
             agent->twist.velocity = value;
-          })
+          },
+          "Velocity")
       .def_property(
           "angular_speed",
           [](const Agent *agent) { return agent->twist.angular_speed; },
           [](Agent *agent, const float value) {
             agent->twist.angular_speed = value;
-          })
-      .def_readwrite("cmd_twist", &Agent::cmd_twist)
-      .def_readonly("nav_controller", &Agent::nav_controller)
+          },
+          "Angular speed")
+      .def_property("controller", &Agent::get_controller, nullptr,
+                    py::return_value_policy::reference,
+                    DOC(hl_navigation_sim_Agent, property_controller))
       // .def_readwrite("task", &Agent::task)
-      .def_property(
-          "task", [](const Agent *agent) { return agent->task; },
-          py::cpp_function(
-              [](Agent *agent, const std::shared_ptr<Task> &value) {
-                agent->task = value;
-              },
-              py::keep_alive<1, 2>()))
+      .def_property("task",
+                    py::cpp_function(&Agent::get_task,
+                                     py::return_value_policy::reference),
+                    py::cpp_function(&Agent::set_task, py::keep_alive<1, 2>()),
+                    DOC(hl_navigation_sim_Agent, property_task))
       // .def_readwrite("state_estimation", &Agent::state_estimation)
+      .def_property("state_estimation",
+                    py::cpp_function(&Agent::get_state_estimation,
+                                     py::return_value_policy::reference),
+                    py::cpp_function(&Agent::set_state_estimation,
+                                     py::keep_alive<1, 2>()),
+                    DOC(hl_navigation_sim_Agent, property_state_estimation))
+      // .def_readwrite("behavior", &Agent::behavior)
       .def_property(
-          "state_estimation",
-          [](const Agent *agent) { return agent->state_estimation; },
-          py::cpp_function(
-              [](Agent *agent, const std::shared_ptr<StateEstimation> &value) {
-                agent->state_estimation = value;
-              },
-              py::keep_alive<1, 2>()))
-      // .def_readwrite("nav_behavior", &Agent::nav_behavior)
+          "behavior",
+          py::cpp_function(&Agent::get_behavior,
+                           py::return_value_policy::reference),
+          py::cpp_function(&Agent::set_behavior, py::keep_alive<1, 2>()),
+          DOC(hl_navigation_sim_Agent, property_behavior))
+      // .def_readwrite("kinematics", &Agent::kinematics)
       .def_property(
-          "nav_behavior",
-          [](const Agent *agent) { return agent->nav_behavior; },
-          py::cpp_function(
-              [](Agent *agent, const std::shared_ptr<Behavior> &value) {
-                agent->nav_behavior = value;
-              },
-              py::keep_alive<1, 2>()))
-      // .def_readwrite("kinematic", &Agent::kinematic)
-      .def_property(
-          "kinematic", [](const Agent *agent) { return agent->kinematic; },
-          py::cpp_function(
-              [](Agent *agent, const std::shared_ptr<Kinematic> &value) {
-                agent->kinematic = value;
-              },
-              py::keep_alive<1, 2>()));
+          "kinematics",
+          py::cpp_function(&Agent::get_kinematics,
+                           py::return_value_policy::reference),
+          py::cpp_function(&Agent::set_kinematics, py::keep_alive<1, 2>()),
+          DOC(hl_navigation_sim_Agent, property_kinematics))
+      .def_property("idle", &Agent::idle, nullptr,
+                    DOC(hl_navigation_sim_Agent, idle));
 
-  py::class_<PyAgent, Agent, Entity, std::shared_ptr<PyAgent>>(m, "Agent",
-                                                       py::dynamic_attr())
-      .def(py::init<float, const py::object &,
-                    const py::object &,const py::object &,
-                    const py::object &, float, unsigned>(),
+  py::class_<PyAgent, Agent, Entity, std::shared_ptr<PyAgent>>(
+      m, "Agent", py::dynamic_attr(), DOC(hl_navigation_sim_Agent))
+      .def(py::init<float, const py::object &, const py::object &,
+                    const py::object &, const py::object &, float, unsigned>(),
            py::arg("radius") = 0.0f, py::arg("behavior") = py::none(),
-           py::arg("kinematic") = py::none(), py::arg("task") = py::none(),
+           py::arg("kinematics") = py::none(), py::arg("task") = py::none(),
            py::arg("state_estimation") = py::none(),
-           py::arg("control_period") = 0.0f, py::arg("id") = 0)
-      #if 0
+           py::arg("control_period") = 0.0f, py::arg("id") = 0,
+           DOC(hl_navigation_sim_Agent, Agent))
+#if 0
       .def(py::init<float, std::shared_ptr<Behavior>,
-                    std::shared_ptr<Kinematic>, std::shared_ptr<Task>,
+                    std::shared_ptr<Kinematics>, std::shared_ptr<Task>,
                     std::shared_ptr<StateEstimation>, float, unsigned>(),
            py::arg("radius") = 0.0f, py::arg("behavior") = nullptr,
-           py::arg("kinematic") = nullptr, py::arg("task") = nullptr,
+           py::arg("kinematics") = nullptr, py::arg("task") = nullptr,
            py::arg("state_estimation") = nullptr,
            py::arg("control_period") = 0.0f, py::arg("id") = 0)
-      #endif
+#endif
       .def_property("task", &PyAgent::get_task, &PyAgent::set_task)
       .def_property("state_estimation", &PyAgent::get_state_estimation,
                     &PyAgent::set_state_estimation)
-      .def_property("nav_behavior", &PyAgent::get_behavior,
-                    &PyAgent::set_behavior)
-      .def_property("kinematic", &PyAgent::get_kinematic,
-                    &PyAgent::set_kinematic)
+      .def_property("behavior", &PyAgent::get_behavior, &PyAgent::set_behavior)
+      .def_property("kinematics", &PyAgent::get_kinematics,
+                    &PyAgent::set_kinematics)
       .def_property("controller", &PyAgent::get_controller, nullptr,
                     py::return_value_policy::reference);
 
-  py::class_<BoundingBox>(m, "BoundingBox")
-      .def(py::init<float, float, float, float>());
+  py::class_<World, std::shared_ptr<World>>(m, "NativeWorld",
+                                            DOC(hl_navigation_sim_World, 2))
+      .def(py::init<>(), DOC(hl_navigation_sim_World, World))
+      .def("update", &World::update, py::arg("time_step"),
+           DOC(hl_navigation_sim_World, update))
+      .def("run", &World::run, py::arg("steps"), py::arg("time_step"),
+           DOC(hl_navigation_sim_World, run))
+      .def_property("time", &World::get_time, nullptr,
+                    DOC(hl_navigation_sim_World, property_time))
+      .def_property("step", &World::get_step, nullptr,
+                    DOC(hl_navigation_sim_World, property_step))
+      .def("add_agent", &World::add_agent, py::keep_alive<1, 2>(),
+           py::arg("agent"), DOC(hl_navigation_sim_World, add_agent))
+      .def("add_obstacle",
+           py::overload_cast<const Disc &>(&World::add_obstacle),
+           py::arg("disc"), DOC(hl_navigation_sim_World, add_obstacle))
+      .def("add_obstacle",
+           py::overload_cast<const Obstacle &>(&World::add_obstacle),
+           py::arg("obstacle"), DOC(hl_navigation_sim_World, add_obstacle, 2))
+      .def("add_wall", py::overload_cast<const LineSegment &>(&World::add_wall),
+           py::arg("line"), DOC(hl_navigation_sim_World, add_wall))
+      .def("add_wall", py::overload_cast<const Wall &>(&World::add_wall),
+           py::arg("wall"), DOC(hl_navigation_sim_World, add_wall, 2))
+      .def_property("agents", &World::get_agents, nullptr,
+                    DOC(hl_navigation_sim_World, property_agents))
+      .def_property("walls", &World::get_walls, nullptr,
+                    DOC(hl_navigation_sim_World, property_walls))
+      .def_property("obstacles", &World::get_obstacles, nullptr,
+                    DOC(hl_navigation_sim_World, property_obstacles))
+      .def_property("discs", &World::get_discs, nullptr,
+                    DOC(hl_navigation_sim_World, property_discs))
+      .def_property("line_obstacles", &World::get_line_obstacles, nullptr,
+                    DOC(hl_navigation_sim_World, property_line_obstacles))
+      .def("get_agents_in_region", &World::get_agents_in_region,
+           py::arg("bounding_box"),
+           DOC(hl_navigation_sim_World, get_agents_in_region))
+      .def("get_static_obstacles_in_region",
+           &World::get_static_obstacles_in_region, py::arg("bounding_box"),
+           DOC(hl_navigation_sim_World, get_static_obstacles_in_region))
+      .def("get_line_obstacles_in_region", &World::get_line_obstacles_in_region,
+           py::arg("bounding_box"),
+           DOC(hl_navigation_sim_World, get_line_obstacles_in_region))
+      .def("get_neighbors", &World::get_neighbors, py::arg("agent"),
+           py::arg("distance"), DOC(hl_navigation_sim_World, get_neighbors))
+      .def_property("collisions", &World::get_collisions, nullptr,
+                    DOC(hl_navigation_sim_World, property_collisions))
+      .def("compute_safety_violation", &World::compute_safety_violation,
+           py::arg("agent"),
+           DOC(hl_navigation_sim_World, compute_safety_violation))
+      .def("agents_are_idle", &World::agents_are_idle,
+           DOC(hl_navigation_sim_World, agents_are_idle))
+      .def("space_agents_apart", &World::space_agents_apart,
+           py::arg("minimal_distance") = 0.0f,
+           py::arg("with_safety_margin") = false,
+           py::arg("max_iterations") = 10,
+           DOC(hl_navigation_sim_World, space_agents_apart))
+      .def_static("set_seed", &World::set_seed, py::arg("seed"),
+                  DOC(hl_navigation_sim_World, set_seed))
+      .def("get_entity", &World::get_entity, py::arg("uid"),
+           py::return_value_policy::reference,
+           DOC(hl_navigation_sim_World, get_entity))
+      .def("in_collision", &World::in_collision, py::arg("e1"), py::arg("e2"),
+           DOC(hl_navigation_sim_World, in_collision));
 
-  py::class_<World>(m, "NativeWorld")
-      .def(py::init<>())
-      .def("run", &World::run)
-      .def("add_agent", &World::add_agent, py::keep_alive<1, 2>())
-      .def("add_obstacle", &World::add_obstacle)
-      .def("add_wall", &World::add_wall)
-      .def_readwrite("agents", &World::agents)
-      .def_readwrite("walls", &World::walls)
-      .def_readwrite("obstacles", &World::obstacles)
-      .def("get_neighbors", &World::get_neighbors)
-      .def_property("time", &World::get_time, nullptr)
-      .def("dump",
-           [](const World &world) {
-             YAML::Emitter out;
-             out << YAML::Node(world);
-             return std::string(out.c_str());
-           })
-      .def_static("load", [](const std::string &yaml) {
-        YAML::Node node = YAML::Load(yaml);
-        return node.as<World>();
-      });
-
-  py::class_<PyWorld, World>(m, "World")
-      .def(py::init<>())
-      .def("add_agent", &PyWorld::add_agent);
+  py::class_<PyWorld, World, std::shared_ptr<PyWorld>>(
+      m, "World", DOC(hl_navigation_sim_World))
+      .def(py::init<>(), DOC(hl_navigation_sim_World, World))
+      .def("add_agent", &PyWorld::add_agent,
+           DOC(hl_navigation_sim_World, add_agent));
 
   py::class_<StateEstimation, PyStateEstimation, HasRegister<StateEstimation>,
-             HasProperties, std::shared_ptr<StateEstimation>>(m,
-                                                              "StateEstimation")
-      .def(py::init<World *>(), py::arg("world") = nullptr)
-      .def_readwrite("world", &StateEstimation::world,
-                     py::return_value_policy::reference)
-      .def("update", &StateEstimation::update)
+             HasProperties, std::shared_ptr<StateEstimation>>(
+      m, "StateEstimation", DOC(hl_navigation_sim_StateEstimation))
+      .def(py::init<>(),
+           DOC(hl_navigation_sim_StateEstimation, StateEstimation))
+      // .def_readwrite("world", &StateEstimation::world,
+      //                py::return_value_policy::reference,
+      //                DOC(hl_navigation_sim_StateEstimation, world))
+      // .def("_update", &StateEstimation::update)
+      // .def("_prepare", &StateEstimation::prepare);
       .def_property(
-          "type", [](StateEstimation *obj) { return obj->get_type(); }, nullptr)
-      .def("prepare", &StateEstimation::prepare);
+          "type", [](StateEstimation *obj) { return obj->get_type(); }, nullptr,
+          "The name associated to the type of an object");
 
   py::class_<BoundedStateEstimation, StateEstimation,
-             std::shared_ptr<BoundedStateEstimation>>(m,
-                                                      "BoundedStateEstimation")
-      .def(py::init<World *, float, float>(), py::arg("world") = nullptr,
-           py::arg("field_of_view") = 0.0, py::arg("range_of_view") = 0.0)
-      .def_property("field_of_view", &BoundedStateEstimation::get_field_of_view,
-                    &BoundedStateEstimation::set_field_of_view)
-      .def_property("range_of_view", &BoundedStateEstimation::get_range_of_view,
-                    &BoundedStateEstimation::set_range_of_view)
-      .def("neighbors", &BoundedStateEstimation::neighbors);
+             std::shared_ptr<BoundedStateEstimation>>(
+      m, "BoundedStateEstimation",
+      DOC(hl_navigation_sim_BoundedStateEstimation))
+      .def(
+          py::init<float>(),
+          // py::arg("field_of_view") = 0.0,
+          py::arg("range_of_view") = 0.0,
+          DOC(hl_navigation_sim_BoundedStateEstimation, BoundedStateEstimation))
+      // .def_property("field_of_view",
+      // &BoundedStateEstimation::get_field_of_view,
+      //               &BoundedStateEstimation::set_field_of_view)
+      .def_property(
+          "range_of_view", &BoundedStateEstimation::get_range_of_view,
+          &BoundedStateEstimation::set_range_of_view,
+          DOC(hl_navigation_sim_BoundedStateEstimation, property_range_of_view))
+      .def("_neighbors_of_agent", &BoundedStateEstimation::neighbors_of_agent,
+           py::arg("agent"), py::arg("world"),
+           DOC(hl_navigation_sim_BoundedStateEstimation, neighbors_of_agent));
 
   py::class_<Task, PyTask, HasRegister<Task>, HasProperties,
-             std::shared_ptr<Task>>(m, "Task")
+             std::shared_ptr<Task>>(m, "Task", DOC(hl_navigation_sim_Task))
       .def(py::init<>())
-      .def("update", &Task::update)
+      // .def("update", &Task::update)
       .def_property(
-          "type", [](Task *obj) { return obj->get_type(); }, nullptr)
-      .def("done", &Task::done);
+          "type", [](Task *obj) { return obj->get_type(); }, nullptr,
+          "The name associated to the type of an object")
+      .def("done", &Task::done, DOC(hl_navigation_sim_Task, done))
+      .def("add_callback", &WaypointsTask::add_callback,
+           DOC(hl_navigation_sim_Task, add_callback));
 
-  py::class_<WayPointsTask, Task, std::shared_ptr<WayPointsTask>>(
-      m, "WayPointsTask")
+  py::class_<WaypointsTask, Task, std::shared_ptr<WaypointsTask>>(
+      m, "WaypointsTask", DOC(hl_navigation_sim_WaypointsTask))
       .def(py::init<Waypoints, bool, float>(),
            py::arg("waypoints") = Waypoints{},
-           py::arg("loop") = WayPointsTask::default_loop,
-           py::arg("tolerance") = WayPointsTask::default_tolerance)
-      .def_property("waypoints", &WayPointsTask::get_waypoints,
-                    &WayPointsTask::set_waypoints)
-      .def_property("tolerance", &WayPointsTask::get_tolerance,
-                    &WayPointsTask::set_tolerance)
-      .def("add_callback", &WayPointsTask::add_callback)
-      .def_property("loop", &WayPointsTask::get_loop, &WayPointsTask::set_loop);
+           py::arg("loop") = WaypointsTask::default_loop,
+           py::arg("tolerance") = WaypointsTask::default_tolerance,
+           DOC(hl_navigation_sim_WaypointsTask, WaypointsTask))
+      .def_property("waypoints", &WaypointsTask::get_waypoints,
+                    &WaypointsTask::set_waypoints,
+                    DOC(hl_navigation_sim_WaypointsTask, property_waypoints))
+      .def_property("tolerance", &WaypointsTask::get_tolerance,
+                    &WaypointsTask::set_tolerance,
+                    DOC(hl_navigation_sim_WaypointsTask, property_tolerance))
+      .def_property("loop", &WaypointsTask::get_loop, &WaypointsTask::set_loop,
+                    DOC(hl_navigation_sim_WaypointsTask, property_loop));
 
-  py::class_<PyExperiment>(m, "Experiment")
+  py::class_<Trace>(m, "Trace", DOC(hl_navigation_sim_Trace))
+      .def("index_of_agent", &Trace::index_of_agent, py::arg("agent"),
+           DOC(hl_navigation_sim_Trace, index_of_agent))
+      .def_property(
+          "poses",
+          [](const Trace *trace) {
+            if (trace->record_pose) {
+              return trace_view(trace, trace->pose_data.data());
+            }
+            return empty_float_view;
+          },
+          nullptr, R"doc(
+The recorded poses of the agents
+as a memory view to the floating point buffer::
+
+  [[[agent_0_x, agent_0_y, agent_0_theta], 
+    [agent_1_x, agent_1_y, agent_1_theta], 
+    ...], 
+   ...]
+  
+
+of shape ``(simulation steps, number of agents, 3)``.
+
+The view is empty if poses have 
+not been recorded in the trace.
+)doc")
+      .def_property(
+          "twists",
+          [](const Trace *trace) {
+            if (trace->record_twist) {
+              return trace_view(trace, trace->twist_data.data());
+            }
+            return empty_float_view;
+          },
+          nullptr, R"doc(
+The recorded twist of the agents
+as a memory view to the floating point buffer::
+
+  [[[agent_0_x, agent_0_y, agent_0_theta], 
+    [agent_1_x, agent_1_y, agent_1_theta], 
+    ...], 
+   ...]
+  
+
+of shape ``(simulation steps, number of agents, 3)``.
+
+The view is empty if twist have 
+not been recorded in the trace.
+)doc")
+      .def_property(
+          "targets",
+          [](const Trace *trace) {
+            if (trace->record_target) {
+              return trace_view(trace, trace->target_data.data());
+            }
+            return py::memoryview::from_buffer<float>(trace->target_data.data(),
+                                                      {0}, {0});
+          },
+          nullptr, R"doc(
+The recorded targets of the agents
+as a memory view to the floating point buffer::
+
+  [[[agent_0_x, agent_0_y, agent_0_theta], 
+    [agent_1_x, agent_1_y, agent_1_theta], 
+    ...], 
+   ...]
+  
+of shape ``(simulation steps, number of agents, 3)``.
+
+The view is empty if targets have 
+not been recorded in the trace.
+)doc")
+      .def_property(
+          "commands",
+          [](const Trace *trace) {
+            if (trace->record_cmd) {
+              return trace_view(trace, trace->cmd_data.data());
+            }
+            return empty_float_view;
+          },
+          nullptr, R"doc(
+The recorded commands of the agents
+as a memory view to the floating point buffer::
+    
+  [[[agent_0_x, agent_0_y, agent_0_theta], 
+   [agent_1_x, agent_1_y, agent_1_theta], 
+    ...], 
+   ...]
+
+of shape ``(simulation steps, number of agents, 3)``.
+
+The view is empty if commands have 
+not been recorded in the trace.
+)doc")
+      .def_property(
+          "safety_violations",
+          [](const Trace *trace) {
+            if (trace->record_safety_violation) {
+              const std::array<ssize_t, 2> shape{trace->steps, trace->number};
+              const std::array<ssize_t, 2> strides{
+                  static_cast<ssize_t>(sizeof(float) * trace->number),
+                  sizeof(float)};
+              return py::memoryview::from_buffer(
+                  trace->safety_violation_data.data(), shape, strides);
+            }
+            return empty_float_view;
+          },
+          nullptr, R"doc(
+The recorded amounts of safety violation")
+as a memory view to the floating point buffer::
+
+  [[agent_0_violation, agent_1_violation, ...],
+   ...]
+
+of shape ``(simulation steps, number of agents)`` and
+where a value of 0 represents no violations.
+
+The view is empty if safety violations have 
+not been recorded in the trace.
+)doc")
+      .def_property(
+          "collisions",
+          [](const Trace *trace) {
+            if (trace->record_collisions) {
+              const ssize_t n = trace->collisions_data.size() / 3;
+              const std::array<ssize_t, 2> shape{n, 3};
+              const std::array<ssize_t, 2> strides{sizeof(float) * 3,
+                                                   sizeof(float)};
+              return py::memoryview::from_buffer(trace->collisions_data.data(),
+                                                 shape, strides);
+            }
+            return empty_unsigned_view;
+          },
+          nullptr, R"doc(
+The recorded collisions between pairs of entities as
+a memory view to the uint32 buffer::
+
+  [[time_step, entity 1 uid, entity 1 uid], 
+   ...]
+
+of shape ``(number of collisions, 3)``.
+
+The view is empty if collisions have 
+not been recorded in the trace.
+)doc")
+      .def(
+          "get_task_events",
+          [](const Trace *trace, const Agent *agent) {
+            const auto index = trace->index_of_agent(agent);
+            if (index && trace->record_task_events) {
+              const auto i = *index;
+              const ssize_t n = trace->task_events[i];
+              const auto &data = trace->task_events_data[i];
+              const ssize_t m = n ? data.size() / n : 0;
+              const std::array<ssize_t, 2> shape{n, m};
+              const std::array<ssize_t, 2> strides{
+                  static_cast<ssize_t>(sizeof(float) * m), sizeof(float)};
+              return py::memoryview::from_buffer(data.data(), shape, strides);
+            }
+            return empty_float_view;
+          },
+          R"doc(
+The recorded events logged by the task of an agent 
+as memory view to the floating point buffer::
+
+  [[data_0, ...], 
+   ...]
+
+of shape ``(number events, size of event log)``.
+
+The view is empty if the agent's task has not been recorded in the trace.
+
+:param agent: The agent
+
+:return: The events logged by the agent task
+)doc")
+      .def_readwrite("record_pose", &Trace::record_pose,
+                     DOC(hl_navigation_sim_Trace, record_pose))
+      .def_readwrite("record_twist", &Trace::record_twist,
+                     DOC(hl_navigation_sim_Trace, record_twist))
+      .def_readwrite("record_cmd", &Trace::record_cmd,
+                     DOC(hl_navigation_sim_Trace, record_cmd))
+      .def_readwrite("record_target", &Trace::record_target,
+                     DOC(hl_navigation_sim_Trace, record_target))
+      .def_readwrite("record_safety_violation", &Trace::record_safety_violation,
+                     DOC(hl_navigation_sim_Trace, record_safety_violation))
+      .def_readwrite("record_collisions", &Trace::record_collisions,
+                     DOC(hl_navigation_sim_Trace, record_collisions))
+      .def_readwrite("record_task_events", &Trace::record_task_events,
+                     DOC(hl_navigation_sim_Trace, record_task_events))
+      .def_readonly("number", &Trace::number,
+                    DOC(hl_navigation_sim_Trace, number))
+      .def_readonly("steps", &Trace::steps,
+                    DOC(hl_navigation_sim_Trace, steps));
+
+  py::class_<PyExperiment>(m, "Experiment", DOC(hl_navigation_sim_Experiment))
       .def(py::init<float, int>(), py::arg("time_step") = 0.1,
-           py::arg("steps") = 1000)
-      .def_readwrite("time_step", &Experiment::time_step)
-      .def_readwrite("steps", &Experiment::steps)
+           py::arg("steps") = 1000,
+           DOC(hl_navigation_sim_Experiment, Experiment))
+      .def_readwrite("time_step", &Experiment::time_step,
+                     DOC(hl_navigation_sim_Experiment, time_step))
+      .def_readwrite("steps", &Experiment::steps,
+                     DOC(hl_navigation_sim_Experiment, steps))
+      .def_readonly("trace", &Experiment::trace,
+                    DOC(hl_navigation_sim_Experiment, trace))
       .def_property(
           "scenario", [](const PyExperiment *exp) { return exp->scenario; },
           [](PyExperiment *exp, const std::shared_ptr<Scenario> &value) {
             exp->scenario = value;
-          })
-      .def_readonly("world", &Experiment::world)
-      .def_readwrite("runs", &Experiment::runs)
-      .def_readwrite("save_directory", &Experiment::save_directory)
-      .def_readwrite("name", &Experiment::name)
-      .def_property("path", &Experiment::get_path, nullptr)
-      .def("add_callback", &Experiment::add_callback)
-      .def("run_once", &Experiment::run_once)
-      .def("run", &Experiment::run)
-      .def_property(
-          "record_pose",
-          [](const PyExperiment *exp) { return exp->trace.record_pose; },
-          [](PyExperiment *exp, bool value) { exp->trace.record_pose = value; })
-      .def_property(
-          "record_twist",
-          [](const PyExperiment *exp) { return exp->trace.record_twist; },
-          [](PyExperiment *exp, bool value) {
-            exp->trace.record_twist = value;
-          })
-      .def_property(
-          "record_cmd",
-          [](const PyExperiment *exp) { return exp->trace.record_cmd; },
-          [](PyExperiment *exp, bool value) { exp->trace.record_cmd = value; })
-      .def_property(
-          "record_target",
-          [](const PyExperiment *exp) { return exp->trace.record_target; },
-          [](PyExperiment *exp, bool value) {
-            exp->trace.record_target = value;
-          })
-      .def("run", &Experiment::run);
+          },
+          DOC(hl_navigation_sim_Experiment, scenario))
+      .def_property("world", &Experiment::get_world, nullptr,
+                    DOC(hl_navigation_sim_Experiment, world))
+      .def_readwrite("runs", &Experiment::runs,
+                     DOC(hl_navigation_sim_Experiment, runs))
+      .def_readwrite("save_directory", &Experiment::save_directory,
+                     DOC(hl_navigation_sim_Experiment, save_directory))
+      .def_readwrite("name", &Experiment::name,
+                     DOC(hl_navigation_sim_Experiment, name))
+      .def_property("path", &Experiment::get_path, nullptr,
+                    DOC(hl_navigation_sim_Experiment, property_path))
+      .def("add_callback", &Experiment::add_callback, py::arg("callback"),
+           DOC(hl_navigation_sim_Experiment, add_callback))
+      .def("run_once", &Experiment::run_once, py::arg("seed"),
+           DOC(hl_navigation_sim_Experiment, run_once))
+      .def("run", &Experiment::run, DOC(hl_navigation_sim_Experiment, run));
 
-  py::class_<Scenario, PyScenario, HasRegister<Scenario>, HasProperties,
-             std::shared_ptr<Scenario>>(m, "Scenario")
-      .def(py::init<>())
-      .def("init_world", &Scenario::init_world)
-      // .def("sample", &Scenario::sample)
-      // .def("reset", &Scenario::reset)
-      // .def_readwrite("groups", &Scenario::groups)
-      .def_readwrite("obstacles", &Scenario::obstacles)
-      .def_readwrite("walls", &Scenario::walls)
-      .def_property(
-          "initializers", [](Scenario *ws) { return ws->initializers; },
-          nullptr)
-      .def("add_init", &Scenario::add_init);
+  auto scenario = py::class_<Scenario, PyScenario, HasRegister<Scenario>,
+                             HasProperties, std::shared_ptr<Scenario>>(
+      m, "Scenario", DOC(hl_navigation_sim_Scenario));
+
+  py::class_<Scenario::Group, PyGroup>(scenario, "Group",
+                                       DOC(hl_navigation_sim_Scenario_Group))
+      .def(py::init<>(), "");
+
+  scenario.def(py::init<>())
+      .def("init_world", &Scenario::init_world,
+           DOC(hl_navigation_sim_Scenario, init_world))
+// .def("sample", &Scenario::sample)
+// .def("reset", &Scenario::reset)
+#if 0
+      .def_property("groups", py::cpp_function([](const Scenario *scenario) {
+                      std::vector<Scenario::Group *> gs;
+                      std::transform(scenario->groups.cbegin(),
+                                     scenario->groups.cend(),
+                                     std::back_inserter(gs),
+                                     [](const auto &g) { return g.get(); });
+                      return gs;
+                    }),
+                    nullptr, DOC(hl_navigation_sim_Scenario, obstacles))
+      .def(
+          "add_group",
+          [](Scenario *scenario, py::object &group) {
+            std::unique_ptr<Scenario::Group> g =
+                group.cast<std::unique_ptr<Scenario::Group>>();
+            scenario->groups.push_back(std::move(g));
+          },
+          "Add a group.")
+#endif
+      .def_readwrite("obstacles", &Scenario::obstacles,
+                     DOC(hl_navigation_sim_Scenario, obstacles))
+      .def_readwrite("walls", &Scenario::walls,
+                     DOC(hl_navigation_sim_Scenario, walls))
+      // .def_readwrite("groups", &Scenario::groups,
+      // py::return_value_policy::reference) .def_property("initializers",
+      // &Scenario::get_initializers, nullptr)
+      .def("add_init", &Scenario::add_init,
+           DOC(hl_navigation_sim_Scenario, add_init));
+
+  py::class_<SimpleScenario, Scenario, std::shared_ptr<SimpleScenario>>(
+      m, "SimpleScenario", DOC(hl_navigation_sim_SimpleScenario))
+      .def(py::init<>(), DOC(hl_navigation_sim_SimpleScenario, SimpleScenario));
 
   py::class_<AntipodalScenario, Scenario, std::shared_ptr<AntipodalScenario>>(
-      m, "Antipodal")
-      .def(py::init<>())
+      m, "AntipodalScenario", DOC(hl_navigation_sim_AntipodalScenario))
+      .def(
+          py::init<float, float, float, float, bool>(),
+          py::arg("radius") = AntipodalScenario::default_radius,
+          py::arg("tolerance") = AntipodalScenario::default_tolerance,
+          py::arg("position_noise") = AntipodalScenario::default_position_noise,
+          py::arg("orientation_noise") =
+              AntipodalScenario::default_orientation_noise,
+          py::arg("shuffle") = AntipodalScenario::default_shuffle,
+          DOC(hl_navigation_sim_AntipodalScenario, AntipodalScenario))
       .def_property("radius", &AntipodalScenario::get_radius,
-                    &AntipodalScenario::set_radius)
-      .def_property("tolerance", &AntipodalScenario::get_tolerance,
-                    &AntipodalScenario::set_tolerance);
+                    &AntipodalScenario::set_radius,
+                    DOC(hl_navigation_sim_AntipodalScenario, property_radius))
+      .def_property(
+          "tolerance", &AntipodalScenario::get_tolerance,
+          &AntipodalScenario::set_tolerance,
+          DOC(hl_navigation_sim_AntipodalScenario, property_tolerance))
+      .def_property(
+          "position_noise", &AntipodalScenario::get_position_noise,
+          &AntipodalScenario::set_position_noise,
+          DOC(hl_navigation_sim_AntipodalScenario, property_position_noise))
+      .def_property(
+          "orientation_noise", &AntipodalScenario::get_orientation_noise,
+          &AntipodalScenario::set_orientation_noise,
+          DOC(hl_navigation_sim_AntipodalScenario, property_orientation_noise));
 
-  m.def("load_task", &YAML::load_py<PyTask>);
-  m.def("load_state_estimation", &YAML::load_py<PyStateEstimation>);
-  m.def("load_agent", [](const std::string &yaml) {
-    YAML::Node node = YAML::Load(yaml);
-    return node.as<PyAgent>();
-  });
-  m.def("load_world", [](const std::string &yaml) -> PyWorld {
-    YAML::Node node = YAML::Load(yaml);
-    return YAML::load_world(node);
-  });
-  m.def("load_scenario", [](const std::string &yaml) {
-    YAML::Node node = YAML::Load(yaml);
-    return YAML::load_scenario(node);
-  });
-  m.def("load_experiment", [](const std::string &yaml) {
-    YAML::Node node = YAML::Load(yaml);
-    return node.as<PyExperiment>();
-  });
-  m.def("dump", &YAML::dump<Task>);
-  m.def("dump", &YAML::dump<StateEstimation>);
-  m.def("dump", &YAML::dump<World>);
-  m.def("dump", &YAML::dump_scenario);
+  py::class_<CrossScenario, Scenario, std::shared_ptr<CrossScenario>>(
+      m, "CrossScenario", DOC(hl_navigation_sim_CrossScenario, CrossScenario))
+      .def(py::init<float, float, float, bool, float>(),
+           py::arg("side") = CrossScenario::default_side,
+           py::arg("tolerance") = CrossScenario::default_tolerance,
+           py::arg("agent_margin") = CrossScenario::default_agent_margin,
+           py::arg("add_safety_to_agent_margin") =
+               CrossScenario::default_add_safety_to_agent_margin,
+           py::arg("target_margin") = CrossScenario::default_target_margin,
+           DOC(hl_navigation_sim_CrossScenario))
+      .def_property("side", &CrossScenario::get_side, &CrossScenario::set_side,
+                    DOC(hl_navigation_sim_CrossScenario, property_side))
+      .def_property("tolerance", &CrossScenario::get_tolerance,
+                    &CrossScenario::set_tolerance,
+                    DOC(hl_navigation_sim_CrossScenario, property_tolerance))
+      .def_property("agent_margin", &CrossScenario::get_agent_margin,
+                    &CrossScenario::set_agent_margin,
+                    DOC(hl_navigation_sim_CrossScenario, property_agent_margin))
+      .def_property("add_safety_to_agent_margin",
+                    &CrossScenario::get_add_safety_to_agent_margin,
+                    &CrossScenario::set_add_safety_to_agent_margin,
+                    DOC(hl_navigation_sim_CrossScenario,
+                        property_add_safety_to_agent_margin))
+      .def_property(
+          "target_margin", &CrossScenario::get_target_margin,
+          &CrossScenario::set_target_margin,
+          DOC(hl_navigation_sim_CrossScenario, property_target_margin));
+
+  py::class_<CorridorScenario, Scenario, std::shared_ptr<CorridorScenario>>(
+      m, "CorridorScenario", DOC(hl_navigation_sim_CorridorScenario))
+      .def(py::init<float, float, float, bool>(),
+           py::arg("width") = CorridorScenario::default_width,
+           py::arg("length") = CorridorScenario::default_length,
+           py::arg("agent_margin") = CorridorScenario::default_agent_margin,
+           py::arg("add_safety_to_agent_margin") =
+               CorridorScenario::default_add_safety_to_agent_margin,
+           DOC(hl_navigation_sim_CorridorScenario, CorridorScenario))
+      .def_property("width", &CorridorScenario::get_width,
+                    &CorridorScenario::set_width,
+                    DOC(hl_navigation_sim_CorridorScenario, property_width))
+      .def_property("length", &CorridorScenario::get_length,
+                    &CorridorScenario::set_length,
+                    DOC(hl_navigation_sim_CorridorScenario, property_length))
+      .def_property(
+          "agent_margin", &CorridorScenario::get_agent_margin,
+          &CorridorScenario::set_agent_margin,
+          DOC(hl_navigation_sim_CorridorScenario, property_agent_margin))
+      .def_property("add_safety_to_agent_margin",
+                    &CorridorScenario::get_add_safety_to_agent_margin,
+                    &CorridorScenario::set_add_safety_to_agent_margin,
+                    DOC(hl_navigation_sim_CorridorScenario,
+                        property_add_safety_to_agent_margin));
+
+  py::class_<CrossTorusScenario, Scenario, std::shared_ptr<CrossTorusScenario>>(
+      m, "CrossTorusScenario", DOC(hl_navigation_sim_CrossTorusScenario))
+      .def(py::init<float, float, bool>(),
+           py::arg("side") = CrossTorusScenario::default_side,
+           py::arg("agent_margin") = CrossTorusScenario::default_agent_margin,
+           py::arg("add_safety_to_agent_margin") =
+               CrossTorusScenario::default_add_safety_to_agent_margin,
+           DOC(hl_navigation_sim_CrossTorusScenario, CrossTorusScenario))
+      .def_property("side", &CrossTorusScenario::get_side,
+                    &CrossTorusScenario::set_side,
+                    DOC(hl_navigation_sim_CrossTorusScenario, property_side))
+      .def_property(
+          "agent_margin", &CrossTorusScenario::get_agent_margin,
+          &CrossTorusScenario::set_agent_margin,
+          DOC(hl_navigation_sim_CrossTorusScenario, property_agent_margin))
+      .def_property("add_safety_to_agent_margin",
+                    &CrossTorusScenario::get_add_safety_to_agent_margin,
+                    &CrossTorusScenario::set_add_safety_to_agent_margin,
+                    DOC(hl_navigation_sim_CrossTorusScenario,
+                        property_add_safety_to_agent_margin));
+
+  m.def("load_task", &YAML::load_string_py<PyTask>, py::arg("value"),
+        R"doc(
+Load a task from a YAML string.
+
+:return:
+  The loaded task or ``None`` if loading fails.)doc");
+
+  m.def("load_state_estimation", &YAML::load_string_py<PyStateEstimation>,
+        py::arg("value"),
+        R"doc(
+Load a state estimation from a YAML string.
+
+:return:
+  The loaded state estimation or ``None`` if loading fails.)doc");
+  m.def(
+      "load_agent",
+      [](const std::string &yaml) {
+        YAML::Node node = YAML::Load(yaml);
+        return node.as<PyAgent>();
+      },
+      py::arg("value"),
+      R"doc(
+Load an agent from a YAML string.
+
+:return:
+  The loaded agent or ``None`` if loading fails.)doc");
+  m.def(
+      "load_world",
+      [](const std::string &yaml) -> PyWorld {
+        YAML::Node node = YAML::Load(yaml);
+        return YAML::load_world(node);
+      },
+      py::arg("value"),
+      R"doc(
+Load a world from a YAML string.
+
+:return:
+  The loaded world or ``None`` if loading fails.)doc");
+  m.def(
+      "load_scenario",
+      [](const std::string &yaml) {
+        YAML::Node node = YAML::Load(yaml);
+        return YAML::load_scenario(node);
+      },
+      py::arg("value"),
+      R"doc(
+Load a scenario from a YAML string.
+
+:return:
+  The loaded scenario or ``None`` if loading fails.)doc");
+  m.def(
+      "load_experiment",
+      [](const std::string &yaml) {
+        YAML::Node node = YAML::Load(yaml);
+        return node.as<PyExperiment>();
+      },
+      py::arg("value"),
+      R"doc(
+Load an experiment from a YAML string.
+
+:return:
+  The loaded experiment or ``None`` if loading fails.)doc");
+
+  m.def("dump", &YAML::dump<Task>, py::arg("task"),
+        "Dump a task to a YAML-string");
+  m.def("dump", &YAML::dump<StateEstimation>, py::arg("state_estimation"),
+        "Dump a state_estimation to a YAML-string");
+  m.def("dump", &YAML::dump<World>, py::arg("world"),
+        "Dump a world to a YAML-string");
+  m.def("dump", &YAML::dump_scenario, py::arg("scenario"),
+        "Dump a scenario to a YAML-string");
   // m.def("dump", &YAML::dump<Scenario>);
-  m.def("dump", &YAML::dump<Agent>);
-  m.def("dump", &YAML::dump<PyAgent>);
-  m.def("dump", &YAML::dump<Experiment>);
-  m.def("dump", &YAML::dump<PyExperiment>);
+  m.def("dump", &YAML::dump<Agent>, py::arg("agent"),
+        "Dump an agent to a YAML-string");
+  m.def("dump", &YAML::dump<PyAgent>, py::arg("agent"),
+        "Dump an agent to a YAML-string");
+  m.def("dump", &YAML::dump<Experiment>, py::arg("experiment"),
+        "Dump an experiment to a YAML-string");
+  m.def("dump", &YAML::dump<PyExperiment>, py::arg("experiment"),
+        "Dump an experiment to a YAML-string");
 }

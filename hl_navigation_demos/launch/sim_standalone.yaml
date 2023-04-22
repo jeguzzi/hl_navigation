@@ -4,11 +4,11 @@ time_step: 0.02
 save_directory: '.'
 record_pose: true
 name: StandaloneYAML
-world:
+scenario:
   obstacles:
     - position: [0, 0]
       radius: 0.1
-  agents:
+  groups:
     -
       type: thymio
       number: 2
@@ -18,11 +18,11 @@ world:
       radius: 0.08
       control_period: 0.1
       speed_tolerance: 0.02
-      kinematic:
+      kinematics:
         type: TwoWheeled
         wheel_axis: 0.094
         max_speed: 0.166
-      navigation_behavior:
+      behavior:
         type: HL
         optimal_speed: 0.12
         horizon: 1.0
@@ -30,9 +30,8 @@ world:
       state_estimation:
         type: Bounded
         range_of_view: 1.0
-        field_of_view: 1.0
       task:
-        type: WayPoints
+        type: Waypoints
         waypoints: [[1, 0], [-1, 0]]
         loop: true
         tolerance: 0.2

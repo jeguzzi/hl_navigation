@@ -11,7 +11,7 @@ DiscCache::DiscCache(Vector2 delta, float margin, Vector2 velocity)
       velocity(velocity),
       distance(delta.norm() - margin),
       C(delta.squaredNorm() - margin * margin),
-      gamma(polar_angle(delta)),
+      gamma(orientation_of(delta)),
       visible_angle(M_PI_2) {}
 
 CollisionComputation::CollisionMap

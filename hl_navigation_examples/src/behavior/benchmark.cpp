@@ -54,7 +54,7 @@ void run(const char *behavior = "HL", const char *path_ = "", float radius = 4,
   for (auto &[target, position] : task) {
     for (size_t i = 0; i < number; i++) {
       auto agent = Behavior::make_type(behavior);
-      agent->set_kinematic(std::make_shared<Holonomic>(1.0, 1.0));
+      agent->set_kinematics(std::make_shared<Holonomic>(1.0, 1.0));
       agent->set_radius(0.1);
       agent->set_horizon(1.0);
       agent->set_position(position(i));

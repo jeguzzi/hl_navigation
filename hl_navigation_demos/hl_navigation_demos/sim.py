@@ -14,21 +14,21 @@ class ThymioDemo(sim.Scenario, name="PyThymioDemo"):  # type: ignore[call-arg]
     def init_world(self, world: sim.World) -> None:
         targets = [(1.0, 0.0), (-1.0, 0.0)]
         for i in range(2):
-            task = sim.WayPointsTask(targets, True, 0.2)
+            task = sim.WaypointsTask(targets, True, 0.2)
             se = sim.BoundedStateEstimation(world, 1.0, 1.0)
-            kinematic = nav.kinematics.TwoWheeled(0.166, 0.094)
+            kinematics = nav.kinematics.TwoWheeled(0.166, 0.094)
             behavior = nav.Behavior.make_type(self.behavior_type)
-            agent = sim.Agent(0.08, behavior, kinematic, task, se, 0.02)
-            agent.nav_behavior.optimal_speed = 0.12
-            agent.nav_behavior.horizon = 1.0
-            agent.nav_behavior.safety_margin = 0.02
-            agent.nav_controller.speed_tolerance = 0.01
+            agent = sim.Agent(0.08, behavior, kinematics, task, se, 0.02)
+            agent.behavior.optimal_speed = 0.12
+            agent.behavior.horizon = 1.0
+            agent.behavior.safety_margin = 0.02
+            agent.controller.speed_tolerance = 0.01
             agent.pose = nav.Pose2((-0.5 if i else 0.5, 0.5), 0.0)
             agent.type = "thymio"
             world.add_agent(agent)
         world.add_obstacle(nav.Disc((0.0, 0.0), 0.1))
 
-    @sim.register_property("HL", "Behavior name")
+    @sim.registered_property("HL", "Behavior name")
     def behavior_type(self) -> str:
         return self._behavior_type
 

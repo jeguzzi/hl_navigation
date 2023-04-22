@@ -5,97 +5,66 @@
 #include "hl_navigation_sim/scenarios/cross.h"
 
 #include <memory>
-#include <tuple>
 #include <utility>
 #include <vector>
+
+#include "hl_navigation/common.h"
+#include "hl_navigation/property.h"
+#include "hl_navigation_sim/sampling/sampler.h"
+#include "hl_navigation_sim/tasks/waypoints.h"
 
 namespace hl_navigation_sim {
 
 using namespace hl_navigation;
 
 void CrossScenario::init_world(World *world) {
-  float x = radius - margin;
-  std::vector<std::tuple<Vector2, std::function<Pose2(int, int)>>> task = {
-      {Vector2{radius, 0.0f},
-       [x](int i, unsigned number) {
-         return Pose2{{-x + 2 * x * i / (number - 1), 0.49f}};
-       }},
-      {Vector2{-radius, 0.0f},
-       [x](int i, unsigned number) {
-         return Pose2{{-x + 2 * x * i / (number - 1), -0.51f}};
-       }},
-      {Vector2{0.0f, radius},
-       [x](int i, unsigned number) {
-         return Pose2{{0.52f, -x + 2 * x * i / (number - 1)}};
-       }},
-      {Vector2{0.0f, -radius}, [x](int i, unsigned number) {
-         return Pose2{{-0.53f, -x + 2 * x * i / (number - 1)}};
-       }}};
-
-  for (auto &[target, pose] : task) {
-    for (size_t i = 0; i < number; i++) {
-      const float agent_radius = 0.1f;
-      auto task = std::make_shared<WayPointsTask>(
-          std::vector<Vector2>{target, -target}, true, 0.1);
-      auto se = std::make_shared<BoundedStateEstimation>(world, 1.0, 1.0);
-      auto kinematic = std::make_shared<Holonomic>(1.0, 1.0);
-      auto behavior = Behavior::make_type(behavior_name);
-      auto agent = std::make_shared<Agent>(agent_radius, behavior, kinematic,
-                                           task, se, control_period);
-      agent->nav_behavior->set_max_speed(1.0);
-      agent->nav_behavior->set_max_angular_speed(1.0);
-      agent->nav_behavior->set_optimal_speed(1.0);
-      agent->nav_behavior->set_optimal_angular_speed(1.0);
-      agent->nav_behavior->set_horizon(1.0);
-      // agent.nav_controller.distance_tolerance = 1.0;
-      // agent.nav_controller.angle_tolerance = 4.0;
-      agent->nav_controller.set_speed_tolerance(0.1f);
-      agent->pose = pose(i, number);
-      world->agents.push_back(agent);
-    }
+  Scenario::init_world(world);
+  const float t = 0.5f * side;
+  const float p = std::max(0.0f, 0.5f * side - target_margin);
+  UniformSampler<float> x(-p, p);
+  const Waypoints targets{{t, 0.0f}, {-t, 0.0f}, {0.0f, t}, {0.0f, -t}};
+  for (const auto &agent : world->get_agents()) {
+    agent->pose.position = {x.sample(), x.sample()};
+  }
+  world->space_agents_apart(agent_margin, add_safety_to_agent_margin);
+  unsigned index = 0;
+  for (const auto &agent : world->get_agents()) {
+    const auto target = targets[index % 4];
+    agent->set_task(
+        std::make_shared<WaypointsTask>(Waypoints{target, -target}, true, tolerance));
+    agent->pose.orientation = orientation_of(target - agent->pose.position);
+    index++;
   }
 }
 
-const std::map<std::string, Property> CrossScenario::properties = Properties{
-    {"behavior_name", make_property<std::string, CrossScenario>(
-                          [](const CrossScenario *obj) -> std::string {
-                            return obj->behavior_name;
-                          },
-                          [](CrossScenario *obj, const std::string &value) {
-                            obj->behavior_name = value;
-                          },
-                          "HL", "Behavior name")},
-    {"control_period",
-     make_property<float, CrossScenario>(
-         [](const CrossScenario *obj) -> float { return obj->control_period; },
-         [](CrossScenario *obj, const float &value) {
-           obj->control_period = value;
-         },
-         0.1f, "Control period")},
-    {"size",
-     make_property<float, CrossScenario>(
-         [](const CrossScenario *obj) -> float { return obj->radius; },
-         [](CrossScenario *obj, const float &value) { obj->radius = value; },
-         4.0f, "Size")},
-    {"margin",
-     make_property<float, CrossScenario>(
-         [](const CrossScenario *obj) -> float { return obj->margin; },
-         [](CrossScenario *obj, const float &value) { obj->margin = value; },
-         1.0f, "Margin")},
-    {"number",
-     make_property<int, CrossScenario>(
-         [](const CrossScenario *obj) -> unsigned { return obj->number; },
-         [](CrossScenario *obj, const unsigned &value) { obj->number = value; },
-         7, "Number of agents per group")},
-    {"control_period",
-     make_property<float, CrossScenario>(
-         [](const CrossScenario *obj) -> float { return obj->control_period; },
-         [](CrossScenario *obj, const float &value) {
-           obj->control_period = value;
-         },
-         0.1f, "Control period")}};
+#if 0
 
-const std::string CrossScenario::type =
-    register_type<CrossScenario>("CrossScenario");
+const std::map<std::string, Property> CrossScenario::properties = Properties{
+    {"side", make_property<float, CrossScenario>(
+                 &CrossScenario::get_side, &CrossScenario::set_side,
+                 default_side, "Distance between targets")},
+    {"tolerance",
+     make_property<float, CrossScenario>(&CrossScenario::get_tolerance,
+                                         &CrossScenario::set_tolerance,
+                                         default_tolerance, "Goal tolerance")},
+    {"agent_margin",
+     make_property<float, CrossScenario>(
+         &CrossScenario::get_agent_margin, &CrossScenario::set_agent_margin,
+         0.1f, "initial minimal distance between agents")},
+    {"add_safety_to_agent_margin",
+     make_property<bool, CrossScenario>(
+         &CrossScenario::get_add_safety_to_agent_margin,
+         &CrossScenario::set_add_safety_to_agent_margin,
+         default_add_safety_to_agent_margin,
+         "Whether to add the safety margin to the agent margin")},
+    {"target_margin",
+     make_property<float, CrossScenario>(
+         &CrossScenario::get_target_margin, &CrossScenario::set_target_margin,
+         default_target_margin,
+         "Initial minimal distance between agents and targets")}};
+
+const std::string CrossScenario::type = register_type<CrossScenario>("Cross");
+
+#endif
 
 }  // namespace hl_navigation_sim

@@ -9,12 +9,11 @@
 #include "hl_navigation_sim/scenarios/cross.h"
 #include "hl_navigation_sim/scenarios/collisions.h"
 #include "hl_navigation_sim/scenarios/simple.h"
-#include "hl_navigation_sim/scenarios/simple_with_init.h"
 #include "hl_navigation_sim/yaml/world.h"
 #include "hl_navigation_sim/yaml/scenario.h"
 #include "yaml-cpp/yaml.h"
 
-static std::string s_type = "SimpleWithInit";
+static std::string s_type = "Simple";
 namespace sim = hl_navigation_sim;
 
 int main() {

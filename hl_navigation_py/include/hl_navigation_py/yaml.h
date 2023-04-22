@@ -20,7 +20,7 @@ py::object make_type_from_yaml_py(const Node &node) {
 }
 
 template <typename T>
-py::object load_node(const Node &node) {
+py::object load_node_py(const Node &node) {
   auto obj = make_type_from_yaml_py<T>(node);
   if (!obj.is_none()) {
     convert<typename T::Native>::decode(node, obj.template cast<T &>());
@@ -29,10 +29,10 @@ py::object load_node(const Node &node) {
 }
 
 template <typename T>
-py::object load_py(const std::string &value) {
+py::object load_string_py(const std::string &value) {
   try {
     Node node = YAML::Load(value);
-    return load_node<T>(node);
+    return load_node_py<T>(node);
   } catch (const YAML::ParserException &ex) {
     return py::none();
   }

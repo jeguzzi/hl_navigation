@@ -18,7 +18,7 @@ def main() -> None:
     sim.load_py_plugins()
     print_register(nav.Behavior, "Behaviors")
     print("")
-    print_register(nav.Kinematic, "Kinematics")
+    print_register(nav.Kinematics, "Kinematics")
     print("")
     print_register(sim.StateEstimation, "State estimations")
     print("")

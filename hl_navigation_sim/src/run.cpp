@@ -54,5 +54,4 @@ int main(int argc, char *argv[]) {
   Experiment experiment = node.as<Experiment>();
   std::cout << YAML::dump<Experiment>(&experiment) << std::endl;
   experiment.run();
-  return 0;
 }

@@ -5,6 +5,8 @@
 #include <vector>
 
 #include "hl_navigation/common.h"
+#include "hl_navigation/social_margin.h"
+#include "hl_navigation_export.h"
 
 namespace hl_navigation {
 
@@ -74,7 +76,7 @@ struct Neighbor : public Disc {
   /**
    * @brief      Constructs a new instance from a disc
    *
-   * @param[in]  Disc      The disc
+   * @param[in]  disc      The disc
    * @param[in]  velocity  The velocity
    * @param[in]  id      The id
    */
@@ -194,10 +196,10 @@ inline std::ostream& operator<<(std::ostream& os, const LineSegment& line) {
   return os;
 }
 
-class GeometricState : protected RegisterChanges {
+class HL_NAVIGATION_EXPORT GeometricState : protected TrackChanges {
  public:
   GeometricState()
-      : RegisterChanges(), static_obstacles(), neighbors(), line_obstacles() {}
+      : TrackChanges(), social_margin(), static_obstacles(), neighbors(), line_obstacles() {}
 
   virtual ~GeometricState() = default;
 
@@ -258,6 +260,8 @@ class GeometricState : protected RegisterChanges {
     change(LINE_OBSTACLES);
   }
 
+  SocialMargin social_margin;
+
  protected:
   enum {
     NEIGHBORS = 1 << 0,
@@ -271,6 +275,7 @@ class GeometricState : protected RegisterChanges {
   std::vector<LineSegment> line_obstacles;
 };
 
+#if 0
 inline std::ostream& operator<<(std::ostream& os, const GeometricState& state) {
   os << "<GeometricState:\n";
   os << "\tline obstacles: {";
@@ -290,6 +295,8 @@ inline std::ostream& operator<<(std::ostream& os, const GeometricState& state) {
   os << "}\n>";
   return os;
 }
+
+#endif
 
 }  // namespace hl_navigation
 

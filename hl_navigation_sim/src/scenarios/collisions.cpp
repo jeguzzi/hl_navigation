@@ -8,6 +8,15 @@
 #include <utility>
 #include <vector>
 
+#include "hl_navigation/kinematics.h"
+#include "hl_navigation/property.h"
+#include "hl_navigation_sim/state_estimations/geometric_bounded.h"
+#include "hl_navigation_sim/tasks/waypoints.h"
+
+using hl_navigation::Holonomic;
+using hl_navigation::Properties;
+using hl_navigation::Property;
+
 namespace hl_navigation_sim {
 
 void CollisionsScenario::init_world(World *world) {
@@ -15,24 +24,25 @@ void CollisionsScenario::init_world(World *world) {
   const float agent_radius = 0.1f;
   Vector2 target{10.0f, 10.0f};
   auto task =
-      std::make_shared<WayPointsTask>(Waypoints{target, -target}, true, 0.1);
-  auto se = std::make_shared<BoundedStateEstimation>(nullptr, 10.0, 4.0);
-  auto kinematic = std::make_shared<Holonomic>(1.0, 1.0);
+      std::make_shared<WaypointsTask>(Waypoints{target, -target}, true, 0.1);
+  auto se = std::make_shared<BoundedStateEstimation>(nullptr, 10.0);
+  auto kinematics = std::make_shared<Holonomic>(1.0, 1.0);
   auto agent =
       std::make_shared<Agent>(agent_radius, Behavior::make_type(behavior_name),
-                              kinematic, task, se, control_period);
+                              kinematics, task, se, control_period);
 
   world->add_agent(agent);
-  agent->nav_behavior->set_horizon(10.0);
-  agent->nav_behavior->set_safety_margin(0.1);
-  // agent.nav_controller.distance_tolerance = 1.0;
-  // agent.nav_controller.angle_tolerance = 4.0;
-  agent->nav_controller.set_speed_tolerance(0.1f);
+  auto behavior = agent->get_behavior();
+  behavior->set_horizon(10.0);
+  behavior->set_safety_margin(0.1);
+  // agent.controller.distance_tolerance = 1.0;
+  // agent.controller.angle_tolerance = 4.0;
+  agent->get_controller()->set_speed_tolerance(0.1f);
   agent->pose = {{-8.0f, -7.9f}};
-  world->walls.emplace_back(Vector2{-5.0f, -5.0f}, Vector2{-5.0f, -8.0f});
-  world->walls.emplace_back(Vector2{-3.0f, -1.0f}, Vector2{-0.0f, -2.0f});
+  world->add_wall(Wall{Vector2{-5.0f, -5.0f}, Vector2{-5.0f, -8.0f}});
+  world->add_wall(Wall{Vector2{-3.0f, -1.0f}, Vector2{-0.0f, -2.0f}});
   // world.walls.emplace_back(Vector2{-3.0f, -1.0f}, Vector2{-3.0f, -0.0f});
-  world->obstacles.emplace_back(Vector2{3.0f, 2.0f}, 3.0f);
+  world->add_obstacle(Obstacle{Vector2{3.0f, 2.0f}, 3.0f});
 }
 
 const std::map<std::string, Property> CollisionsScenario::properties =
@@ -59,5 +69,3 @@ const std::string CollisionsScenario::type =
     register_type<CollisionsScenario>("CollisionsScenario");
 
 }  // namespace hl_navigation_sim
-
-

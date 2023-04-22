@@ -32,4 +32,5 @@ constexpr auto get_type_name() -> std::string_view {
   return function.substr(start, size);
 }
 
+
 #endif  // HL_NAVIGATION_UTILITIES_H

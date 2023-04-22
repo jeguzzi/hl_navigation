@@ -10,6 +10,7 @@
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/property.h"
 #include "hl_navigation/states/geometric.h"
+#include "hl_navigation_export.h"
 
 namespace RVO {
 class Agent;
@@ -25,10 +26,19 @@ namespace hl_navigation {
  *
  * A wrapper of the open-source implementation from
  * http://gamma.cs.unc.edu/RVO2/
+ *
+ * *Properties*: time_horizon (int), effective_center (bool)
  */
-class ORCABehavior : public Behavior, public GeometricState {
+class HL_NAVIGATION_EXPORT ORCABehavior : public Behavior,
+                                          public GeometricState {
  public:
-  ORCABehavior(std::shared_ptr<Kinematic> kinematic = nullptr,
+  /**
+   * @brief      Contruct a new instance
+   *
+   * @param[in]  kinematics  The kinematics
+   * @param[in]  radius      The radius
+   */
+  ORCABehavior(std::shared_ptr<Kinematics> kinematics = nullptr,
                float radius = 0.0f);
   ~ORCABehavior();
 
@@ -49,51 +59,68 @@ class ORCABehavior : public Behavior, public GeometricState {
    */
   void set_time_horizon(float value);
   /**
-   * @brief      Determines if the kinematic uses an effective center, as
-   * described
-   *
-   *    See J. Snape, J. van den Berg, S. J. Guy, and D. Manocha,
-   *    “Smooth and collision-free navigation for multiple robots under
-   * differential-drive constraints,” in 2010 IEEE/RSJ International Conference
-   * on Intelligent, Robots and Systems, 2010, pp. 4584–4589. with D=L/2
+   * @brief      Determines if an effective center is being used.
    *
    * Using an effective center placed with an offset towards the front, allows
-   * to consider the kinematic as holonomic instead of a two-wheeled
-   * differential drive.
+   * to consider the kinematics as holonomic instead of a two-wheeled
+   * differential drive. See
+   *
+   *     J. Snape, J. van den Berg, S. J. Guy, and D. Manocha,
+   *     "Smooth and collision-free navigation for multiple robots under
+   *     differential-drive constraints," in 2010 IEEE/RSJ International
+   *     Conference on Intelligent, Robots and Systems, 2010, pp. 4584–4589.
+   *
+   * with ``D=L/2``.
+   *
+   * Only possibly true if the  kinematics is wheeled and constrained.
    *
    * @return     True if using effective center, False otherwise.
    */
-  bool is_using_effective_center() const { return use_effective_center; }
-  /**
-   * @brief      Specifies if the kinematic should be using an shifted effective
-   * center, see \ref set_time_horizon
-   *
-   * @param[in]  value
-   */
-  void should_use_effective_center(bool value) {
-    if (value && kinematic->is_wheeled() && kinematic->dof() == 2) {
-      use_effective_center = true;
-    } else {
-      use_effective_center = false;
-    }
+  bool is_using_effective_center() const {
+    if (!kinematics) return false;
+    return use_effective_center && kinematics->is_wheeled() &&
+           kinematics->dof() == 2;
   }
+  /**
+   * @brief      Specifies if the kinematics should be using an shifted
+   * effective center, see \ref set_time_horizon
+   *
+   * @param[in]  value Whenever is should use an effective center when
+   * kinematics is wheeled and constrained.
+   */
+  void should_use_effective_center(bool value) { use_effective_center = value; }
 
   void set_time_step(float value);
   float get_time_step() const;
 
-  virtual const Properties &get_properties() const override {
+  /**
+   * @private
+   */
+  virtual const Properties& get_properties() const override {
     return properties;
   };
 
+  /**
+   * @private
+   */
   static inline std::map<std::string, Property> properties =
       Properties{
           {"time_horizon",
            make_property<float, ORCABehavior>(&ORCABehavior::get_time_horizon,
                                               &ORCABehavior::set_time_horizon,
                                               10.0f, "Time horizon")},
+          {"effective_center",
+           make_property<bool, ORCABehavior>(
+               &ORCABehavior::is_using_effective_center,
+               &ORCABehavior::should_use_effective_center, false,
+               "Whenever to use an effective center to handle non-holonomic "
+               "kinematics")},
       } +
       Behavior::properties;
 
+  /**
+   * @private
+   */
   std::string get_type() const override { return type; }
 
  protected:

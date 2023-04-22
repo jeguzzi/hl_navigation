@@ -4,6 +4,7 @@
 
 #include "hl_navigation/behavior.h"
 #include <iostream>
+#include <stdexcept>
 
 namespace hl_navigation {
 
@@ -20,14 +21,14 @@ Twist2 Behavior::twist_towards_velocity(const Vector2& absolute_velocity,
   }
   switch (get_heading_behavior()) {
     case Heading::velocity:
-      delta_angle = polar_angle(absolute_velocity) - pose.orientation;
+      delta_angle = orientation_of(absolute_velocity) - pose.orientation;
       break;
     case Heading::target_angle:
       delta_angle = target_pose.orientation - pose.orientation;
       break;
     case Heading::target_point:
       delta_angle =
-          polar_angle(target_pose.position - pose.position) - pose.orientation;
+          orientation_of(target_pose.position - pose.position) - pose.orientation;
       break;
     default:
       delta_angle = 0.0;
@@ -44,15 +45,15 @@ Twist2 Behavior::twist_towards_velocity(const Vector2& absolute_velocity,
 Twist2 Behavior::cmd_twist_towards_target([[maybe_unused]] float dt, bool relative) {
   desired_velocity = compute_desired_velocity(dt);
   Twist2 desired_twist = twist_towards_velocity(desired_velocity, true);
-  Twist2 twist = kinematic->feasible(desired_twist);
+  Twist2 twist = kinematics->feasible(desired_twist);
   return to_frame(twist, relative);
 }
 
 Twist2 Behavior::cmd_twist_towards_target_orientation([[maybe_unused]] float dt, bool relative) {
   return {Vector2::Zero(),
           std::clamp(normalize(target_pose.orientation - pose.orientation),
-                     -kinematic->get_max_angular_speed(),
-                     kinematic->get_max_angular_speed()),
+                     -kinematics->get_max_angular_speed(),
+                     kinematics->get_max_angular_speed()),
           relative};
 }
 
@@ -60,10 +61,10 @@ Twist2 Behavior::cmd_twist_towards_stopping([[maybe_unused]] float dt, bool rela
   return {Vector2::Zero(), 0.0, relative};
 }
 
-Twist2 Behavior::cmd_twist(float dt, bool relative, Mode mode,
+Twist2 Behavior::cmd_twist(float dt, Mode mode, bool relative,
                            bool set_as_actuated) {
-  if (!kinematic) {
-    std::cerr << "Missing kinematic" << std::endl;
+  if (!kinematics) {
+    std::cerr << "Missing kinematics" << std::endl;
     return {};
   }
   Twist2 twist;
@@ -78,7 +79,10 @@ Twist2 Behavior::cmd_twist(float dt, bool relative, Mode mode,
       twist = cmd_twist_towards_stopping(dt, relative);
       break;
     case Mode::follow:
-      throw "Not implemented yet.";
+      // TODO(Jerome): Placeholder
+      target_pose.position = pose.position + target_twist.velocity * 1e3;
+      twist = cmd_twist_towards_target(dt, relative);
+      //throw std::runtime_error("Not implemented yet.");
       break;
   }
   if (set_as_actuated) {
@@ -86,7 +90,5 @@ Twist2 Behavior::cmd_twist(float dt, bool relative, Mode mode,
   }
   return twist;
 }
-
-// std::map<std::string, Behavior::BehaviorFactory> Behavior::factory = {};
 
 }  // namespace hl_navigation

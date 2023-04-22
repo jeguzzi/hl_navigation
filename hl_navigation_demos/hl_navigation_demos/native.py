@@ -9,7 +9,7 @@ def go_to(controller: hl_navigation.Controller, target: np.ndarray) -> None:
     action = controller.go_to_position(target, 0.2)
 
     def done_cb(state):
-        if state == hl_navigation.ActionState.success:
+        if state == hl_navigation.Action.State.success:
             go_to(controller, -target)
     action.done_cb = done_cb
 
@@ -22,7 +22,7 @@ def run(behavior_name: str = "HL") -> None:
     obstacles = [hl_navigation.Disc((0.0, 0.0), 0.1)]
     for p in ((0.5, 0.0), (-0.5, 0.5)):
         behavior = hl_navigation.Behavior.make_type(behavior_name)
-        behavior.kinematic = hl_navigation.kinematics.TwoWheeled(0.166, 0.094)
+        behavior.kinematics = hl_navigation.kinematics.TwoWheeled(0.166, 0.094)
         behavior.radius = 0.08
         behavior.horizon = 1.0
         behavior.safety_margin = 0.02

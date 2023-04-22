@@ -1,14 +1,29 @@
 #ifndef HL_NAVIGATION_PLUGINS_H
 #define HL_NAVIGATION_PLUGINS_H
 
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <vector>
 
-// TODO(Jerome): add windows
+#if defined(WIN32) || defined(_WIN32) || \
+    defined(__WIN32) && !defined(__CYGWIN__)
+#include <libloaderapi.h>
+#else
 #include <dlfcn.h>
+#endif
 
-#include <cstdlib>
+void load_library(const std::string& path) {
+#if defined(WIN32) || defined(_WIN32) || \
+    defined(__WIN32) && !defined(__CYGWIN__)
+  auto lib = LoadLibraryA(path.c_str());
+#else
+  void* lib = dlopen(path.c_str(), RTLD_LAZY);
+#endif
+  if (lib) {
+    std::cout << "Loaded " << path << std::endl;
+  }
+}
 
 static inline std::string default_plugins_env_name = "HL_NAVIGATION_PLUGINS";
 
@@ -27,10 +42,7 @@ inline std::vector<std::string> get_plugins(
 
 inline void load_plugins(const std::string& name = default_plugins_env_name) {
   for (const auto& path : get_plugins(name)) {
-    void* lib = dlopen(path.c_str(), RTLD_LAZY);
-    if (lib) {
-      std::cout << "Loaded " << path << std::endl;
-    }
+    load_library(path);
   }
 }
 

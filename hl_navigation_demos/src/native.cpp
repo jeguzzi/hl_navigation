@@ -55,9 +55,9 @@ static void run(const char *behavior = "HL") {
   std::vector<Disc> obstacles = {Disc({0.0f, 0.0f}, 0.1)};
   Vector2 target{1.0, 0.0};
   for (size_t i = 0; i < 2; i++) {
-    auto kinematic = std::make_shared<TwoWheeled>(0.166, 0.094);
+    auto kinematics = std::make_shared<TwoWheeled>(0.166, 0.094);
     auto agent = Behavior::make_type(behavior);
-    agent->set_kinematic(kinematic);
+    agent->set_kinematics(kinematics);
     agent->set_radius(0.08);
     agent->set_horizon(1.0);
     agent->set_safety_margin(0.02);
@@ -101,7 +101,7 @@ static void run(const char *behavior = "HL") {
 int main(int argc, char *argv[]) {
   char behavior_name[10] = "HL";
   for (int i = 0; i < argc; i++) {
-    if (sscanf(argv[i], "--behavior=%10s", behavior_name)) {
+    if (sscanf(argv[i], "--behavior=%9s", behavior_name)) {
       continue;
     }
     if (strcmp(argv[i], "--help") == 0) {

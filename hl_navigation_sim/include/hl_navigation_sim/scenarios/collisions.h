@@ -11,6 +11,11 @@
 
 #include "hl_navigation_sim/scenario.h"
 
+using hl_navigation::Properties;
+using hl_navigation::Property;
+using hl_navigation::make_property;
+
+
 namespace hl_navigation_sim {
 
 struct CollisionsScenario : public Scenario {

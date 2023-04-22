@@ -1,13 +1,13 @@
 import pkg_resources
 from hl_navigation import load_py_plugins as _load_py_plugins
-from hl_navigation import register_property
+from hl_navigation import registered_property
 
-from ._hl_navigation_sim import (Agent, BoundedStateEstimation, BoundingBox,
-                                 Entity, Experiment, Wall, Obstacle)
+from ._hl_navigation_sim import (Agent, BoundingBox, Entity, Experiment,
+                                 Obstacle)
 from ._hl_navigation_sim import Scenario as _Scenario
 from ._hl_navigation_sim import StateEstimation as _StateEstimation
 from ._hl_navigation_sim import Task as _Task
-from ._hl_navigation_sim import (WayPointsTask, World, dump, load_agent,
+from ._hl_navigation_sim import (Trace, Wall, World, dump, load_agent,
                                  load_experiment, load_scenario,
                                  load_state_estimation, load_task, load_world)
 
@@ -18,7 +18,7 @@ class Scenario(_Scenario):
         name = kwargs.pop('name', '')
         super().__init_subclass__(**kwargs)
         if name:
-            _Scenario.register_type(name, cls)
+            _Scenario._register_type(name, cls)
             cls._type = name
             for k, v in vars(cls).items():
                 if isinstance(v, property) and hasattr(v.fget,
@@ -26,7 +26,7 @@ class Scenario(_Scenario):
                     return_type = v.fget.__annotations__['return']
                     default_value = return_type(v.fget.__default_value__)
                     desc = v.fget.__desc__
-                    _Scenario.add_property(name, k, v, default_value, desc)
+                    _Scenario._add_property(name, k, v, default_value, desc)
 
     def __init__(self):
         _Scenario.__init__(self)
@@ -38,7 +38,7 @@ class StateEstimation(_StateEstimation):
         name = kwargs.pop('name', '')
         super().__init_subclass__(**kwargs)
         if name:
-            _StateEstimation.register_type(name, cls)
+            _StateEstimation._register_type(name, cls)
             cls._type = name
             for k, v in vars(cls).items():
                 if isinstance(v, property) and hasattr(v.fget,
@@ -46,8 +46,8 @@ class StateEstimation(_StateEstimation):
                     return_type = v.fget.__annotations__['return']
                     default_value = return_type(v.fget.__default_value__)
                     desc = v.fget.__desc__
-                    _StateEstimation.add_property(name, k, v, default_value,
-                                                  desc)
+                    _StateEstimation._add_property(name, k, v, default_value,
+                                                   desc)
 
     def __init__(self, *args, **kwargs):
         _StateEstimation.__init__(self, *args, **kwargs)
@@ -59,7 +59,7 @@ class Task(_Task):
         name = kwargs.pop('name', '')
         super().__init_subclass__(**kwargs)
         if name:
-            _Task.register_type(name, cls)
+            _Task._register_type(name, cls)
             cls._type = name
             for k, v in vars(cls).items():
                 if isinstance(v, property) and hasattr(v.fget,
@@ -67,10 +67,14 @@ class Task(_Task):
                     return_type = v.fget.__annotations__['return']
                     default_value = return_type(v.fget.__default_value__)
                     desc = v.fget.__desc__
-                    _Task.add_property(name, k, v, v, default_value, desc)
+                    _Task._add_property(name, k, v, v, default_value, desc)
 
     def __init__(self):
         _Task.__init__(self)
+
+from . import tasks
+from . import state_estimations
+from . import scenarios
 
 
 def load_py_plugins():
@@ -81,8 +85,9 @@ def load_py_plugins():
 
 
 __all__ = [
-    'Entity', 'Obstacle', 'Wall', 'World', 'Agent', 'BoundedStateEstimation', 'WayPointsTask',
-    'Experiment', 'Scenario', 'StateEstimation', 'Task', 'BoundingBox', 'dump'
+    'Entity', 'Obstacle', 'Wall', 'World', 'Agent', 'BoundedStateEstimation',
+    'WaypointsTask', 'Experiment', 'Scenario', 'StateEstimation', 'Task',
+    'BoundingBox', 'dump'
     'load_agent', 'load_state_estimation', 'load_task', 'load_world',
     'load_scenario', 'load_experiment', 'load_py_plugins'
 ]

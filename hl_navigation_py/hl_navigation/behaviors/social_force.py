@@ -18,17 +18,16 @@ import numpy as np
 from hl_navigation import (
     Behavior,
     GeometricState,
-    Kinematic,
+    Kinematics,
     Neighbor,
     Disc,
     LineSegment,
+    Vector2
 )
 # from hl_navigation._hl_navigation import Behavior, GeometricState
 
 
 # Jerome: what about the radius and safety margin?
-
-Vector2 = np.ndarray
 
 
 # value and gradient
@@ -115,7 +114,7 @@ class ExponentialPotential(Potential):
 class SocialForceBehavior(Behavior, GeometricState, name="SocialForce"):
     def __init__(
         self,
-        kinematic: Optional[Kinematic] = None,
+        kinematics: Optional[Kinematics] = None,
         radius: float = 0.0,
         tau: float = 0.5,
         step_duration: float = 1.0,
@@ -124,7 +123,7 @@ class SocialForceBehavior(Behavior, GeometricState, name="SocialForce"):
         v: Potential = ExponentialPotential(2.1, 0.3),
         u: Potential = ExponentialPotential(10, 0.2),
     ):
-        Behavior.__init__(self, kinematic, radius)
+        Behavior.__init__(self, kinematics, radius)
         GeometricState.__init__(self)
         self.tau = tau
         self.step_duration = step_duration

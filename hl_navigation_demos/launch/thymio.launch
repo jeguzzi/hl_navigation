@@ -4,9 +4,9 @@
   <group>
     <push-ros-namespace namespace="$(var name)"/>
     <include file="$(find-pkg-share hl_navigation_ros)/launch/navigation.launch">
-      <arg name="kinematic_type" value="two_wheeled"/>
-      <arg name="kinematic_maximal_speed" value="0.14"/>
-      <arg name="kinematic_axis_length" value="0.0935"/>
+      <arg name="kinematics_type" value="two_wheeled"/>
+      <arg name="kinematics_maximal_speed" value="0.14"/>
+      <arg name="kinematics_axis_length" value="0.0935"/>
       <arg name="radius" value="0.08"/>
       <arg name="behavior" value="HL"/>
       <arg name="optimal_speed" value="0.12"/>

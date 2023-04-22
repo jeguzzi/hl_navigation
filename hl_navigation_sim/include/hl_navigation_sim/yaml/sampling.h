@@ -14,24 +14,35 @@
 using hl_navigation::Property;
 using hl_navigation_sim::AgentSampler;
 using hl_navigation_sim::BehaviorSampler;
-using hl_navigation_sim::Constant;
-using hl_navigation_sim::KinematicSampler;
+using hl_navigation_sim::ChoiceSampler;
+using hl_navigation_sim::ConstantSampler;
+using hl_navigation_sim::GridSampler;
+using hl_navigation_sim::is_algebra;
+using hl_navigation_sim::is_number;
+using hl_navigation_sim::KinematicsSampler;
+using hl_navigation_sim::NormalSampler;
 using hl_navigation_sim::PropertySampler;
-using hl_navigation_sim::Regular;
+using hl_navigation_sim::RegularSampler;
 using hl_navigation_sim::Sampler;
 using hl_navigation_sim::SamplerFromRegister;
-using hl_navigation_sim::Sequence;
+using hl_navigation_sim::SequenceSampler;
 using hl_navigation_sim::StateEstimationSampler;
 using hl_navigation_sim::TaskSampler;
+using hl_navigation_sim::uniform_distribution;
+using hl_navigation_sim::UniformSampler;
 using hl_navigation_sim::World;
+using hl_navigation_sim::Wrap;
+using hl_navigation_sim::wrap_from_string;
+using hl_navigation_sim::wrap_to_string;
 
 namespace YAML {
 
+#if 0
 std::unique_ptr<PropertySampler> property_sampler(const Node& node,
                                                   const Property& property) {
   try {
     const auto value = decode_property(property, node);
-    return std::make_unique<Constant<Property::Field>>(value);
+    return std::make_unique<ConstantSampler<Property::Field>>(value);
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
   }
@@ -42,90 +53,281 @@ std::unique_ptr<PropertySampler> property_sampler(const Node& node,
       values.push_back(value);
     }
     if (values.size()) {
-      return std::make_unique<Sequence<Property::Field>>(values);
+      return std::make_unique<SequenceSampler<Property::Field>>(values);
     }
   }
   return nullptr;
 }
-
-template <typename T>
-std::unique_ptr<Sampler<T>> read_regular_sampler(const Node& node) {
-  if (node["start"] && node["end"] && node["number"]) {
-    return std::make_unique<Regular<T>>(node["start"].as<T>(),
-                                        node["end"].as<T>(),
-                                        node["number"].as<unsigned>());
-  }
-  return nullptr;
-}
+#endif
 
 template <typename T>
 std::unique_ptr<Sampler<T>> read_sampler(const Node& node) {
+  // implicit const
   try {
-    return std::make_unique<Constant<T>>(node.as<T>());
+    return std::make_unique<ConstantSampler<T>>(node.as<T>());
   } catch (YAML::BadConversion) {
   }
+  // implicit sequence
   if (node.Type() == YAML::NodeType::Sequence) {
     try {
-      return std::make_unique<Sequence<T>>(node.as<std::vector<T>>());
+      return std::make_unique<SequenceSampler<T>>(node.as<std::vector<T>>());
     } catch (YAML::BadConversion) {
     }
   }
-  if (node.Type() == YAML::NodeType::Map) {
-    if (node["regular"]) {
-      return read_regular_sampler<T>(node["regular"]);
+  if (node.Type() != YAML::NodeType::Map || !node["sampler"]) {
+    return nullptr;
+  }
+  const auto sampler = node["sampler"].as<std::string>();
+  if (sampler == "constant") {
+    if (node["value"]) {
+      return std::make_unique<ConstantSampler<T>>(node["value"].as<T>());
+    }
+  }
+  if (sampler == "sequence") {
+    if (node["values"]) {
+      Wrap wrap(Wrap::loop);
+      if (node["wrap"]) {
+        wrap = wrap_from_string(node["wrap"].as<std::string>());
+      }
+      return std::make_unique<SequenceSampler<T>>(
+          node["values"].as<std::vector<T>>(), wrap);
+    }
+    return nullptr;
+  }
+  if (sampler == "choice") {
+    if (node["values"]) {
+      return std::make_unique<ChoiceSampler<T>>(
+          node["values"].as<std::vector<T>>());
+    }
+    return nullptr;
+  }
+  if constexpr (is_algebra<T>) {
+    if (sampler == "regular") {
+      if (node["from"]) {
+        const auto start = node["from"].as<T>();
+        Wrap wrap(Wrap::loop);
+        if (node["wrap"]) {
+          wrap = wrap_from_string(node["wrap"].as<std::string>());
+        }
+        if (node["to"] && node["number"]) {
+          const auto end = node["to"].as<T>();
+          const auto number = node["number"].as<unsigned>();
+          return std::make_unique<RegularSampler<T>>(
+              RegularSampler<T>::make_with_interval(start, end, number, wrap));
+        }
+        if (node["step"]) {
+          const auto step = node["step"].as<T>();
+          std::optional<unsigned> number = std::nullopt;
+          if (node["number"]) {
+            number = node["number"].as<unsigned>();
+          }
+          return std::make_unique<RegularSampler<T>>(
+              RegularSampler<T>::make_with_step(start, step, number, wrap));
+        }
+      }
+      return nullptr;
+    }
+  }
+  if constexpr (std::is_same_v<T, Vector2>) {
+    if (sampler == "grid") {
+      if (node["from"] && node["to"] && node["numbers"]) {
+        const auto start = node["from"].as<Vector2>();
+        const auto end = node["to"].as<Vector2>();
+        const auto numbers = node["numbers"].as<std::array<unsigned, 2>>();
+        Wrap wrap(Wrap::loop);
+        if (node["wrap"]) {
+          wrap = wrap_from_string(node["wrap"].as<std::string>());
+        }
+        return std::make_unique<GridSampler>(start, end, numbers, wrap);
+      }
+      return nullptr;
+    }
+  }
+  // !std::is_void_v<uniform_distribution<T>>
+  if constexpr (is_number<T>) {
+    if (sampler == "uniform") {
+      if (node["from"] && node["to"]) {
+        const auto min = node["from"].as<T>();
+        const auto max = node["to"].as<T>();
+        return std::make_unique<UniformSampler<T>>(min, max);
+      }
+      return nullptr;
+    }
+  }
+  if constexpr (is_number<T>) {
+    if (sampler == "normal") {
+      if (node["mean"] && node["std_dev"]) {
+        std::optional<T> min;
+        std::optional<T> max;
+        if (node["min"]) {
+          min = node["min"].as<T>();
+        }
+        if (node["max"]) {
+          max = node["max"].as<T>();
+        }
+        const auto mean = node["mean"].as<float>();
+        const auto std_dev = node["std_dev"].as<float>();
+        return std::make_unique<NormalSampler<T>>(mean, std_dev, min, max);
+      }
+      return nullptr;
     }
   }
   return nullptr;
 }
 
 template <typename T>
-struct convert<Constant<T>> {
-  static Node encode(const Constant<T>& rhs) {
+struct convert<ConstantSampler<T>> {
+  static Node encode(const ConstantSampler<T>& rhs) {
     Node node;
     node["sampler"] = "constant";
     node["value"] = rhs.value;
     return node;
-    // return Node(rhs.value);
   }
 };
 
 template <typename T>
-struct convert<Sequence<T>> {
-  static Node encode(const Sequence<T>& rhs) {
+struct convert<SequenceSampler<T>> {
+  static Node encode(const SequenceSampler<T>& rhs) {
     Node node;
     node["sampler"] = "sequence";
     node["values"] = rhs.values;
+    node["wrap"] = wrap_to_string(rhs.wrap);
     return node;
-    // return Node(rhs.values);
   }
 };
 
 template <typename T>
-struct convert<Regular<T>> {
-  static Node encode(const Regular<T>& rhs) {
+struct convert<ChoiceSampler<T>> {
+  static Node encode(const ChoiceSampler<T>& rhs) {
     Node node;
-    node["start"] = rhs.start;
-    node["step"] = rhs.step;
-    node["number"] = rhs.number;
-    node["sampler"] = "regular";
+    node["sampler"] = "choice";
+    node["values"] = rhs.values;
     return node;
+  }
+};
+
+template <typename T>
+struct convert<RegularSampler<T>> {
+  static Node encode(const RegularSampler<T>& rhs) {
+    Node node;
+    node["from"] = rhs.from;
+    if (rhs.to) {
+      node["to"] = *rhs.to;
+    }
+    node["step"] = rhs.step;
+    if (rhs.number) {
+      node["number"] = *rhs.number;
+    }
+    node["sampler"] = "regular";
+    node["wrap"] = wrap_to_string(rhs.wrap);
+    return node;
+  }
+};
+
+template <>
+struct convert<GridSampler> {
+  static Node encode(const GridSampler& rhs) {
+    Node node;
+    node["from"] = rhs.from;
+    node["to"] = rhs.to;
+    node["numbers"] = rhs.numbers;
+    node["sampler"] = "grid";
+    node["wrap"] = wrap_to_string(rhs.wrap);
+    return node;
+  }
+};
+
+template <typename T>
+struct convert<UniformSampler<T>> {
+  static Node encode(const UniformSampler<T>& rhs) {
+    Node node;
+    node["from"] = rhs.min;
+    node["to"] = rhs.max;
+    node["sampler"] = "uniform";
+    return node;
+  }
+};
+
+template <typename T>
+struct convert<NormalSampler<T>> {
+  static Node encode(const NormalSampler<T>& rhs) {
+    Node node;
+    if (rhs.min) {
+      node["min"] = *rhs.min;
+    }
+    if (rhs.max) {
+      node["max"] = *rhs.max;
+    }
+    node["mean"] = rhs.mean;
+    node["std_dev"] = rhs.std_dev;
+    node["sampler"] = "normal";
+    return node;
+  }
+};
+
+inline std::unique_ptr<PropertySampler> property_sampler(
+    const Node& node, const Property& property) {
+  return std::visit(
+      [&node](auto&& arg) -> std::unique_ptr<PropertySampler> {
+        using V = std::decay_t<decltype(arg)>;
+        return std::make_unique<PropertySampler>(
+            PropertySampler(read_sampler<V>(node)));
+      },
+      property.default_value);
+}
+
+template <typename T>
+struct convert<Sampler<T>*> {
+  static Node encode(const Sampler<T>* rhs) {
+    if (!rhs) return Node();
+    if (const ConstantSampler<T>* sampler =
+            dynamic_cast<const ConstantSampler<T>*>(rhs)) {
+      return Node(*sampler);
+    }
+    if (const SequenceSampler<T>* sampler =
+            dynamic_cast<const SequenceSampler<T>*>(rhs)) {
+      return Node(*sampler);
+    }
+    if (const ChoiceSampler<T>* sampler =
+            dynamic_cast<const ChoiceSampler<T>*>(rhs)) {
+      return Node(*sampler);
+    }
+    if constexpr (is_algebra<T>) {
+      if (const RegularSampler<T>* sampler =
+              dynamic_cast<const RegularSampler<T>*>(rhs)) {
+        return Node(*sampler);
+      }
+    }
+    if constexpr (std::is_same_v<T, Vector2>) {
+      if (const GridSampler* sampler = dynamic_cast<const GridSampler*>(rhs)) {
+        return Node(*sampler);
+      }
+    }
+    if constexpr (is_number<T>) {
+      if (const UniformSampler<T>* sampler =
+              dynamic_cast<const UniformSampler<T>*>(rhs)) {
+        return Node(*sampler);
+      }
+      if (const NormalSampler<T>* sampler =
+              dynamic_cast<const NormalSampler<T>*>(rhs)) {
+        return Node(*sampler);
+      }
+    }
+    return Node();
   }
 };
 
 template <typename T>
 struct convert<std::shared_ptr<Sampler<T>>> {
   static Node encode(const std::shared_ptr<Sampler<T>>& rhs) {
-    if (!rhs) return Node();
-    if (const Constant<T>* sampler = dynamic_cast<Constant<T>*>(rhs.get())) {
-      return Node(*sampler);
-    }
-    if (const Sequence<T>* sampler = dynamic_cast<Sequence<T>*>(rhs.get())) {
-      return Node(*sampler);
-    }
-    if (const Regular<T>* sampler = dynamic_cast<Regular<T>*>(rhs.get())) {
-      return Node(*sampler);
-    }
-    return Node();
+    return convert<Sampler<T>*>::encode(rhs.get());
+  }
+};
+
+template <>
+struct convert<std::shared_ptr<PropertySampler>> {
+  static Node encode(const std::shared_ptr<PropertySampler>& rhs) {
+    return std::visit([](auto&& arg) { return Node(arg.get()); }, rhs->sampler);
   }
 };
 
@@ -157,7 +359,9 @@ Node encode_sr(const SamplerFromRegister<T>& rhs) {
   Node node;
   node["type"] = rhs.type;
   for (const auto& [name, property_sampler] : rhs.properties) {
-    node[name] = property_sampler;
+    if (property_sampler) {
+      node[name] = property_sampler;
+    }
   }
   return node;
 }
@@ -182,6 +386,9 @@ struct convert<BehaviorSampler<T>> {
     if (rhs.horizon) {
       node["horizon"] = rhs.horizon;
     }
+    if (rhs.heading) {
+      node["heading"] = rhs.heading;
+    }
     return node;
   }
   static bool decode(const Node& node, BehaviorSampler<T>& rhs) {
@@ -203,14 +410,16 @@ struct convert<BehaviorSampler<T>> {
     if (node["horizon"]) {
       rhs.horizon = read_sampler<float>(node["horizon"]);
     }
-    // std::cout << "R" << rhs.type << std::endl;
+    if (node["heading"]) {
+      rhs.heading = read_sampler<std::string>(node["heading"]);
+    }
     return true;
   }
 };
 
 template <typename T>
-struct convert<KinematicSampler<T>> {
-  static Node encode(const KinematicSampler<T>& rhs) {
+struct convert<KinematicsSampler<T>> {
+  static Node encode(const KinematicsSampler<T>& rhs) {
     Node node = encode_sr<T>(rhs);
     if (rhs.max_speed) {
       node["max_speed"] = rhs.max_speed;
@@ -220,7 +429,7 @@ struct convert<KinematicSampler<T>> {
     }
     return node;
   }
-  static bool decode(const Node& node, KinematicSampler<T>& rhs) {
+  static bool decode(const Node& node, KinematicsSampler<T>& rhs) {
     bool r = decode_sr<T>(node, &rhs);
     if (!r) return false;
     if (node["max_speed"]) {
@@ -253,18 +462,15 @@ struct convert<AgentSampler<W>> {
 
   static Node encode(const AgentSampler<W>& rhs) {
     Node node;
-    node["navigation_behavior"] = rhs.behavior;
-    node["kinematic"] = rhs.kinematic;
+    node["behavior"] = rhs.behavior;
+    node["kinematics"] = rhs.kinematics;
     node["task"] = rhs.task;
     node["state_estimation"] = rhs.state_estimation;
-    if (rhs.x) {
-      node["x"] = rhs.x;
+    if (rhs.position) {
+      node["position"] = rhs.position;
     }
-    if (rhs.y) {
-      node["y"] = rhs.y;
-    }
-    if (rhs.theta) {
-      node["theta"] = rhs.theta;
+    if (rhs.orientation) {
+      node["orientation"] = rhs.orientation;
     }
     if (rhs.radius) {
       node["radius"] = rhs.radius;
@@ -275,8 +481,14 @@ struct convert<AgentSampler<W>> {
     if (rhs.number) {
       node["number"] = rhs.number;
     }
-    if (!rhs.type.empty()) {
+    if (rhs.type) {
       node["type"] = rhs.type;
+    }
+    if (rhs.id) {
+      node["id"] = rhs.id;
+    }
+    if (!rhs.name.empty()) {
+      node["name"] = rhs.name;
     }
     return node;
   }
@@ -284,11 +496,11 @@ struct convert<AgentSampler<W>> {
     if (!node.IsMap()) {
       return false;
     }
-    if (node["navigation_behavior"]) {
-      rhs.behavior = node["navigation_behavior"].as<BehaviorSampler<B>>();
+    if (node["behavior"]) {
+      rhs.behavior = node["behavior"].as<BehaviorSampler<B>>();
     }
-    if (node["kinematic"]) {
-      rhs.kinematic = node["kinematic"].as<KinematicSampler<K>>();
+    if (node["kinematics"]) {
+      rhs.kinematics = node["kinematics"].as<KinematicsSampler<K>>();
     }
     if (node["task"]) {
       rhs.task = node["task"].as<TaskSampler<T>>();
@@ -297,14 +509,11 @@ struct convert<AgentSampler<W>> {
       rhs.state_estimation =
           node["state_estimation"].as<StateEstimationSampler<S>>();
     }
-    if (node["x"]) {
-      rhs.x = read_sampler<float>(node["x"]);
+    if (node["position"]) {
+      rhs.position = read_sampler<Vector2>(node["position"]);
     }
-    if (node["y"]) {
-      rhs.y = read_sampler<float>(node["y"]);
-    }
-    if (node["theta"]) {
-      rhs.theta = read_sampler<float>(node["theta"]);
+    if (node["orientation"]) {
+      rhs.orientation = read_sampler<float>(node["orientation"]);
     }
     if (node["radius"]) {
       rhs.radius = read_sampler<float>(node["radius"]);
@@ -316,7 +525,13 @@ struct convert<AgentSampler<W>> {
       rhs.number = node["number"].as<unsigned>(0);
     }
     if (node["type"]) {
-      rhs.type = node["type"].as<std::string>();
+      rhs.type = read_sampler<std::string>(node["type"]);
+    }
+    if (node["id"]) {
+      rhs.id = read_sampler<int>(node["id"]);
+    }
+    if (node["name"]) {
+      rhs.name = node["name"].as<std::string>();
     }
     return true;
   }

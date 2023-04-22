@@ -10,8 +10,8 @@
           <param name="behavior" type="string">
             <description>The obstacle avoidance behavior</description>
           </param>
-          <param name="kinematic" type="kinematic_t">
-            <description>The kinematic</description>
+          <param name="kinematics" type="kinematics_t">
+            <description>The kinematics</description>
           </param>
           <param name="radius" type="float">
             <description>The radius</description>
@@ -400,7 +400,7 @@
             <description>The position of the second vertex</description>
         </param>
     </struct>
-    <struct name="kinematic_t">
+    <struct name="kinematics_t">
         <description>TODO</description>
         <param name="type" type="int">
           <description>The type</description>
@@ -478,7 +478,7 @@
       <item name="failure" />
       <item name="success" />
     </enum>
-    <enum name="Kinematic" item-prefix="" base="0">
+    <enum name="Kinematics" item-prefix="" base="0">
       <item name="holonomic" />
       <item name="frontal" />
       <item name="two_wheeled" />

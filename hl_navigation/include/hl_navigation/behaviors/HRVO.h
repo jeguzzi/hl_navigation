@@ -9,6 +9,7 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/states/geometric.h"
+#include "hl_navigation_export.h"
 
 namespace HRVO {
 class Agent;
@@ -25,14 +26,23 @@ namespace hl_navigation {
  * A wrapper of the open-source implementation from
  * http://gamma.cs.unc.edu/HRVO/
  */
-class HRVOBehavior : public Behavior, public GeometricState {
+class HL_NAVIGATION_EXPORT HRVOBehavior : public Behavior,
+                                          public GeometricState {
  public:
-  HRVOBehavior(std::shared_ptr<Kinematic> kinematic = nullptr, float radius = 0.0f);
+  /**
+   * @brief      Contruct a new instance
+   *
+   * @param[in]  kinematics  The kinematics
+   * @param[in]  radius      The radius
+   */
+  HRVOBehavior(std::shared_ptr<Kinematics> kinematics = nullptr,
+               float radius = 0.0f);
   ~HRVOBehavior();
 
-  std::string get_type() const override {
-    return type;
-  }
+  /** 
+   * @private
+  */
+  std::string get_type() const override { return type; }
 
  protected:
   Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
@@ -48,7 +58,8 @@ class HRVOBehavior : public Behavior, public GeometricState {
   void prepare();
 
  private:
-  inline static std::string type = Behavior::register_type<HRVOBehavior>("HRVO");
+  inline static std::string type =
+      Behavior::register_type<HRVOBehavior>("HRVO");
 };
 
 }  // namespace hl_navigation

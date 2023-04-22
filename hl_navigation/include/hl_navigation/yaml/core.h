@@ -3,15 +3,18 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/common.h"
-#include "hl_navigation/kinematic.h"
+#include "hl_navigation/kinematics.h"
 #include "hl_navigation/states/geometric.h"
 #include "hl_navigation/yaml/register.h"
 #include "yaml-cpp/yaml.h"
 
 using hl_navigation::Behavior;
 using hl_navigation::Disc;
-using hl_navigation::Kinematic;
+using hl_navigation::GeometricState;
+using hl_navigation::Kinematics;
 using hl_navigation::LineSegment;
+using hl_navigation::Neighbor;
+using hl_navigation::SocialMargin;
 using hl_navigation::Vector2;
 
 namespace YAML {
@@ -54,6 +57,24 @@ struct convert<Disc> {
 };
 
 template <>
+struct convert<Neighbor> {
+  static Node encode(const Neighbor& rhs) {
+    Node node = convert<Disc>::encode(static_cast<const Disc&>(rhs));
+    node["velocity"] = rhs.velocity;
+    node["id"] = rhs.id;
+    return node;
+  }
+  static bool decode(const Node& node, Neighbor& rhs) {
+    if (!convert<Disc>::decode(node, static_cast<Disc&>(rhs))) {
+      return false;
+    }
+    rhs.velocity = node["velocity"].as<Vector2>();
+    rhs.id = node["id"].as<unsigned>();
+    return true;
+  }
+};
+
+template <>
 struct convert<Behavior::Heading> {
   static Node encode(const Behavior::Heading& rhs) {
     return Node(Behavior::heading_to_string(rhs));
@@ -76,10 +97,14 @@ struct convert<Behavior> {
     node["horizon"] = rhs.get_horizon();
     node["radius"] = rhs.get_radius();
     node["heading"] = rhs.get_heading_behavior();
-    node["social_margin"] = rhs.social_margin;
-    auto k = rhs.get_kinematic();
+    auto k = rhs.get_kinematics();
     if (k) {
-      node["kinematic"] = *k;
+      node["kinematics"] = *k;
+    }
+    try {
+      const GeometricState& state = dynamic_cast<const GeometricState&>(rhs);
+      node["social_margin"] = state.social_margin;
+    } catch (std::bad_cast) {
     }
     return node;
   }
@@ -107,7 +132,11 @@ struct convert<Behavior> {
       rhs.set_heading_behavior(node["heading"].as<Behavior::Heading>());
     }
     if (node["social_margin"]) {
-      rhs.social_margin = node["social_margin"].as<SocialMargin>();
+      try {
+        GeometricState& state = dynamic_cast<GeometricState&>(rhs);
+        state.social_margin = node["social_margin"].as<SocialMargin>();
+      } catch (std::bad_cast) {
+      }
     }
     return true;
   }
@@ -128,15 +157,15 @@ struct convert<std::shared_ptr<Behavior>> {
 };
 
 template <>
-struct convert<Kinematic> {
-  static Node encode(const Kinematic& rhs) {
+struct convert<Kinematics> {
+  static Node encode(const Kinematics& rhs) {
     Node node;
-    encode_type_and_properties<Kinematic>(node, rhs);
+    encode_type_and_properties<Kinematics>(node, rhs);
     node["max_speed"] = rhs.get_max_speed();
     node["max_angular_speed"] = rhs.get_max_angular_speed();
     return node;
   }
-  static bool decode(const Node& node, Kinematic& rhs) {
+  static bool decode(const Node& node, Kinematics& rhs) {
     decode_properties(node, rhs);
     if (node["max_speed"]) {
       rhs.set_max_speed(node["max_speed"].as<float>());
@@ -149,14 +178,14 @@ struct convert<Kinematic> {
 };
 
 template <>
-struct convert<std::shared_ptr<Kinematic>> {
-  static Node encode(const std::shared_ptr<Kinematic>& rhs) {
-    return convert<Kinematic>::encode(*rhs);
+struct convert<std::shared_ptr<Kinematics>> {
+  static Node encode(const std::shared_ptr<Kinematics>& rhs) {
+    return convert<Kinematics>::encode(*rhs);
   }
-  static bool decode(const Node& node, std::shared_ptr<Kinematic>& rhs) {
-    rhs = make_type_from_yaml<Kinematic>(node);
+  static bool decode(const Node& node, std::shared_ptr<Kinematics>& rhs) {
+    rhs = make_type_from_yaml<Kinematics>(node);
     if (rhs) {
-      convert<Kinematic>::decode(node, *rhs);
+      convert<Kinematics>::decode(node, *rhs);
     }
     return true;
   }

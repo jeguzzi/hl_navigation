@@ -8,54 +8,175 @@
 #include <memory>
 
 #include "hl_navigation_sim/scenario.h"
+#include "hl_navigation_sim/tasks/waypoints.h"
 #include "hl_navigation_sim/world.h"
+#include "hl_navigation_sim_export.h"
 
-// using std::placeholders::_1;
+using hl_navigation::make_property;
+using hl_navigation::Properties;
+using hl_navigation::Property;
 
 namespace hl_navigation_sim {
 
-struct AntipodalScenario : public Scenario {
-  float radius;
-  float tolerance;
+/**
+ * @brief      A scenario that place the agents around a circle at regular
+ * intervals and task them to reach the opposite ("antipode") side.
+ */
+struct HL_NAVIGATION_SIM_EXPORT AntipodalScenario : public Scenario {
+  /**
+   * The default circle radius
+   */
+  static constexpr float default_radius = 1.0f;
+  /**
+   * The default goal tolerance
+   */
+  static constexpr float default_tolerance = 0.1f;
+  /**
+   * The default position noise
+   */
+  static constexpr float default_position_noise = 0.0f;
+  /**
+   * The default orientation noise
+   */
+  static constexpr float default_orientation_noise = 0.0f;
+  /**
+   * The default shuffle
+   */
+  static constexpr float default_shuffle = false;
+  /**
+   * @brief      Constructs a new instance.
+   */
+  AntipodalScenario(float radius = default_radius,
+                    float tolerance = default_tolerance,
+                    float position_noise = default_position_noise,
+                    float orientation_noise = default_orientation_noise,
+                    bool shuffle = default_shuffle)
+      : Scenario(),
+        radius(radius),
+        tolerance(tolerance),
+        position_noise(default_position_noise),
+        orientation_noise(default_orientation_noise),
+        shuffle(default_shuffle){};
 
+  /**
+   * @brief      Gets the circle radius.
+   *
+   * @return     The radius.
+   */
   float get_radius() const { return radius; }
-  void set_radius(const float &value) { radius = std::max(value, 0.0f); }
+  /**
+   * @brief      Sets the circle radius.
+   *
+   * @param[in]  value  The desired value
+   */
+  void set_radius(float value) { radius = std::max(value, 0.0f); }
+  /**
+   * @brief      Gets the goal tolerance.
+   *
+   * @return     The tolerance.
+   */
   float get_tolerance() const { return tolerance; }
-  void set_tolerance(const float &value) { tolerance = std::max(value, 0.0f); }
+  /**
+   * @brief      Sets the goal tolerance.
+   *
+   * @param[in]  value  The desired value
+   */
+  void set_tolerance(float value) { tolerance = std::max(value, 0.0f); }
 
-  void init_world(World *world) override {
-    Scenario::init_world(world);
-    const unsigned n = world->agents.size();
-    const float da = (n < 1) ? 0.0f : 2 * M_PI / n;
-    float a = 0.0f;
-    for (auto &agent : world->agents) {
-      const Vector2 p{radius * std::cos(a), radius * std::sin(a)};
-      agent->pose = Pose2(p, a + M_PI);
-      agent->task =
-          std::make_shared<WayPointsTask>(Waypoints{-p}, false, tolerance);
-      a += da;
-    }
+  /**
+   * @brief      Gets the position_noise.
+   *
+   * @return     The position_noise.
+   */
+  float get_position_noise() const { return position_noise; }
+  /**
+   * @brief      Sets the position noise.
+   *
+   * @param[in]  value  The desired value
+   */
+  void set_position_noise(float value) {
+    position_noise = std::max(value, 0.0f);
   }
 
-  AntipodalScenario()
-      :  // Scenario({std::bind(&AntipodalScenario::init, this, _1)})
-        Scenario(),
-        radius(1.0f),
-        tolerance(0.1f){};
+  /**
+   * @brief      Gets the orientation.
+   *
+   * @return     The orientation noise.
+   */
+  float get_orientation_noise() const { return orientation_noise; }
+  /**
+   * @brief      Sets the position_noise.
+   *
+   * @param[in]  value  The desired value
+   */
+  void set_orientation_noise(float value) {
+    orientation_noise = std::max(value, 0.0f);
+  }
 
+  /**
+   * @brief      Gets whether it should shuffle the agents before initializing
+   * them.
+   *
+   * @return     True if it shuffles the agents.
+   */
+  bool get_shuffle() const { return shuffle; }
+  /**
+   * @brief      Sets whether it should shuffle the agents.
+   *
+   * @param[in]  value  The desired value
+   */
+  void set_shuffle(bool value) { shuffle = value; }
+
+  /**
+   * @private
+   */
+  void init_world(World *world) override;
+
+  /**
+   * @private
+   */
   const Properties &get_properties() const override { return properties; };
 
+  /**
+   * @private
+   */
   inline const static std::map<std::string, Property> properties = Properties{
       {"radius",
-       make_property<float, AntipodalScenario>(&AntipodalScenario::get_radius,
-                                               &AntipodalScenario::set_radius,
-                                               1.0f, "Radius of the circle")},
+       make_property<float, AntipodalScenario>(
+           &AntipodalScenario::get_radius, &AntipodalScenario::set_radius,
+           default_radius, "Radius of the circle")},
       {"tolerance",
        make_property<float, AntipodalScenario>(
            &AntipodalScenario::get_tolerance, &AntipodalScenario::set_tolerance,
-           0.1f, "Goal tolerance")}};
+           default_tolerance, "Goal tolerance")},
+      {"position_noise",
+       make_property<float, AntipodalScenario>(
+           &AntipodalScenario::get_position_noise,
+           &AntipodalScenario::set_position_noise, default_position_noise,
+           "Noise added to the initial position")},
+      {"orientation_noise",
+       make_property<float, AntipodalScenario>(
+           &AntipodalScenario::get_orientation_noise,
+           &AntipodalScenario::set_orientation_noise, default_orientation_noise,
+           "Noise added to the initial orientation")},
+      {"shuffle",
+       make_property<bool, AntipodalScenario>(
+           &AntipodalScenario::get_shuffle, &AntipodalScenario::set_shuffle,
+           default_shuffle,
+           "Whether to shuffle the agents before initializing them")}};
 
+  /**
+   * @private
+   */
   std::string get_type() const override { return type; }
+
+  float radius;
+  float tolerance;
+  float position_noise;
+  float orientation_noise;
+  bool shuffle;
+
+ private:
   inline const static std::string type =
       register_type<AntipodalScenario>("Antipodal");
 };

@@ -12,7 +12,6 @@ using hl_navigation::Vector2;
 
 namespace YAML {
 
-
 template <>
 struct convert<Vector2> {
   static Node encode(const Vector2& rhs) {
@@ -31,7 +30,6 @@ struct convert<Vector2> {
     return true;
   }
 };
-
 
 // Note(Jerome): I don't know why I have to [re]define
 // `convert<std::vector<bool>>`, as it is already defined in yaml-cpp; but

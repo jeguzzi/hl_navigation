@@ -1,6 +1,6 @@
 from typing import Any
 
-from hl_navigation import Behavior, Kinematic, load_plugins
+from hl_navigation import Behavior, Kinematics, load_plugins
 
 
 def print_register(cls: Any, title: str) -> None:
@@ -17,4 +17,4 @@ def main() -> None:
     load_plugins()
     print_register(Behavior, "Behaviors")
     print("")
-    print_register(Kinematic, "Kinematics")
+    print_register(Kinematics, "Kinematics")

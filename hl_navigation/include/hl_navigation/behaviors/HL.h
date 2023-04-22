@@ -1,4 +1,4 @@
-  /**
+/**
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
@@ -6,7 +6,6 @@
 #define HL_NAVIGATION_BEHAVIOR_HL_H_
 
 #include <algorithm>
-#include <list>
 #include <memory>
 #include <vector>
 
@@ -14,10 +13,9 @@
 #include "hl_navigation/collision_computation.h"
 #include "hl_navigation/property.h"
 #include "hl_navigation/states/geometric.h"
+#include "hl_navigation_export.h"
 
 // TODO(J): verify if behavior for tau < step is correct (non smooth)
-
-// trajectory planning
 
 namespace hl_navigation {
 
@@ -31,9 +29,10 @@ namespace hl_navigation {
  *     "Human-friendly robot navigation in dynamic environments,"
  *     Robotics and Automation (ICRA), 2013 IEEE International Conference on,
  *     vol., no., pp.423,430, 6-10 May 2013
+ *     
+ * *Properties*: tau (float), eta (float), aperture (float), resolution(int)  
  */
-class HLBehavior : public Behavior,
-                   public GeometricState {
+class HL_NAVIGATION_EXPORT HLBehavior : public Behavior, public GeometricState {
  public:
   /**
    * Default \f$\eta\f$
@@ -56,8 +55,15 @@ class HLBehavior : public Behavior,
    */
   static constexpr unsigned default_resolution = 101;
 
-  HLBehavior(std::shared_ptr<Kinematic> kinematic = nullptr, float radius = 0.0f)
-      : Behavior(kinematic, radius),
+  /**
+   * @brief      Contruct a new instance
+   *
+   * @param[in]  kinematics  The kinematics
+   * @param[in]  radius      The radius
+   */
+  HLBehavior(std::shared_ptr<Kinematics> kinematics = nullptr,
+             float radius = 0.0f)
+      : Behavior(kinematics, radius),
         GeometricState(),
         effective_horizon(0.0f),
         tau(default_tau),
@@ -134,40 +140,6 @@ class HLBehavior : public Behavior,
    */
   Radians get_angular_resolution() const { return 2 * aperture / resolution; }
 
-  // -------------------------- CONTROL
-
-  /**
-   * @brief      Override \ref Behavior::cmd_twist adding target velocity
-   * relaxation
-   *
-   * The target velocities (twist or wheel speeds, depending on the \ref
-   * kinematic) are relaxed over time \f$\eta\f$ as \f$ \dot v = (v_t - v) /
-   * \eta \f$, where \f$v_t\f$ is the instantaneous desired value computed by
-   * Behavior::cmd_twist.
-   *
-   * If \f$\eta=0\f$, no relaxation is performed and the desired target velocity
-   * is returned.
-   *
-   * @param[in]  time_step        The control time step, used to integrate
-   * velocity relaxation.
-   * @param[in]  relative         The desired frame of reference for the twist:
-   *                              set it to true for the agent's own frame and
-   * to false for the world fixed frame.
-   * @param[in]  mode             Should the agent move towards the \ref
-   * Behavior::get_target_position (\ref Behavior::Mode::move), turn-in-place
-   * towards \ref Behavior::get_target_orientation, or stop moving.
-   * @param[in]  set_as_actuated  If set, it assumes that the control command
-   * will be actuated, therefore setting Behavior::actuated_twist to the
-   * returned value. If not set, the user should call
-   * Behavior::set_actuated_twist before querying for a new control commands. it
-   * uses the old actuated control command as \f$v\f$ in the velocity
-   * relaxation.
-   *
-   * @return     The control command as a twist in the specified frame.
-   */
-  Twist2 cmd_twist(float time_step, bool relative, Mode mode = Mode::move,
-                   bool set_as_actuated = true) override;
-
   /**
    * @brief      Gets the free distance to collision in \f$[-\alpha, \alpha]\f$
    * at regular intervals.
@@ -180,24 +152,38 @@ class HLBehavior : public Behavior,
   CollisionComputation::CollisionMap get_collision_distance(
       bool assuming_static = false);
 
+
+  /** @private
+  */
   virtual const Properties &get_properties() const override {
     return properties;
   };
 
+  /**
+   * Properties: tau, eta, aperture, and resolution
+   * @private
+   */
   static inline std::map<std::string, Property> properties =
       Properties{
-          {"tau", make_property<float, HLBehavior>(
-                      &HLBehavior::get_tau, &HLBehavior::set_tau, default_tau, "Tau")},
-          {"eta", make_property<float, HLBehavior>(
-                      &HLBehavior::get_eta, &HLBehavior::set_eta, default_eta, "Eta")},
+          {"tau",
+           make_property<float, HLBehavior>(
+               &HLBehavior::get_tau, &HLBehavior::set_tau, default_tau, "Tau")},
+          {"eta",
+           make_property<float, HLBehavior>(
+               &HLBehavior::get_eta, &HLBehavior::set_eta, default_eta, "Eta")},
           {"aperture", make_property<float, HLBehavior>(
                            &HLBehavior::get_aperture, &HLBehavior::set_aperture,
                            default_aperture, "Aperture angle")},
-          {"resolution", make_property<int, HLBehavior>(
-                             &HLBehavior::get_resolution,
-                             &HLBehavior::set_resolution, default_resolution, "Safety margin")},
+          {"resolution",
+           make_property<int, HLBehavior>(&HLBehavior::get_resolution,
+                                          &HLBehavior::set_resolution,
+                                          default_resolution, "Safety margin")},
       } +
       Behavior::properties;
+
+  /** @private
+  */
+  std::string get_type() const override { return type; }
 
  protected:
   float effective_horizon;
@@ -206,6 +192,22 @@ class HLBehavior : public Behavior,
   Radians aperture;
   unsigned int resolution;
   CollisionComputation collision_computation;
+
+  /**
+   * @brief      Override \ref Behavior::cmd_twist adding target velocity
+   * relaxation
+   *
+   * The target velocities (twist or wheel speeds, depending on the \ref
+   * get_kinematics) are relaxed over time \f$\eta\f$ as \f$ \dot v = (v_t - v) /
+   * \eta \f$, where \f$v_t\f$ is the instantaneous desired value computed by
+   * \ref Behavior::cmd_twist.
+   *
+   * If \f$\eta=0\f$, no relaxation is performed and the desired target velocity
+   * is returned.
+   *
+   */
+  Twist2 cmd_twist(float time_step, Mode mode, bool relative,
+                   bool set_as_actuated) override;
 
   Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
 
@@ -226,10 +228,6 @@ class HLBehavior : public Behavior,
   DiscCache make_obstacle_cache(const Disc &obstacle, bool push_away = false,
                                 float epsilon = 2e-3);
 
-
-  std::string get_type() const override {
-    return type;
-  }
 
  private:
   inline static std::string type = register_type<HLBehavior>("HL");

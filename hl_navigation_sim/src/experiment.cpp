@@ -1,9 +1,11 @@
 #include "hl_navigation_sim/experiment.h"
 
 #include <filesystem>
+#include <highfive/H5DataSpace.hpp>
 #include <highfive/H5File.hpp>
 
 #include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_sim/sampling/sampler.h"
 #include "hl_navigation_sim/world.h"
 #include "hl_navigation_sim/yaml/experiment.h"
 #include "hl_navigation_sim/yaml/world.h"
@@ -15,14 +17,22 @@ namespace fs = std::filesystem;
 
 static void store_world(const World &world, HighFive::Group &group) {
   const std::string yaml = YAML::dump<World>(&world);
-  HighFive::Attribute a = group.createAttribute<std::string>(
-      "world", HighFive::DataSpace::From(yaml));
-  a.write(yaml);
+  group.createAttribute<std::string>("world", HighFive::DataSpace::From(yaml))
+      .write(yaml);
 }
 
-static void store_experiment(const std::string & yaml, HighFive::File &file) {
-  HighFive::Attribute a = file.createAttribute<std::string>("experiment", yaml);
-  a.write(yaml);
+static void store_seed(unsigned seed, HighFive::Group &group) {
+  group.createAttribute<unsigned>("seed", HighFive::DataSpace::From(seed))
+      .write(seed);
+}
+
+static void store_steps(unsigned steps, HighFive::Group &group) {
+  group.createAttribute<unsigned>("steps", HighFive::DataSpace::From(steps))
+      .write(steps);
+}
+
+static void store_experiment(const std::string &yaml, HighFive::File &file) {
+  file.createAttribute<std::string>("experiment", yaml).write(yaml);
 }
 
 static std::string current_stamp() {
@@ -35,52 +45,176 @@ static std::string current_stamp() {
   return s;
 }
 
-void Trace::init(const World &world, HighFive::Group &group, unsigned steps) {
-  // TODO(Jerome): set the column names
-  unsigned n = 0;
-  if (record_pose) n += 3;
-  if (record_twist) n += 3;
-  if (record_cmd) n += 3;
-  if (record_target) n += 3;
-  record = n > 0;
-  if (!record) return;
-  number = world.agents.size();
-  const std::vector<size_t> dims{static_cast<size_t>(steps), number, n};
-  auto ds = group.createDataSet<float>("traces", HighFive::DataSpace(dims));
-  data = std::vector<float>(number * n, 0.0f);
-  dataset = std::make_shared<HighFive::DataSet>(std::move(ds));
+void Trace::init(const World &world, HighFive::Group *group,
+                 unsigned max_steps) {
+  record = false;
+  number = world.get_agents().size();
+  const auto & agents = world.get_agents();
+  indices.clear();
+  for (unsigned i = 0; i < number; ++i) {
+    indices[agents[i].get()] = i;
+  }
+  steps = 0;
+  if (record_pose) {
+    pose_data.clear();
+    pose_data.reserve(max_steps * number * 3);
+    pose_ptr = reinterpret_cast<float *>(pose_data.data());
+    record = true;
+  }
+  if (record_twist) {
+    twist_data.clear();
+    twist_data.reserve(max_steps * number * 3);
+    twist_ptr = reinterpret_cast<float *>(twist_data.data());
+    record = true;
+  }
+  if (record_cmd) {
+    cmd_data.clear();
+    cmd_data.reserve(max_steps * number * 3);
+    cmd_ptr = reinterpret_cast<float *>(cmd_data.data());
+    record = true;
+  }
+  if (record_target) {
+    target_data.clear();
+    target_data.reserve(max_steps * number * 3);
+    target_ptr = reinterpret_cast<float *>(target_data.data());
+    record = true;
+  }
+  if (record_safety_violation) {
+    safety_violation_data.clear();
+    safety_violation_data.reserve(max_steps * number);
+    safety_violation_ptr =
+        reinterpret_cast<float *>(safety_violation_data.data());
+    record = true;
+  }
+  if (record_collisions) {
+    record = true;
+    collisions_data.clear();
+  }
+  if (record_task_events) {
+    record = true;
+    task_events_data = std::vector<std::vector<float>>(number);
+    task_events = std::vector<unsigned>(number, 0);
+    int index = 0;
+    for (const auto & agent : world.get_agents()) {
+      if (Task *task = agent->get_task()) {
+        auto &ds = task_events_data[index];
+        auto &n = task_events[index];
+        task->add_callback([&ds, &n](const std::vector<float> &data) {
+          ds.insert(std::end(ds), std::begin(data), std::end(data));
+          n++;
+        });
+      }
+      index++;
+    }
+  }
 }
 
 void Trace::update(const World &world, unsigned step) {
   if (!record) return;
-  float *d = reinterpret_cast<float *>(data.data());
-  for (const auto &agent : world.agents) {
-    if (record_pose) {
+  steps++;
+  if (record_pose) {
+    for (const auto &agent : world.get_agents()) {
       const auto pose = agent->pose;
-      *d++ = pose.position[0];
-      *d++ = pose.position[1];
-      *d++ = pose.orientation;
-    }
-    if (record_twist) {
-      const auto twist = agent->twist;
-      *d++ = twist.velocity[0];
-      *d++ = twist.velocity[1];
-      *d++ = twist.angular_speed;
-    }
-    if (record_cmd) {
-      const auto twist = agent->cmd_twist;
-      *d++ = twist.velocity[0];
-      *d++ = twist.velocity[1];
-      *d++ = twist.angular_speed;
-    }
-    if (record_target && agent->nav_behavior) {
-      const auto pose = agent->nav_behavior->get_target_pose();
-      *d++ = pose.position[0];
-      *d++ = pose.position[1];
-      *d++ = pose.orientation;
+      *pose_ptr++ = pose.position[0];
+      *pose_ptr++ = pose.position[1];
+      *pose_ptr++ = pose.orientation;
     }
   }
-  dataset->select({step, 0, 0}, {1, number, 3}).write_raw(data.data());
+  if (record_twist) {
+    for (const auto &agent : world.get_agents()) {
+      const auto twist = agent->twist;
+      *twist_ptr++ = twist.velocity[0];
+      *twist_ptr++ = twist.velocity[1];
+      *twist_ptr++ = twist.angular_speed;
+    }
+  }
+  if (record_cmd) {
+    for (const auto &agent : world.get_agents()) {
+      const auto twist = agent->cmd_twist;
+      *cmd_ptr++ = twist.velocity[0];
+      *cmd_ptr++ = twist.velocity[1];
+      *cmd_ptr++ = twist.angular_speed;
+    }
+  }
+  if (record_target) {
+    for (const auto &agent : world.get_agents()) {
+      if (auto b = agent->get_behavior()) {
+        const auto pose = b->get_target_pose();
+        *target_ptr++ = pose.position[0];
+        *target_ptr++ = pose.position[1];
+        *target_ptr++ = pose.orientation;
+      }
+    }
+  }
+  if (record_safety_violation) {
+    for (const auto &agent : world.get_agents()) {
+      *safety_violation_ptr++ = world.compute_safety_violation(agent.get());
+    }
+  }
+  if (record_collisions) {
+    const auto collisions = world.get_collisions();
+    const unsigned n = collisions.size();
+    if (n > 0) {
+      collisions_data.reserve(collisions_data.size() + 3 * n);
+      for (const auto &[e1, e2] : collisions) {
+        collisions_data.push_back(step);
+        collisions_data.push_back(e1->uid);
+        collisions_data.push_back(e2->uid);
+      }
+    }
+  }
+}
+
+void Trace::finalize(const World &world, HighFive::Group *group) {
+  if (!group) return;
+  const std::vector<size_t> dims{static_cast<size_t>(steps), number, 3};
+  if (record_pose) {
+    group->createDataSet<float>("pose", HighFive::DataSpace(dims))
+        .write_raw(pose_data.data());
+  }
+  if (record_twist) {
+    group->createDataSet<float>("twist", HighFive::DataSpace(dims))
+        .write_raw(twist_data.data());
+  }
+  if (record_cmd) {
+    group->createDataSet<float>("cmd", HighFive::DataSpace(dims))
+        .write_raw(cmd_data.data());
+  }
+  if (record_target) {
+    group->createDataSet<float>("target", HighFive::DataSpace(dims))
+        .write_raw(target_data.data());
+  }
+  if (record_safety_violation) {
+    group
+        ->createDataSet<float>("safety_violation",
+                               HighFive::DataSpace({steps, number}))
+        .write_raw(safety_violation_data.data());
+  }
+  if (record_collisions) {
+    unsigned collisions_number = collisions_data.size() / 3;
+    group
+        ->createDataSet<unsigned>("collisions",
+                                  HighFive::DataSpace({collisions_number, 3}))
+        .write_raw(collisions_data.data());
+  }
+  if (record_task_events) {
+    for (unsigned i = 0; i < task_events.size(); ++i) {
+      const auto n = task_events[i];
+      if (!n) continue;
+      const auto ds = task_events_data[i];
+      group->createGroup("agent_" + std::to_string(i))
+          .createDataSet<float>("task", HighFive::DataSpace({n, ds.size() / n}))
+          .write_raw(ds.data());
+    }
+  }
+}
+
+void Experiment::init_run(int index) {
+  set_random_seed(index);
+  world = make_world();
+  if (scenario) {
+    scenario->init_world(world.get());
+  }
 }
 
 void Experiment::init_dataset() {
@@ -100,18 +234,16 @@ void Experiment::init_dataset() {
   store_experiment(dump(), *file);
 }
 
-std::string Experiment::dump() {
-  return YAML::dump<Experiment>(this);
-}
+std::string Experiment::dump() { return YAML::dump<Experiment>(this); }
 
 void Experiment::init_dataset_run(unsigned index) {
   if (!file) {
-    trace.record = false;
+    run_group = nullptr;
     return;
   }
   auto group = file->createGroup("run_" + std::to_string(index));
   store_world(*world, group);
-  trace.init(*world, group, steps);
+  store_seed(get_random_seed(), group);
   run_group = std::make_shared<HighFive::Group>(std::move(group));
 }
 
@@ -121,23 +253,31 @@ void Experiment::run() {
   }
 }
 
-void Experiment::run_once(int seed) {
+void Experiment::run_once(int index) {
   if (!initialized) {
     init_dataset();
     initialized = true;
   }
-  init_run(seed);
+  init_run(index);
   if (!world) {
     std::cerr << "No world" << std::endl;
     return;
   }
   world->prepare();
-  init_dataset_run(seed);
+  init_dataset_run(index);
+  trace.init(*world, run_group.get(), steps);
   for (step = 0; step < steps; step++) {
     world->update(time_step);
     trace.update(*world, step);
     for (const auto &cb : callbacks) {
       cb();
     }
+    if (terminate_when_all_idle && world->agents_are_idle()) {
+      break;
+    }
+  }
+  trace.finalize(*world, run_group.get());
+  if (run_group) {
+    store_steps(steps, *run_group);
   }
 }

@@ -8,10 +8,10 @@
 #include "hl_navigation/plugins.h"
 #include "hl_navigation/property.h"
 #include "hl_navigation/utilities.h"
+#include "hl_navigation/behavior.h"
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim/scenarios/antipodal.h"
 #include "hl_navigation_sim/scenarios/simple.h"
-#include "hl_navigation_sim/scenarios/simple_with_init.h"
 #include "hl_navigation_sim/world.h"
 
 template <typename T>
@@ -83,6 +83,8 @@ int main(int argc, char* argv[]) {
       return 0;
     }
   }
+  // print_register<hl_navigation::Behavior>("Behaviors", "");
+
   if (state_estimations) {
     print_register<hl_navigation_sim::StateEstimation>("State Estimations",
                                                        state_estimation_type);

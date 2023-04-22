@@ -15,6 +15,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic -Wno-gnu-zero-variadic-macro-arguments)
 endif()
 
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+
 # set(CMAKE_BUILD_TYPE Release)
 # set(CMAKE_CXX_FLAGS_RELEASE "-Os")
 
@@ -23,9 +25,8 @@ find_package(ament_cmake_python REQUIRED)
 find_package(hl_navigation REQUIRED)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-# find_package(pybind11_vendor REQUIRED)
-# find_package(pybind11 REQUIRED)
-add_subdirectory(../external/pybind11 pybind11 EXCLUDE_FROM_ALL)
+find_package(pybind11 REQUIRED)
+# add_subdirectory(../external/pybind11 pybind11 EXCLUDE_FROM_ALL)
 
 include_directories(include)
 
@@ -38,6 +39,7 @@ ament_python_install_package(hl_navigation
 
 pybind11_add_module(_hl_navigation src/python.cpp)
 # target_compile_options(_hl_navigation PRIVATE -fvisibility=hidden)
+target_compile_definitions(_hl_navigation PRIVATE PYBIND11_DETAILED_ERROR_MESSAGES=1)
 target_link_libraries(_hl_navigation PRIVATE hl_navigation::hl_navigation)
 add_dependencies(_hl_navigation hl_navigation::hl_navigation)
 

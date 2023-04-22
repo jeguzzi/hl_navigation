@@ -1,20 +1,62 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import Any, Callable, Union, ParamSpec, TypeVar, List
 import pkg_resources
+import numpy
 
-from ._hl_navigation import Action, ActionState
+from ._hl_navigation import Action
 from ._hl_navigation import Behavior as _Behavior
-from ._hl_navigation import (BehaviorHeading, BehaviorMode,
-                             CachedCollisionComputation, CollisionComputation,
+from ._hl_navigation import (CachedCollisionComputation, CollisionComputation,
                              Controller, Disc, GeometricState)
-from ._hl_navigation import Kinematic as _Kinematic
-from ._hl_navigation import (SocialMargin, LineSegment, Neighbor, Pose2, Twist2, dump,
-                             load_behavior, load_kinematic, load_plugins)
+from ._hl_navigation import Kinematics as _Kinematics
+from ._hl_navigation import (SocialMargin, LineSegment, Neighbor, Pose2,
+                             Twist2, dump, load_behavior, load_kinematics,
+                             load_plugins)
+
+Vector2 = 'numpy.ndarray[numpy.float32[2, 1]]'
+PropertyField = Union[bool, int, float, str, Vector2, List[bool], List[int],
+                      List[float], List[str], List[Vector2]]
+
+T = TypeVar('T')
+P = Callable[[], T]
 
 
-def register_property(value: Any, description: str = ""):
+def registered_property(default_value: PropertyField,
+                        description: str = "") -> Callable[[P], P]:
+    """
+    A decorator that define and automatically register a property.
+    The use it similar to :py:func:`property`, except for the
+    two additional arguments
+
+    For example, the following code adds a boolean valued auto
+    registered property to a registered sub-class ``C`` of class ``T``:
+
+    .. code-block:: python
+
+        class C(T, name="C"):
+
+            def __init__(self):
+                super().__init__()
+                self._my_field = True
+
+            @registered_property(True, "...")
+            def my_property(self) -> bool:
+                return self._my_field;
+
+            @my_property.setter
+            def my_property(self, value: bool) -> None:
+                self._my_field = value;
+
+
+    :param default_value:
+        The default value of the property
+        when the object is initialized
+
+    :param description: The description of the property
+    """
 
     def g(f):
-        f.__default_value__ = value
+        f.__default_value__ = default_value
         f.__desc__ = description
         return property(f)
 
@@ -23,11 +65,13 @@ def register_property(value: Any, description: str = ""):
 
 class Behavior(_Behavior):
 
+    __doc__ = _Behavior.__doc__
+
     def __init_subclass__(cls, /, **kwargs):
         name = kwargs.pop('name', '')
         super().__init_subclass__(**kwargs)
         if name:
-            _Behavior.register_type(name, cls)
+            _Behavior._register_type(name, cls)
             cls._type = name
             for k, v in vars(cls).items():
                 if isinstance(v, property) and hasattr(v.fget,
@@ -35,19 +79,21 @@ class Behavior(_Behavior):
                     return_type = v.fget.__annotations__['return']
                     default_value = return_type(v.fget.__default_value__)
                     desc = v.fget.__desc__
-                    _Behavior.add_property(name, k, v, default_value, desc)
+                    _Behavior._add_property(name, k, v, default_value, desc)
 
-    def __init__(self, kinematic=None, radius=0.0):
-        _Behavior.__init__(self, kinematic, radius)
+    def __init__(self, kinematics=None, radius=0.0):
+        _Behavior.__init__(self, kinematics, radius)
 
 
-class Kinematic(_Kinematic):
+class Kinematics(_Kinematics):
+
+    __doc__ = _Kinematics.__doc__
 
     def __init_subclass__(cls, /, **kwargs):
         name = kwargs.pop('name', '')
         super().__init_subclass__(**kwargs)
         if name:
-            _Kinematic.register_type(name, cls)
+            _Kinematics._register_type(name, cls)
             cls._type = name
             for k, v in vars(cls).items():
                 if isinstance(v, property) and hasattr(v.fget,
@@ -55,10 +101,10 @@ class Kinematic(_Kinematic):
                     return_type = v.fget.__annotations__['return']
                     default_value = return_type(v.fget.__default_value__)
                     desc = v.fget.__desc__
-                    _Kinematic.add_property(name, k, v, default_value, desc)
+                    _Kinematics._add_property(name, k, v, default_value, desc)
 
     def __init__(self, max_speed=0.0, max_angular_speeed=0.0):
-        _Kinematic.__init__(self, max_speed, max_angular_speeed)
+        _Kinematics.__init__(self, max_speed, max_angular_speeed)
 
 
 from . import behaviors
@@ -72,10 +118,9 @@ def load_py_plugins():
 
 
 __all__ = [
-    'Behavior', 'BehaviorHeading', 'BehaviorMode', 'Pose2', 'Twist2', 'Disc',
-    'Neighbor', 'LineSegment', 'Kinematic', 'Action', 'ActionState',
-    'Controller', 'CollisionComputation'
+    'Behavior', 'Pose2', 'Twist2', 'Disc', 'Neighbor', 'LineSegment',
+    'Kinematics', 'Action', 'Controller', 'CollisionComputation'
     'CachedCollisionComputation'
-    'GeometricState', 'dump', 'load_behavior', 'load_kinematic',
+    'GeometricState', 'dump', 'load_behavior', 'load_kinematics',
     'load_plugins', 'load_py_plugins'
 ]

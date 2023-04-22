@@ -10,27 +10,72 @@
 
 #include "./common.h"
 #include "./utilities.h"
+#include "hl_navigation_export.h"
 
 namespace hl_navigation {
 
 struct HasProperties;
 
+/**
+ * @brief      This class defines a property (similar to Python built-in properties),
+ * i.e., a pair of getter and setter. In addition, it holds (for auto-documentation) 
+ * a default value, a description, and the name of the involved types.
+ * A property has a value of type
+ * \ref Field, which is one of ``bool``, ``int``, ``float``, ``string``, \ref
+ * hl_navigation::Vector2 or a collection (a vector in C++, a list in Python) thereof.
+ * Properties are used to configure sub-classes of \ref hl_navigation::HasProperties when using
+ * bindings like YAML or Python. Properties values are accessed 
+ * using the methods exposed by \ref hl_navigation::HasProperties.
+ */
 struct Property {
+  /**
+   * The type of the value held by the property.
+   */
   using Field =
       std::variant<bool, int, float, std::string, Vector2, std::vector<bool>,
                    std::vector<int>, std::vector<float>,
                    std::vector<std::string>, std::vector<Vector2>>;
+  /**
+   * The type of the property value getter, i.e., a function that gets the
+   * property value from the owner.
+   */
   using Getter = std::function<Field(const HasProperties*)>;
+  /**
+   * The type of the property value setter, i.e., a function that sets the
+   * property value of the owner.
+   */
   using Setter = std::function<void(HasProperties*, const Field&)>;
 
+  /**
+   * The property value getter.
+   */
   Getter getter;
+  /**
+   * The property value setter.
+   */
   Setter setter;
+  /**
+   * The property default value, i.e., the value of the property when the object
+   * is initialized.
+   */
   Field default_value;
+  /**
+   * The name of the property value type, used for auto documentation.
+   */
   std::string type_name;
+  /**
+   * A textual description of the property, used for auto documentation.
+   */
   std::string description;
+  /**
+   * The name of the property-owner type.
+   */
   std::string owner_type_name;
 };
 
+/**
+ * A type the holds a dictionary of named properties ``name -> property``
+ */
 using Properties = std::map<std::string, Property>;
 
 inline Properties operator+(const Properties& p1, const Properties& p2) {
@@ -42,12 +87,36 @@ inline Properties operator+(const Properties& p1, const Properties& p2) {
   return r;
 }
 
+/**
+ * A function that gets a value of type ``T`` from an object of type ``C``.
+ */
 template <typename T, class C>
 using TypedGetter = std::function<T(const C*)>;
 
+/**
+ * A function that sets a value of type ``T`` of an object of type ``C``.
+ */
 template <typename T, class C>
 using TypedSetter = std::function<void(C*, const T&)>;
 
+/**
+ * @brief      Makes a property from a pair of typed setters and getters.
+ * It erases the type of the property (``T``)
+ * and of the property owner (``C``) from the interface, replacing typed by
+ * generic getters and setters. The property type is effectively preserved
+ * inside the getter and setter.
+ *
+ *
+ * @param[in]  getter         A typed getter
+ * @param[in]  setter         A typed setter
+ * @param[in]  default_value  The property default value
+ * @param[in]  description    The property description
+ *
+ * @tparam     T              The type of the property
+ * @tparam     C              The type of the property owner
+ *
+ * @return     A property
+ */
 template <typename T, class C>
 inline Property make_property(const TypedGetter<T, C>& getter,
                               const TypedSetter<T, C>& setter,
@@ -78,13 +147,33 @@ inline Property make_property(const TypedGetter<T, C>& getter,
   return property;
 }
 
-struct HasProperties {
+/**
+ * @brief      This class defines set and get methods to access named
+ * \ref Property "properties".
+ */
+struct HL_NAVIGATION_EXPORT HasProperties {
   virtual ~HasProperties() = default;
 
+  /**
+   * All the properties associated with a owner type.
+   */
   static inline std::map<std::string, Property> properties = Properties{};
 
+  /**
+   * @brief      Gets all properties associated with an owner.
+   *
+   * @return     The properties.
+   */
   virtual const Properties& get_properties() const { return properties; };
 
+  /**
+   * @brief      Set the value of a named property.
+   * Fails silently if no property can be found or if the value has a
+   * non-compatible type.
+   *
+   * @param[in]  name   The name of the property
+   * @param[in]  value  The desired value for the property
+   */
   void set(const std::string& name, const Property::Field& value) {
     const auto& properties = get_properties();
     if (properties.count(name)) {
@@ -95,6 +184,15 @@ struct HasProperties {
     }
   }
 
+  /**
+   * @brief      Set the value of a named property, similar to \ref set but
+   * casting the value to V.
+   *
+   * @param[in]  name   The name of the property
+   * @param[in]  value  The desired value for the property
+   *
+   * @tparam     V      The type of the desired value
+   */
   template <typename V>
   void set_value(const std::string& name, const V& value) {
     const auto& properties = get_properties();
@@ -114,6 +212,15 @@ struct HasProperties {
     }
   }
 
+  /**
+   * @brief      Gets the value of the specified property.
+   *
+   * @param[in]  name  The name of the property
+   *
+   * @throws     std::runtime_error A runtime error if no property is found.
+   *
+   * @return     The value of the property
+   */
   Property::Field get(const std::string& name) const {
     const auto& properties = get_properties();
     if (properties.count(name)) {
@@ -128,23 +235,6 @@ struct HasProperties {
 
 }  // namespace hl_navigation
 
-// namespace Eigen {
-
-// inline std::ostream& operator<<(
-//     std::ostream& os, const std::vector<Matrix<float, 2, 1, 0>>& items) {
-//   os << "[";
-//   bool first = true;
-//   for (const auto& item : items) {
-//     if (!first) os << ", ";
-//     os << "[" << item[0] << ", " << item[1] << "]";
-//     first = false;
-//   }
-//   os << "]";
-//   return os;
-// }
-// }  // namespace Eigen
-
-
 template <typename T>
 inline std::ostream& operator<<(std::ostream& os,
                                 const std::vector<T>& values) {
@@ -158,7 +248,6 @@ inline std::ostream& operator<<(std::ostream& os,
   os << "]";
   return os;
 }
-
 
 inline std::ostream& operator<<(std::ostream& os,
                                 const hl_navigation::Property::Field& value) {

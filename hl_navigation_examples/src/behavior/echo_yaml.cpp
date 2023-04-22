@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   std::string yaml = std::string(argv[1]);
-  auto behavior = YAML::load<Behavior>(yaml);
+  auto behavior = YAML::load_string<Behavior>(yaml);
   if (!behavior) {
     std::cerr << "Failed loading behavior from " << std::quoted(yaml) << std::endl;
     return 1;

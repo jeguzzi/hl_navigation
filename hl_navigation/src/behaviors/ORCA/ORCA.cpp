@@ -13,8 +13,8 @@
 
 namespace hl_navigation {
 
-ORCABehavior::ORCABehavior(std::shared_ptr<Kinematic> kinematic, float radius)
-    : Behavior(kinematic, radius),
+ORCABehavior::ORCABehavior(std::shared_ptr<Kinematics> kinematics, float radius)
+    : Behavior(kinematics, radius),
       GeometricState(),
       use_effective_center(false),
       _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
@@ -106,9 +106,8 @@ float ORCABehavior::get_time_step() const { return _RVOAgent->timeStep_; }
 
 
 void ORCABehavior::prepare() {
-  if (use_effective_center && kinematic->is_wheeled() &&
-      kinematic->dof() == 2) {
-    Wheeled *wk = dynamic_cast<Wheeled *>(kinematic.get());
+  if (is_using_effective_center()) {
+    Wheeled *wk = dynamic_cast<Wheeled *>(kinematics.get());
     D = wk->get_axis() * 0.5;
     RVO::Vector2 delta =
         RVO::Vector2(cosf(pose.orientation), sinf(pose.orientation)) * D;
@@ -169,12 +168,11 @@ Vector2 ORCABehavior::compute_desired_velocity(float dt) {
 // TODO(J 2023): review ... should I check feasibility?
 Twist2 ORCABehavior::twist_towards_velocity(const Vector2 &absolute_velocity,
                                             bool relative) {
-  if (use_effective_center && kinematic->is_wheeled() &&
-      kinematic->dof() == 2) {
-    Radians angle = polar_angle(absolute_velocity) - pose.orientation;
+  if (is_using_effective_center()) {
+    Radians angle = orientation_of(absolute_velocity) - pose.orientation;
     float speed = absolute_velocity.norm();
     if (speed) {
-      Wheeled *wk = dynamic_cast<Wheeled *>(kinematic.get());
+      Wheeled *wk = dynamic_cast<Wheeled *>(kinematics.get());
       WheelSpeeds speeds = {
           speed * (cosf(angle) - wk->get_axis() * 0.5f / D * sinf(angle)),
           speed * (cosf(angle) + wk->get_axis() * 0.5f / D * sinf(angle))};

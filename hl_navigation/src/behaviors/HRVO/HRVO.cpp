@@ -10,8 +10,8 @@
 
 namespace hl_navigation {
 
-HRVOBehavior::HRVOBehavior(std::shared_ptr<Kinematic> kinematic, float radius)
-    : Behavior(kinematic, radius),
+HRVOBehavior::HRVOBehavior(std::shared_ptr<Kinematics> kinematics, float radius)
+    : Behavior(kinematics, radius),
       GeometricState(),
       agentIndex(0),
       rangeSq(0.0f),

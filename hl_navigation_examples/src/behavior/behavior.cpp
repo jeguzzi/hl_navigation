@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
   printf("Use behavior %s\n", behavior_name);
-  behavior->set_kinematic(std::make_shared<Holonomic>(1.0, 1.0));
+  behavior->set_kinematics(std::make_shared<Holonomic>(1.0, 1.0));
   behavior->set_radius(0.1);
   float dt = 0.1;
   behavior->set_horizon(5.0);

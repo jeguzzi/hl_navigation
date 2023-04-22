@@ -15,13 +15,13 @@ obstacles:
   - position: [2.0, 0.0]
     radius: 0.5
 agents:
-  - kinematic:
+  - kinematics:
       type: Holonomic
       max_speed: 1.0
-    navigation_behavior:
-      type: Dummy
+    behavior:
+      type: HL
     task:
-      type: WayPoints
+      type: Waypoints
       waypoints: [[1.0, 0.0]]
       tolerance: 0.1
     radius: 0.1

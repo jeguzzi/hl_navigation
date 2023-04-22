@@ -16,7 +16,7 @@ def main(behavior_name: str = 'HL') -> None:
         print(f'No behavior with name {behavior_name}')
         sys.exit(1)
     print(f'Use behavior {behavior_name}')
-    behavior.kinematic = nav.kinematics.Holonomic(1.0, 1.0)
+    behavior.kinematics = nav.kinematics.Holonomic(1.0, 1.0)
     behavior.radius = 0.1
     dt = 0.1
     behavior.horizon = 5.0

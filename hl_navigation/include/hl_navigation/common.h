@@ -23,35 +23,33 @@ namespace hl_navigation {
  */
 using Vector2 = Eigen::Vector2f;
 
-
 /**
  * Angle in radians.
  */
 using Radians = float;
 /**
- * A vector that holds wheel speeds. The order depends on the kinematic.
+ * A vector that holds wheel speeds. The order depends on the kinematics.
  */
 using WheelSpeeds = std::vector<float>;
 
 /**
  * @brief      The orientation of a two dimensional vector
  *
- * @param[in]  vector
+ * @param[in]  vector The vector
  *
- * @return     The polar angle
+ * @return     The orientation of the vector
  */
-inline Radians polar_angle(const Vector2& vector) {
+inline Radians orientation_of(const Vector2& vector) {
   return std::atan2(vector.y(), vector.x());
 }
 
 /**
- * @brief      Normalize an angle to a value in [-pi, pi]
+ * @brief      Normalize an angle to a value in \f$[-\pi, \pi]\f$.
+ * Apply it when computing angular differences.
  *
- * Useful/needed when compute angular differences
+ * @param[in]  value The original unbounded angle
  *
- * @param[in]  value
- *
- * @return     The same angle expressed with a value in [-pi, pi]
+ * @return     The equivalent angle in \f$[-\pi, \pi]\f$
  */
 inline Radians normalize(Radians value) {
   value = std::fmod(value, 2 * M_PI);
@@ -64,18 +62,18 @@ inline Radians normalize(Radians value) {
 }
 
 /**
- * @brief      Unit vector towards an angle
+ * @brief      Unit vector with a desired orientated.
  *
- * @param[in]  angle
+ * @param[in]  angle The desired orientation
  *
- * @return     Vector of norm one oriented towards the angle
+ * @return     Vector of norm one and desired orientation
  */
 inline Vector2 unit(float angle) { return {cosf(angle), sinf(angle)}; }
 
 /**
- * @brief      Rotate a two-dimensional vector
+ * @brief      Rotate a two-dimensional vector.
  *
- * @param[in]  vector
+ * @param[in]  vector The original vector
  * @param[in]  angle  The rotation angle in radians
  *
  * @return     The rotated vector
@@ -88,10 +86,11 @@ inline Vector2 rotate(const Vector2 vector, float angle) {
 /**
  * @brief      Clamp the norm of a vector
  *
- * @param[in]  vector
+ * @param[in]  vector The original vector
  * @param[in]  max_length  The maximum length
  *
- * @return     A vector with the same direction clamped to max_length
+ * @return     A vector with the original orientation but norm clamped to
+ * ``max_length``.
  */
 inline Vector2 clamp_norm(const Vector2& vector, float max_length) {
   float n = vector.norm();
@@ -137,21 +136,30 @@ struct Twist2 {
     return {::hl_navigation::rotate(velocity, angle), angular_speed};
   }
 
+  /**
+   * @brief      Equality operator.
+   *
+   * @param[in]  other  The other twist
+   *
+   * @return     The result of the equality
+   */
   bool operator==(const Twist2& other) const {
     return velocity == other.velocity && angular_speed == other.angular_speed;
   }
 
-  bool operator!=(const Twist2& other) const {
-    return !(operator==(other));
-  }
+  /**
+   * @brief      Inequality operator.
+   *
+   * @param[in]  other  The other twist
+   *
+   * @return     The result of the inequality
+   */
+  bool operator!=(const Twist2& other) const { return !(operator==(other)); }
 };
-
 
 /**
  * @brief      Two-dimensional pose composed of planar position and
- * orientatation.
- *
- * Poses are assumed to be a world fixed frame.
+ * orientatation. Poses are assumed to be the world-fixed frame.
  */
 struct Pose2 {
   /**
@@ -183,7 +191,7 @@ struct Pose2 {
    * @param[in]  twist  The twist (in agent or world frame)
    * @param[in]  dt     The time step
    *
-   * @return     pose + dt * twist  (in world frame)
+   * @return     The result of ``pose + dt * twist`` (in world frame)
    */
   Pose2 integrate(const Twist2& twist, float dt) {
     return {position + dt * (twist.relative ? ::hl_navigation::rotate(
@@ -192,55 +200,84 @@ struct Pose2 {
             orientation + dt * twist.angular_speed};
   }
 
+  /**
+   * @brief      Equality operator.
+   *
+   * @param[in]  other  The other pose
+   *
+   * @return     The result of the equality
+   */
   bool operator==(const Pose2& other) const {
     return position == other.position && orientation == other.orientation;
   }
 
-  bool operator!=(const Pose2& other) const {
-    return !(operator==(other));
-  }
+  /**
+   * @brief      Inequality operator.
+   *
+   * @param[in]  other  The other pose
+   *
+   * @return     The result of the inequality
+   */
+  bool operator!=(const Pose2& other) const { return !(operator==(other)); }
 };
 
-class RegisterChanges {
+/**
+ * @brief  An helper class that track changes.
+ *
+ * Changes are tracked by a bit mask, where the bit index corresponds to
+ * different fields that may change. The class is mainly used for tracking changes in
+ * a \ref Behavior to enable caching when the relevant part of
+ * the state has not changed.
+ */
+class TrackChanges {
  public:
-  RegisterChanges() : changes{0xFFFFFFFF} {}
+  /**
+   * @brief      Constructs a new instance.
+   */
+  TrackChanges() : changes{0xFFFFFFFF} {}
+  /**
+   * @brief      Query if there was a change.
+   *
+   * @param[in]  mask  The bit mask of the indices we are interested in.
+   *
+   * @return     True if there is a recorded change in one of the indices.
+   */
   bool changed(unsigned mask = 0xFFFFFFFF) const { return changes & mask; }
+  /**
+   * @brief      Reset the bit mask.
+   */
   void reset_changes() { changes = 0; }
+  /**
+   * @brief      Notify a change
+   *
+   * @param[in]  mask  A bit mask where indices that have changed are set to 1.
+   *
+   */
   void change(unsigned mask) { changes |= mask; }
 
  private:
   unsigned changes;
 };
 
-
-
 }  // namespace hl_navigation
 
-inline std::ostream& operator<<(std::ostream& os, const hl_navigation::Vector2& vector) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const hl_navigation::Vector2& vector) {
   os << "Vector2(" << vector[0] << ", " << vector[1] << ")";
   return os;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const hl_navigation::Twist2& twist) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const hl_navigation::Twist2& twist) {
   os << "Twist2(" << twist.velocity << ", " << twist.angular_speed << ", "
      << std::boolalpha << twist.relative << ")";
   return os;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const hl_navigation::Pose2& pose) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const hl_navigation::Pose2& pose) {
   os << "Pose2(" << pose.position << ", " << pose.orientation << ")";
   return os;
 }
-
-
-// namespace Eigen {
-
-// inline std::ostream& operator<<(
-//     std::ostream& os, const Matrix<float, 2, 1, 0>& vector) {
-//   os << "Vector2(" << vector[0] << ", " << vector[1] << ")";
-//   return os;
-// }
-// }  // namespace Eigen
-
 
 #endif  // HL_NAVIGATION_COMMON_H_

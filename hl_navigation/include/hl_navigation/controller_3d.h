@@ -6,7 +6,6 @@
 #define HL_NAVIGATION_CONTROLLER_3D_H_
 
 #include <Eigen/Core>
-
 #include <algorithm>
 #include <memory>
 #include <vector>
@@ -14,7 +13,7 @@
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/controller.h"
 #include "hl_navigation/states/geometric.h"
-
+#include "hl_navigation_export.h"
 
 namespace hl_navigation {
 
@@ -25,27 +24,26 @@ namespace hl_navigation {
 using Vector3 = Eigen::Vector3f;
 
 /**
- * @brief      Unit vector towards an angle
+ * @brief      Three dimensional unit vector.
  *
- * @param[in]  angle
+ * @param[in]  angle The desired orientation
  *
- * @return     Vector of norm one oriented towards the angle
+ * @return     Vector of norm one and orientation ``angle``
  */
 inline Vector3 unit3(float angle) { return {cosf(angle), sinf(angle), 0.0f}; }
-
 
 // TODO: check velocity 2D vs 3D
 
 /**
- * @brief      Three dimensional obstacles of a vertical cylindrical shape.
+ * @brief      Three dimensional obstacles with a vertical cylindrical shape.
  */
 struct Cylinder {
   /**
-   * center of the lower face.
+   * Center of the *lower* face.
    */
   Vector3 position;
   /**
-   * radius of the cylinder
+   * Radius of the cylinder
    */
   float radius;
   /**
@@ -56,31 +54,27 @@ struct Cylinder {
   /**
    * @brief      Constructs a new instance.
    *
-   * @param[in]  position       center of the lower face
-   * @param[in]  radius
-   * @param[in]  height
+   * @param[in]  position  Center of the *lower* face
+   * @param[in]  radius    Radius of the cylinder
+   * @param[in]  height    Height of the cylinder
    */
   Cylinder(const Vector3 position, float radius, float height = -1.0)
-      : position(position),
-        radius(radius),
-        height(height) {}
+      : position(position), radius(radius), height(height) {}
 
   /**
-   * @brief      Project to the two dimensional plane
+   * @brief      Project the cylinder to the two dimensional plane
    *
    * @return     The projected disc.
    */
-  Disc disc() const {
-    return {position.head<2>(), radius};
-  }
+  Disc disc() const { return {position.head<2>(), radius}; }
 };
 
 /**
- * @brief      Three dimensional obstacles of a vertical cylindrical shape.
+ * @brief      Three dimensional neighbor of a vertical cylindrical shape.
  */
-struct Neighbor3 : Cylinder{
+struct Neighbor3 : Cylinder {
   /**
-   * TODO
+   * The horizontal velocity
    */
   Vector2 velocity;
   /**
@@ -91,29 +85,23 @@ struct Neighbor3 : Cylinder{
   /**
    * @brief      Constructs a new instance.
    *
-   * @param[in]  position       center of the lower face
-   * @param[in]  radius
-   * @param[in]  height
-   * @param[in]  velocity       planar velocity
-   * @param[in]  id
+   * @param[in]  position       Center of the lower face
+   * @param[in]  radius         Radius of the cylinder
+   * @param[in]  height         Height of the cylinder
+   * @param[in]  velocity       Planar velocity
+   * @param[in]  id             Neighbor identifier
    */
-    Neighbor3(const Vector3 position, float radius, float height = -1.0,
-              Vector2 velocity = Vector2::Zero(), unsigned id = 0.0)
-      : Cylinder(position, radius, height),
-        velocity(velocity),
-        id(id) {}
+  Neighbor3(const Vector3 position, float radius, float height = -1.0,
+            Vector2 velocity = Vector2::Zero(), unsigned id = 0.0)
+      : Cylinder(position, radius, height), velocity(velocity), id(id) {}
 
   /**
-   * @brief      Project to the two dimensional plane
+   * @brief      Project to the two dimensional plane.
    *
-   * @return     The projected disc.
+   * @return     The projected neighbor.
    */
-  Neighbor neighbor() const {
-    return Neighbor{disc(), velocity.head<2>(), id};
-  }
+  Neighbor neighbor() const { return Neighbor{disc(), velocity.head<2>(), id}; }
 };
-
-
 
 // TODO(old) complete with obstacle avoidance
 
@@ -192,13 +180,16 @@ struct Twist3 {
   Twist3() : Twist3(Vector3{}) {}
   Twist3(const Twist2& twist, float vz)
       : velocity{twist.velocity.x(), twist.velocity.x(), vz},
-        angular_speed(twist.angular_speed), relative(twist.relative) {}
+        angular_speed(twist.angular_speed),
+        relative(twist.relative) {}
   /**
-   * @brief      Project to 2D
+   * @brief      Project to the two dimensional plane.
    *
-   * @return     The projected 2D twist
+   * @return     The projected twist
    */
-  Twist2 project() const { return {velocity.head<2>(), angular_speed, relative}; }
+  Twist2 project() const {
+    return {velocity.head<2>(), angular_speed, relative};
+  }
 };
 
 /**
@@ -228,16 +219,16 @@ struct Pose3 {
    * @param[in]  twist  The twist
    * @param[in]  dt     The time step
    *
-   * @return     pose + dt * twist
+   * @return     ``pose + dt * twist``
    */
   Pose3 integrate(const Twist3& twist, float dt) {
     return {position + dt * twist.velocity,
             orientation + dt * twist.angular_speed};
   }
   /**
-   * @brief      Project to 2D
+   * @brief      Project to the two dimensional plane.
    *
-   * @return     The projected 2D pose
+   * @return     The projected pose
    */
   Pose2 project() const { return {position.head<2>(), orientation}; }
 };
@@ -245,47 +236,51 @@ struct Pose3 {
 /**
  * @brief  Simplistic extension of \ref Controller to 3D.
  *
- * Provides methods to update an agent with planar attitude in 3D space.
- * Still relies on the 2D obstacle avoidance \ref Behavior,
+ * Assumes that the agent has planar attitude and motion in 3D space.
+ *
+ * Relies on the 2D obstacle avoidance \ref Behavior,
  * when provided with all relevant state (i.e.,
  * vertical position, speed, and target position), it 1) considers only
  * obstacles that may intersect in three dimensions 2) controls vertical
  * speed with a proportional controller.
  *
  * Note that this is at best a 2.5D controller, making no attempt at 3D
- * collision avoidance. It is best suited to planar motion at arbitrary
+ * collision avoidance. It is best suited for planar motion at arbitrary
  * altitudes, like when a drone flies above ground robots, effectively ignoring
  * them.
  *
- * Typical usage:
+ * *Typical usage*
  *
- * 1. Pick, configure a Behavior, set it to \ref behavior
+ * 1. Pick, configure a \ref Behavior, set it to \ref behavior
+ *
  * 2. Initialize and configure the controller
- * 3. at regular intervals update the state, using the \ref Controller3 API,
+ *
+ * 3. At regular intervals update the state, using the \ref Controller3 API,
  * and call \ref update_3d.
+ *
  * 4. Trigger one of the actions.
+ *
  * 5. Either manually check the action's \ref get_state or set callbacks to be
  * notified when the action terminates or updates.
+ *
  * 6. Actuate the target command by using the return value of \ref update_3d
  *    or by setting a callback \ref set_cmd_cb
  */
-class Controller3 : public Controller {
+class HL_NAVIGATION_EXPORT Controller3 : public Controller {
  public:
   /**
    * @brief      Constructs a new instance.
    *
-   * @param[in]  behavior                            The navigation behavior
-   * @param[in]  compute_relative_twist              The compute relative twist
-   * @param[in]  set_twist_as_automatically_actuated  Indicates if set twist as
-   * automatically actuated
-   * @param[in]  limit_to_2d                         The limit to 2 d
+   * @param[in]  behavior                   The navigation behavior
+   * @param[in]  compute_relative_twist     The compute relative twist
+   * @param[in]  set_cmd_twist_as_actuated  Indicates if the behavior should set
+   * the twist as automatically actuated in \ref Behavior::cmd_twist
+   * @param[in]  limit_to_2d                Whether to limit the control to 2D
    */
   Controller3(std::shared_ptr<Behavior> behavior = nullptr,
-              bool compute_relative_twist = true,
-              bool set_twist_as_automatically_actuated = true,
-              bool limit_to_2d = false)
-      : Controller(behavior, compute_relative_twist,
-                   set_twist_as_automatically_actuated),
+              std::optional<bool> compute_relative_twist = std::nullopt,
+              bool set_cmd_twist_as_actuated = true, bool limit_to_2d = false)
+      : Controller(behavior, compute_relative_twist, set_cmd_twist_as_actuated),
         altitude(),
         limit_to_2d{limit_to_2d} {}
 
@@ -293,7 +288,7 @@ class Controller3 : public Controller {
    * @brief      Sets the neighbors.
    *
    * Filter relevant neighbors, project them to 2D and pass them to \ref
-   * Behavior::set_neighbors
+   * GeometricState::set_neighbors
    *
    * @param[in]  neighbors  The neighbors
    */
@@ -302,7 +297,7 @@ class Controller3 : public Controller {
    * @brief      Sets the static obstacles.
    *
    * Filter relevant obstacles, project them to 2D and pass them to \ref
-   * Behavior::set_static_obstacles
+   * GeometricState::set_static_obstacles
    *
    * @param[in]  obstacles  The obstacles
    */
@@ -321,7 +316,7 @@ class Controller3 : public Controller {
   /**
    * @brief      Sets the pose.
    *
-   * Automatically set the \ref Behavior 2D pose.
+   * Automatically also set the behavior 2D pose.
    *
    * @param[in]  pose  The pose
    */
@@ -335,8 +330,6 @@ class Controller3 : public Controller {
   /**
    * @brief      Gets the twist.
    *
-   * Automatically set the \ref Behavior 2D twist.
-   *
    * @return     The twist.
    */
   Twist3 get_twist() const {
@@ -348,6 +341,8 @@ class Controller3 : public Controller {
   /**
    * @brief      Sets the twist.
    *
+   * Automatically set the behavior 2D twist.
+   *
    * @param[in]  twist  The twist
    */
   void set_twist(const Twist3& twist) {
@@ -357,7 +352,8 @@ class Controller3 : public Controller {
     }
   }
   /**
-   * @brief      { function_description }
+   * @brief      Actuate a twist command, integrating using \ref
+   * Pose3::integrate
    *
    * @param[in]  twist  The twist
    * @param[in]  time_step     the time step
@@ -378,7 +374,7 @@ class Controller3 : public Controller {
   /**
    * @brief      Sets the altitude optimal speed.
    *
-   * @param[in]  value  The value
+   * @param[in]  value  The desired value
    */
   void set_altitude_optimal_speed(float value) {
     altitude.optimal_speed = value;
@@ -386,21 +382,22 @@ class Controller3 : public Controller {
   /**
    * @brief      Gets the altitude relaxation time.
    *
-   * @return     The altitude optimal speed.
+   * @return     The altitude relaxation time.
    */
   float get_altitude_tau() const { return altitude.tau; }
   /**
    * @brief      Sets the altitude relaxation time.
    *
-   * @param[in]  value  The value
+   * @param[in]  value  The desired value
    */
   void set_altitude_tau(float value) { altitude.tau = value; }
   /**
    * @brief      Starts an action to go to a 3D point.
    *
-   * The action succeed once the agent arrives at within the tolerance
-   * from the target point and come to a stop.
-   * The controller aborts the currently running action.
+   * The action succeed once the agent arrives within a tolerance
+   * from the target point and comes to a stop.
+   *
+   * If an action is already running, the controller aborts it.
    *
    * @param[in]  point              The target point
    * @param[in]  tolerance  The spatial tolerance
@@ -415,11 +412,12 @@ class Controller3 : public Controller {
     return Controller::go_to_position(point.head<2>(), tolerance);
   }
   /**
-   * @brief      Starts an action to go to a 3D pose
+   * @brief      Starts an action to go to a 3D pose.
    *
-   * The action succeed once the agent arrives at within the tolerances
-   * from the target pose and come to a stop.
-   * The controller aborts the currently running action.
+   * The action succeed once the agent arrives within a tolerances
+   * from the target pose and comes to a stop.
+   *
+   * If an action is already running, the controller aborts it.
    *
    * @param[in]  pose              The target pose
    * @param[in]  position_tolerance  The spatial tolerance
@@ -427,7 +425,8 @@ class Controller3 : public Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> go_to_pose(const Pose3& pose, float position_tolerance,
+  std::shared_ptr<Action> go_to_pose(const Pose3& pose,
+                                     float position_tolerance,
                                      float orientation_tolerance) {
     altitude.target = pose.position[2];
     altitude.target_set = true;
@@ -436,11 +435,12 @@ class Controller3 : public Controller {
                                   orientation_tolerance);
   }
   /**
-   * @brief      Starts an action to follow a 3D point
+   * @brief      Starts an action to follow a 3D point.
    *
-   * The action keeps running even after the agent arrive near to the target
-   * point. The controller aborts the currently running action if not already
-   * following a point/pose, or updates the target pose.
+   * The action keeps running even after the agent arrive at the target.
+   *
+   * If an action is already running, the controller aborts it, unless it was
+   * following a point/pose, in which case it just updates the target.
    *
    * @param[in]  point              The target point
    *
@@ -453,11 +453,12 @@ class Controller3 : public Controller {
     return Controller::follow_point(point.head<2>());
   }
   /**
-   * @brief      Starts an action to follow a 3D pose
+   * @brief      Starts an action to follow a 3D pose.
    *
-   * The action keeps running even after the agent arrive near to the target
-   * point. The controller aborts the currently running action if not already
-   * following a point/pose, or updates the target pose.
+   * The action keeps running even after the agent arrive at the target.
+   *
+   * If an action is already running, the controller aborts it, unless it was
+   * following a point/pose, in which case it just updates the target.
    *
    * @param[in]  pose              The target pose
    *
@@ -470,10 +471,10 @@ class Controller3 : public Controller {
     return Controller::follow_pose(pose.project());
   }
   /**
-   * @brief      Starts an action to follow a 3D velocity
+   * @brief      Starts an action to follow a 3D velocity.
    *
-   * The controller aborts the currently running action if not already following
-   * a velocity/twist, or updates the target pose.
+   * If an action is already running, the controller aborts it, unless it was
+   * following a velocity/twist, in which case it just updates the target.
    *
    * @param[in]  velocity              The target velocity
    *
@@ -486,10 +487,10 @@ class Controller3 : public Controller {
     return Controller::follow_velocity(velocity.head<2>());
   }
   /**
-   * @brief      Starts an action to follow a 3D twist
+   * @brief      Starts an action to follow a 3D twist.
    *
-   * The controller aborts the currently running action if not already following
-   * a velocity/twist, or updates the target pose.
+   * If an action is already running, the controller aborts it, unless it was
+   * following a velocity/twist, in which case it just updates the target.
    *
    * @param[in]  twist              The target twist
    *
@@ -502,15 +503,21 @@ class Controller3 : public Controller {
     return Controller::follow_twist(twist.project());
   }
 
-
+  /**
+   * @private
+   */
   float distance_to_target() const override {
     // Expect[tolerance >= 0];
     if (behavior) {
-      return std::max(Controller::distance_to_target(), abs(altitude.target - altitude.value));
+      return std::max(Controller::distance_to_target(),
+                      abs(altitude.target - altitude.value));
     }
     return 0.0f;
   }
 
+  /**
+   * @private
+   */
   float time_to_target(float tolerance = 0.0f) const override {
     // Expect[tolerance >= 0];
     const float t = Controller::time_to_target(tolerance);
@@ -521,6 +528,9 @@ class Controller3 : public Controller {
         t, abs(altitude.target - altitude.value) / altitude.optimal_speed);
   }
 
+  /**
+   * @private
+   */
   bool is_still() const override {
     return Controller::is_still() &&
            (limit_to_2d || abs(altitude.speed) < speed_tolerance);
@@ -533,7 +543,7 @@ class Controller3 : public Controller {
    *
    * @param[in]  time_step  The time step
    *
-   * @return     The command twist to actuate the current action
+   * @return     The command twist to execute the current action
    */
   Twist3 update_3d(float time_step) {
     if (action && behavior) {
@@ -541,12 +551,11 @@ class Controller3 : public Controller {
       Behavior::Mode mode = Behavior::Mode::stop;
       if (action->done()) {
         action = nullptr;
-      } else if(action->running()) {
+      } else if (action->running()) {
         mode = action->mode();
       }
-      Twist2 twist =
-          behavior->cmd_twist(time_step, compute_relative_twist, mode,
-                              set_twist_as_automatically_actuated);
+      Twist2 twist = behavior->cmd_twist(
+          time_step, mode, compute_relative_twist, set_cmd_twist_as_actuated);
       const float cmd_z = limit_to_2d ? 0.0f : altitude.update(time_step);
       Twist3 cmd = Twist3(twist, cmd_z);
       if (cmd_cb_3) {
@@ -577,7 +586,7 @@ class Controller3 : public Controller {
   /**
    * @brief      Set if the control should ignore 3D information
    *
-   * @param[in]  value
+   * @param[in]  value The desired value
    */
   void should_be_limited_to_2d(bool value) { limit_to_2d = value; }
 

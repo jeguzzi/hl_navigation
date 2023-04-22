@@ -34,21 +34,13 @@ struct convert_scenario {
   }
   static bool decode(const Node& node, Scenario& rhs) {
     decode_properties(node, rhs);
-    if (node["agents"]) {
-      if (node["agents"].IsMap()) {
-        // for(const auto & [k, c] : node["agents"]) {
-        //   groups.push_back(c.as<AgentSampler>());
-        // }
-      } else if (node["agents"].IsSequence()) {
-        for (const auto& c : node["agents"]) {
+    if (node["groups"]) {
+      if (node["groups"].IsSequence()) {
+        for (const auto& c : node["groups"]) {
           auto group = std::make_unique<AS>();
           convert<AS>::decode(c, *group);
           rhs.groups.push_back(std::move(group));
         }
-      } else if (node["agents"].IsScalar()) {
-        auto group = std::make_unique<AS>();
-        convert<AS>::decode(node["agents"], *group);
-        rhs.groups.push_back(std::move(group));
       }
     }
     if (node["obstacles"]) {

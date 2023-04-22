@@ -11,7 +11,7 @@
 
 using hl_navigation::Behavior;
 using hl_navigation::Disc;
-using hl_navigation::Kinematic;
+using hl_navigation::Kinematics;
 using hl_navigation::LineSegment;
 using hl_navigation::Vector2;
 using hl_navigation_sim::Agent;
@@ -24,25 +24,28 @@ using hl_navigation_sim::Wall;
 namespace YAML {
 
 template <>
-struct convert<Wall> {
-  static Node encode(const Wall& rhs) {
-    return convert<LineSegment>::encode(rhs.line);
-  }
-  static bool decode(const Node& node, Wall& rhs) {
-    return convert<LineSegment>::decode(node, rhs.line);
-  }
-};
-
-template <>
 struct convert<Obstacle> {
   static Node encode(const Obstacle& rhs) {
-    return convert<Disc>::encode(rhs.disc);
+    Node node = convert<Disc>::encode(rhs.disc);
+    node["uid"] = rhs.uid;
+    return node;
   }
   static bool decode(const Node& node, Obstacle& rhs) {
     return convert<Disc>::decode(node, rhs.disc);
   }
 };
 
+template <>
+struct convert<Wall> {
+  static Node encode(const Wall& rhs) {
+    Node node = convert<LineSegment>::encode(rhs.line);
+    node["uid"] = rhs.uid;
+    return node;
+  }
+  static bool decode(const Node& node, Wall& rhs) {
+    return convert<LineSegment>::decode(node, rhs.line);
+  }
+};
 
 template <>
 struct convert<Task> {
@@ -102,17 +105,17 @@ template <>
 struct convert<Agent> {
   static Node encode(const Agent& rhs) {
     Node node;
-    if (rhs.nav_behavior) {
-      node["navigation_behavior"] = *(rhs.nav_behavior);
+    if (const auto b = rhs.get_behavior()) {
+      node["behavior"] = *b;
     }
-    if (rhs.kinematic) {
-      node["kinematic"] = *(rhs.kinematic);
+    if (const auto k = rhs.get_kinematics()) {
+      node["kinematics"] = *k;
     }
-    if (rhs.task) {
-      node["task"] = *(rhs.task);
+    if (const auto t = rhs.get_task()) {
+      node["task"] = *t;
     }
-    if (rhs.state_estimation) {
-      node["state_estimation"] = *(rhs.state_estimation);
+    if (const auto s = rhs.get_state_estimation()) {
+      node["state_estimation"] = *s;
     }
     node["position"] = rhs.pose.position;
     node["orientation"] = rhs.pose.orientation;
@@ -121,25 +124,30 @@ struct convert<Agent> {
     node["radius"] = rhs.radius;
     node["control_period"] = rhs.control_period;
     node["type"] = rhs.type;
+    node["id"] = rhs.id;
+    node["uid"] = rhs.uid;
+    if (rhs.tags.size()) {
+      for(const auto & tag : rhs.tags) {
+        node["tags"].push_back(tag);
+      }
+    }
     return node;
   }
   static bool decode(const Node& node, Agent& rhs) {
     if (!node.IsMap()) {
       return false;
     }
-    if (node["navigation_behavior"]) {
-      rhs.nav_behavior =
-          node["navigation_behavior"].as<std::shared_ptr<Behavior>>();
+    if (node["behavior"]) {
+      rhs.set_behavior(node["behavior"].as<std::shared_ptr<Behavior>>());
     }
-    if (node["kinematic"]) {
-      rhs.kinematic = node["kinematic"].as<std::shared_ptr<Kinematic>>();
+    if (node["kinematics"]) {
+      rhs.set_kinematics(node["kinematics"].as<std::shared_ptr<Kinematics>>());
     }
     if (node["task"]) {
-      rhs.task = node["task"].as<std::shared_ptr<Task>>();
+      rhs.set_task(node["task"].as<std::shared_ptr<Task>>());
     }
     if (node["state_estimation"]) {
-      rhs.state_estimation =
-          node["state_estimation"].as<std::shared_ptr<StateEstimation>>();
+      rhs.set_state_estimation(node["state_estimation"].as<std::shared_ptr<StateEstimation>>());
     }
     if (node["position"]) {
       rhs.pose.position = node["position"].as<Vector2>();
@@ -161,6 +169,13 @@ struct convert<Agent> {
     }
     if (node["type"]) {
       rhs.type = node["type"].as<std::string>();
+    }
+    if (node["id"]) {
+      rhs.id = node["id"].as<unsigned>();
+    }
+    if (node["tags"]) {
+      const auto vs = node["tags"].as<std::vector<std::string>>();
+      rhs.tags = std::set<std::string>(vs.begin(), vs.end());
     }
     return true;
   }
@@ -188,9 +203,9 @@ template <typename T = Agent>
 struct convert_world {
   static Node encode(const World& rhs) {
     Node node;
-    node["obstacles"] = rhs.obstacles;
-    node["walls"] = rhs.walls;
-    node["agents"] = rhs.agents;
+    node["obstacles"] = rhs.get_obstacles();
+    node["walls"] = rhs.get_walls();
+    node["agents"] = rhs.get_agents();
     return node;
   }
   static bool decode(const Node& node, World& rhs) {
@@ -201,7 +216,7 @@ struct convert_world {
       if (node["agents"].IsSequence()) {
         for (const auto& c : node["agents"]) {
           // TODO
-          rhs.agents.push_back(c.as<std::shared_ptr<T>>());
+          rhs.add_agent(c.as<std::shared_ptr<T>>());
         }
       }
     }

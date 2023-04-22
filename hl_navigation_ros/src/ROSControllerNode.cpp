@@ -67,7 +67,7 @@ struct is_ros_param_type<std::vector<float>> : std::true_type {};
 template <>
 struct is_ros_param_type<std::vector<std::string>> : std::true_type {};
 
-static std::shared_ptr<Kinematic> make_kinematic(const std::string &name,
+static std::shared_ptr<Kinematics> make_kinematics(const std::string &name,
                                                  float max_speed,
                                                  float max_angular_speed,
                                                  float axis) {
@@ -210,7 +210,7 @@ class ROSControllerNode : public rclcpp::Node {
  public:
   ROSControllerNode()
       : rclcpp::Node("controller"),
-        nav_controller(),
+        controller(),
         markers_pub(*this),
         fixed_frame(""),
         goal_handle(nullptr) {
@@ -256,7 +256,7 @@ class ROSControllerNode : public rclcpp::Node {
         this, "go_to", std::bind(&ROSControllerNode::handle_goal, this, _1, _2),
         std::bind(&ROSControllerNode::handle_cancel, this, _1),
         std::bind(&ROSControllerNode::handle_accepted, this, _1));
-    nav_controller.set_cmd_cb(
+    controller.set_cmd_cb(
         std::bind(&ROSControllerNode::publish_cmd, this, _1));
     timer = create_wall_timer(
         std::chrono::milliseconds((unsigned)(1e3 * update_period)),
@@ -265,7 +265,7 @@ class ROSControllerNode : public rclcpp::Node {
   }
 
  private:
-  Controller3 nav_controller;
+  Controller3 controller;
   MarkersPublisher markers_pub;
   double update_period;
   bool should_publish_cmd_stamped;
@@ -299,9 +299,9 @@ class ROSControllerNode : public rclcpp::Node {
       auto result = std::make_shared<GoToTarget::Result>();
       goal_handle->canceled(result);
       goal_handle = nullptr;
-      nav_controller.stop();
+      controller.stop();
     }
-    nav_controller.update_3d(update_period);
+    controller.update_3d(update_period);
   }
 
   void done(Action::State state) {
@@ -325,7 +325,7 @@ class ROSControllerNode : public rclcpp::Node {
       f->distance = time_remaining;
       goal_handle->publish_feedback(f);
       if (markers_pub.enabled) {
-        Behavior *behavior = nav_controller.get_behavior().get();
+        Behavior *behavior = controller.get_behavior().get();
         HLBehavior *hl = dynamic_cast<HLBehavior *>(behavior);
         if (hl) {
           // TODO(Jerome): should publish them only when moving, not turning
@@ -439,15 +439,15 @@ class ROSControllerNode : public rclcpp::Node {
                 pose.position.x(), pose.position.y(), pose.position.z(),
                 pose.orientation, twist.velocity.x(), twist.velocity.y(),
                 twist.velocity.z(), twist.angular_speed);
-    nav_controller.set_twist(twist);
-    nav_controller.set_pose(pose);
+    controller.set_twist(twist);
+    controller.set_pose(pose);
   }
 
   void target_point_cb(const geometry_msgs::msg::PointStamped &msg) {
     if (goal_handle) return;
     auto target = point_from_msg(msg, fixed_frame);
     if (target) {
-      nav_controller.follow_point(*target);
+      controller.follow_point(*target);
       if (markers_pub.enabled) {
         markers_pub.publish_target(*target, fixed_frame, 0.0);
       }
@@ -458,7 +458,7 @@ class ROSControllerNode : public rclcpp::Node {
     if (goal_handle) return;
     auto target = pose_from_msg(msg, fixed_frame);
     if (target) {
-      nav_controller.follow_pose(*target);
+      controller.follow_pose(*target);
       if (markers_pub.enabled) {
         markers_pub.publish_target(*target, fixed_frame, 0.0);
       }
@@ -469,7 +469,7 @@ class ROSControllerNode : public rclcpp::Node {
     if (goal_handle) return;
     auto target = twist_from_msg(msg, fixed_frame);
     if (target) {
-      nav_controller.follow_twist(*target);
+      controller.follow_twist(*target);
     }
   }
 
@@ -479,7 +479,7 @@ class ROSControllerNode : public rclcpp::Node {
       goal_handle->abort(r);
       goal_handle = nullptr;
     }
-    nav_controller.stop();
+    controller.stop();
     publish_cmd({});
   }
 
@@ -489,7 +489,7 @@ class ROSControllerNode : public rclcpp::Node {
       const rclcpp_action::GoalUUID &uuid,
       std::shared_ptr<const GoToTarget::Goal> goal) {
     RCLCPP_INFO(get_logger(), "Received goal request");
-    if (!goal_handle && nav_controller.get_behavior())
+    if (!goal_handle && controller.get_behavior())
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     return rclcpp_action::GoalResponse::REJECT;
   }
@@ -522,7 +522,7 @@ class ROSControllerNode : public rclcpp::Node {
       goal_handle = nullptr;
     } else if (target_point) {
       RCLCPP_WARN(get_logger(), "go_to_position");
-      auto action = nav_controller.go_to_position(*target_point,
+      auto action = controller.go_to_position(*target_point,
                                                   goal->position_tolerance);
       action->running_cb = std::bind(&ROSControllerNode::running, this, _1);
       action->done_cb = std::bind(&ROSControllerNode::done, this, _1);
@@ -532,7 +532,7 @@ class ROSControllerNode : public rclcpp::Node {
       }
     } else {
       RCLCPP_WARN(get_logger(), "go_to_pose");
-      auto action = nav_controller.go_to_pose(
+      auto action = controller.go_to_pose(
           *target_pose, goal->position_tolerance, goal->orientation_tolerance);
       action->running_cb = std::bind(&ROSControllerNode::running, this, _1);
       action->done_cb = std::bind(&ROSControllerNode::done, this, _1);
@@ -551,7 +551,7 @@ class ROSControllerNode : public rclcpp::Node {
       msg.header.frame_id = fixed_frame;
       msg.header.stamp = now();
       if (twist.relative) {
-        const auto behavior = nav_controller.get_behavior();
+        const auto behavior = controller.get_behavior();
         if (!behavior) return;
         Twist2 a_twist = behavior->to_absolute(twist.project());
         msg.twist.linear.x = a_twist.velocity.x();
@@ -567,7 +567,7 @@ class ROSControllerNode : public rclcpp::Node {
       // publish in robot frame
       geometry_msgs::msg::Twist msg;
       if (!twist.relative) {
-        const auto behavior = nav_controller.get_behavior();
+        const auto behavior = controller.get_behavior();
         if (!behavior) return;
         Twist2 r_twist = behavior->to_relative(twist.project());
         msg.linear.x = r_twist.velocity.x();
@@ -593,7 +593,7 @@ class ROSControllerNode : public rclcpp::Node {
       neighbors.emplace_back(*position, msg.obstacle.radius,
                              msg.obstacle.height, velocity->head<2>(), msg.id);
     }
-    nav_controller.set_neighbors(neighbors);
+    controller.set_neighbors(neighbors);
     if (markers_pub.enabled) {
       markers_pub.publish_neighbors(neighbors, fixed_frame);
     }
@@ -607,7 +607,7 @@ class ROSControllerNode : public rclcpp::Node {
       *position -= Vector3(0.0f, 0.0f, msg.height);
       obstacles.emplace_back(*position, msg.radius, msg.height);
     }
-    nav_controller.set_static_obstacles(obstacles);
+    controller.set_static_obstacles(obstacles);
     if (markers_pub.enabled) {
       markers_pub.publish_obstacles(obstacles, fixed_frame);
     }
@@ -616,12 +616,12 @@ class ROSControllerNode : public rclcpp::Node {
   void init_params() {
     auto param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     param_desc.read_only = true;
-    auto kinematic = make_kinematic(
-        declare_parameter("kinematic.type", std::string("TwoWheeled"),
+    auto kinematics = make_kinematics(
+        declare_parameter("kinematics.type", std::string("TwoWheeled"),
                           param_desc),
-        declare_parameter("kinematic.max_speed", 1.0, param_desc),
-        declare_parameter("kinematic.max_angular_speed", 1.0, param_desc),
-        declare_parameter("kinematic.wheel_axis", 1.0, param_desc));
+        declare_parameter("kinematics.max_speed", 1.0, param_desc),
+        declare_parameter("kinematics.max_angular_speed", 1.0, param_desc),
+        declare_parameter("kinematics.wheel_axis", 1.0, param_desc));
     const float radius = declare_parameter("radius", 0.0, param_desc);
     should_publish_cmd_stamped =
         declare_parameter("publish_cmd_stamped", false, param_desc);
@@ -661,7 +661,7 @@ class ROSControllerNode : public rclcpp::Node {
   }
 
   void set_behavior(std::string type) {
-    auto behavior = nav_controller.get_behavior();
+    auto behavior = controller.get_behavior();
     if (behavior && behavior->get_type() == type) return;
     const auto &type_properties = Behavior::type_properties();
     if (!type_properties.count(type)) {
@@ -712,14 +712,14 @@ class ROSControllerNode : public rclcpp::Node {
       new_behavior->set_heading_behavior(
           heading_from_string(get_parameter("heading").as_string()));
     }
-    nav_controller.set_behavior(new_behavior);
+    controller.set_behavior(new_behavior);
   }
 
   rcl_interfaces::msg::SetParametersResult on_set_parameters(
       const std::vector<rclcpp::Parameter> &parameters) {
     rcl_interfaces::msg::SetParametersResult result;
     result.successful = true;
-    Behavior *b = nav_controller.get_behavior().get();
+    Behavior *b = controller.get_behavior().get();
     const std::string prefix = b ? (tolower(b->get_type()) + ".") : "";
     const Properties &properties = b ? b->get_properties() : Properties{};
     for (const auto &param : parameters) {
@@ -728,15 +728,15 @@ class ROSControllerNode : public rclcpp::Node {
       if (name == "behavior") {
         set_behavior(param.as_string());
       } else if (name == "altitude.enabled") {
-        nav_controller.should_be_limited_to_2d(!param.as_bool());
+        controller.should_be_limited_to_2d(!param.as_bool());
       } else if (name == "altitude.tau") {
-        nav_controller.set_altitude_tau(param.as_double());
+        controller.set_altitude_tau(param.as_double());
       } else if (name == "altitude.optimal_speed") {
-        nav_controller.set_altitude_optimal_speed(param.as_double());
+        controller.set_altitude_optimal_speed(param.as_double());
       } else if (name == "drawing") {
         markers_pub.enabled = param.as_bool();
       } else if (name == "speed_tolerance") {
-        nav_controller.set_speed_tolerance(param.as_double());
+        controller.set_speed_tolerance(param.as_double());
       }
       if (b) {
         if (name.find(prefix) != std::string::npos) {

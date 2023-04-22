@@ -91,7 +91,7 @@ static inline float distance_from_target(Radians angle, float free_distance,
 Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
   prepare();
   const Vector2 delta_target = target_pose.position - pose.position;
-  const Radians start_angle = polar_angle(delta_target);
+  const Radians start_angle = orientation_of(delta_target);
   const Radians relative_start_angle = start_angle - pose.orientation;
   const Radians da = get_angular_resolution();
   // float max_distance = agentToTarget.norm();
@@ -173,7 +173,7 @@ void HLBehavior::prepare() {
 }
 
 Twist2 HLBehavior::relax(const Twist2 &value, float dt) const {
-  if (kinematic->is_wheeled()) {
+  if (kinematics->is_wheeled()) {
     auto wheel_speeds = wheel_speeds_from_twist(value);
     auto actuated_wheel_speeds = wheel_speeds_from_twist(actuated_twist);
     return twist_from_wheel_speeds(
@@ -189,13 +189,13 @@ Twist2 HLBehavior::relax(const Twist2 &value, float dt) const {
   }
 }
 
-Twist2 HLBehavior::cmd_twist(float dt, bool relative, Mode mode,
+Twist2 HLBehavior::cmd_twist(float dt, Mode mode, bool relative,
                              bool set_as_actuated) {
-  if (!kinematic) {
-    std::cerr << "Missing kinematic" << std::endl;
+  if (!kinematics) {
+    std::cerr << "Missing kinematics" << std::endl;
     return {};
   }
-  Twist2 twist = Behavior::cmd_twist(dt, relative, mode, false);
+  Twist2 twist = Behavior::cmd_twist(dt, mode, relative, false);
   if (tau > 0) {
     twist = relax(twist, dt);
   }

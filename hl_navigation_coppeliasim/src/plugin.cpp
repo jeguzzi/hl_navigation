@@ -8,7 +8,7 @@
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/common.h"
 #include "hl_navigation/controller_3d.h"
-#include "hl_navigation/kinematic.h"
+#include "hl_navigation/kinematics.h"
 #include "hl_navigation/property.h"
 #include "hl_navigation/states/geometric.h"
 #include "simPlusPlus/Handle.h"
@@ -17,8 +17,8 @@
 
 using namespace hl_navigation;
 
-static std::shared_ptr<hl_navigation::Kinematic> make_kinematic(
-    const kinematic_t &k) {
+static std::shared_ptr<hl_navigation::Kinematics> make_kinematics(
+    const kinematics_t &k) {
   switch (k.type) {
     case sim_hlnavigation_holonomic:
       return std::make_shared<Holonomic>(k.max_speed, k.max_angular_speed);
@@ -145,8 +145,8 @@ class Plugin : public sim::Plugin {
 
   void Controller(Controller_in *in, Controller_out *out) {
     int handle = controllers.size();
-    auto kinematic = make_kinematic(in->kinematic);
-    if (!kinematic) {
+    auto kinematics = make_kinematics(in->kinematics);
+    if (!kinematics) {
       out->handle = -1;
       return;
     }
@@ -154,7 +154,7 @@ class Plugin : public sim::Plugin {
     auto behavior =
         Behavior::make_type(in->behavior);
     behavior->set_radius(in->radius);
-    behavior->set_kinematic(kinematic);
+    behavior->set_kinematics(kinematics);
     auto controller = std::make_unique<Controller3>(behavior);
     controllers.push_back(std::move(controller));
   }

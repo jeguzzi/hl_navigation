@@ -17,8 +17,8 @@ namespace sim = hl_navigation_sim;
 
 int main() {
   sim::World world;
-  world.walls.emplace_back(Vector2{-1.0f, -1.f}, Vector2{-1.f, 1.f});
-  world.obstacles.emplace_back(Vector2{2.f, 0.f}, 0.5f);
+  world.add_wall(sim::Wall{Vector2{-1.0f, -1.f}, Vector2{-1.f, 1.f}});
+  world.add_obstacle(sim::Obstacle{Vector2{2.f, 0.f}, 0.5f});
   robots().add_to_world(&world);
   std::cout << "\nLoaded world\n====================" << std::endl;
   std::cout << YAML::dump<sim::World>(&world) << std::endl;

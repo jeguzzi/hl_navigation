@@ -17,13 +17,13 @@ obstacles:
   - 
     position: [2.0, 0.0]
     radius: 0.5
-agents:
+groups:
   -
-    kinematic:
+    kinematics:
       type: Holonomic
       max_speed: 1.0
       wheel_axis: 0.12
-    navigation_behavior:
+    behavior:
       type: HL
       safety_margin: 0.5
       tau: 0.25
@@ -31,19 +31,18 @@ agents:
       type: Bounded
       range_of_view: 10.0
     task:
-      type: WayPoints
+      type: Waypoints
       waypoints: [[1.0, 0.0], [-1.0, 0.0]]
       tolerance: 0.1
     radius: 0.1
     control_period: 0.1
     number: 2
-    x:
+    position:
       sampler: regular
-      start: 0
-      end: 10
+      from: [0, 0]
+      to: [10, 0]
       number: 2
-    y: 0
-    theta: 0
+    orientation: 0
 )YAML";
 
 namespace sim = hl_navigation_sim;

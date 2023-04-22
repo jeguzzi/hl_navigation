@@ -29,7 +29,7 @@ class Thymio(pyenki.Thymio2):
         if not self.behavior:
             print(f"No behavior with name {behavior_name}")
             sys.exit(1)
-        self.behavior.kinematic = hl_navigation.kinematics.TwoWheeled(
+        self.behavior.kinematics = hl_navigation.kinematics.TwoWheeled(
             0.01 * self.max_wheel_speed, 0.01 * self.wheel_axis)
         self.behavior.radius = 0.08
         self.behavior.safety_margin = 0.02

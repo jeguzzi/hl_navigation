@@ -15,16 +15,20 @@ if(NOT LIBPLUGIN_DIR)
     set(LIBPLUGIN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libPlugin)
   endif()
 endif()
+if(NOT COPPELIASIM_INCLUDE_DIR)
+    if(DEFINED ENV{COPPELIASIM_ROOT_DIR})
+        set(COPPELIASIM_INCLUDE_DIR $ENV{COPPELIASIM_ROOT_DIR}/programming/include)
+    else()
+        set(COPPELIASIM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+    endif()
+endif()
 list(APPEND CMAKE_MODULE_PATH
   ${LIBPLUGIN_DIR}/cmake
+  ${COPPELIASIM_INCLUDE_DIR}/cmake
 )
 
 find_package(CoppeliaSim 4 REQUIRED)
 find_package(hl_navigation REQUIRED)
-
-list(APPEND CMAKE_MODULE_PATH
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules
-    ${LIBPLUGIN_DIR}/cmake)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/generated)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external)

@@ -7,7 +7,7 @@
 
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/common.h"
-#include "hl_navigation/kinematic.h"
+#include "hl_navigation/kinematics.h"
 #include "hl_navigation/plugins.h"
 #include "hl_navigation/property.h"
 #include "hl_navigation/utilities.h"
@@ -37,15 +37,15 @@ static void show_usage(const std::string& name) {
             << "  --behavior\t\t\tShow only behaviors" << std::endl
             << "  --behavior <BEHAVIOR>\t\tShow only a specific behavior"
             << std::endl
-            << "  --kinematic\t\t\tShow only kinematics" << std::endl
-            << "  --kinematic <KINEMATIC>\tShow only a specific kinematic"
+            << "  --kinematics\t\t\tShow only kinematics" << std::endl
+            << "  --kinematics <KINEMATICS>\tShow only a specific kinematics"
             << std::endl;
 }
 
 int main(int argc, char* argv[]) {
   load_plugins();
   std::string behavior_type = "";
-  std::string kinematic_type = "";
+  std::string kinematics_type = "";
   bool behaviors = true;
   bool kinematics = true;
   for (int i = 0; i < argc; i++) {
@@ -56,9 +56,9 @@ int main(int argc, char* argv[]) {
       }
       kinematics = false;
     }
-    if (kinematics && std::string(argv[i]) == "--kinematic") {
+    if (kinematics && std::string(argv[i]) == "--kinematics") {
       if (i + 1 < argc) {
-        kinematic_type = std::string(argv[i + 1]);
+        kinematics_type = std::string(argv[i + 1]);
         i++;
       }
       behaviors = false;
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
   }
   if (kinematics) {
-    print_register<hl_navigation::Kinematic>("Kinematics", kinematic_type);
+    print_register<hl_navigation::Kinematics>("Kinematics", kinematics_type);
   }
   return 0;
 }

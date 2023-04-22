@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     printf("No behavior with name %s\n", behavior_name);
     exit(1);
   }
-  behavior->set_kinematic(std::make_shared<Holonomic>(1.0, 1.0));
+  behavior->set_kinematics(std::make_shared<Holonomic>(1.0, 1.0));
   behavior->set_radius(0.1);
   controller.set_behavior(behavior);
   controller.set_speed_tolerance(0.05);

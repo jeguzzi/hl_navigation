@@ -16,7 +16,13 @@
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
-using namespace hl_navigation;
+using hl_navigation::Cylinder;
+using hl_navigation::Neighbor3;
+using hl_navigation::orientation_of;
+using hl_navigation::Pose3;
+using hl_navigation::unit3;
+using hl_navigation::Vector2;
+using hl_navigation::Vector3;
 
 inline geometry_msgs::msg::Point to_msg(const Vector3 &point) {
   geometry_msgs::msg::Point p;
@@ -64,7 +70,7 @@ struct MarkersPublisher {
     marker.scale.z = 0.05;
 
     tf2::Quaternion quat_tf;
-    quat_tf.setRPY(0.0, 0.0, polar_angle(relative_velocity));
+    quat_tf.setRPY(0.0, 0.0, orientation_of(relative_velocity));
     tf2::convert(quat_tf, marker.pose.orientation);
 
     marker.color.r = 1.0f;
@@ -186,9 +192,9 @@ struct MarkersPublisher {
     return c;
   }
 
-  visualization_msgs::msg::Marker obstacle_marker(const Cylinder &obstacle,
-                                                  const std::string &frame_id,
-                                                  unsigned id, const std::string & marker_ns) {
+  visualization_msgs::msg::Marker obstacle_marker(
+      const Cylinder &obstacle, const std::string &frame_id, unsigned id,
+      const std::string &marker_ns) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = frame_id;
     // marker.header.stamp = node.now();
@@ -215,7 +221,8 @@ struct MarkersPublisher {
     return marker;
   }
 
-  visualization_msgs::msg::Marker clear_obstacles(const std::string & marker_ns) {
+  visualization_msgs::msg::Marker clear_obstacles(
+      const std::string &marker_ns) {
     visualization_msgs::msg::Marker marker;
     // marker.header.stamp = node.now();
     marker.ns = add_ns(marker_ns);
@@ -233,15 +240,17 @@ struct MarkersPublisher {
     publish_obstacles_(obstacles, frame_id, "obstacles");
   }
 
-  template<typename T>
+  template <typename T>
   void publish_obstacles_(const std::vector<T> obstacles,
-                          const std::string &frame_id, const std::string & marker_ns) {
+                          const std::string &frame_id,
+                          const std::string &marker_ns) {
     visualization_msgs::msg::MarkerArray msg;
     msg.markers.reserve(obstacles.size() + 1);
     unsigned i = 0;
     msg.markers.push_back(clear_obstacles(marker_ns));
     for (const auto &obstacle : obstacles) {
-      msg.markers.push_back(obstacle_marker(obstacle, frame_id, i++, marker_ns));
+      msg.markers.push_back(
+          obstacle_marker(obstacle, frame_id, i++, marker_ns));
     }
     pub->publish(msg);
   }

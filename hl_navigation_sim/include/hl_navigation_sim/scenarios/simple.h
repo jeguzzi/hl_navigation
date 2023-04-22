@@ -8,13 +8,24 @@
 #include <memory>
 
 #include "hl_navigation/behaviors/dummy.h"
-#include "hl_navigation/kinematic.h"
+#include "hl_navigation/kinematics.h"
 #include "hl_navigation_sim/scenario.h"
+#include "hl_navigation_sim/tasks/waypoints.h"
 #include "hl_navigation_sim/world.h"
+#include "hl_navigation_sim_export.h"
+
+using hl_navigation::DummyBehavior;
+using hl_navigation::Holonomic;
 
 namespace hl_navigation_sim {
 
-struct SimpleScenario : public Scenario {
+/**
+ * @brief      Simple scenario that serves as an example.
+ *
+ * The scenario add a single agent with a waypoints task,
+ * dummy behavior, and holonomic kinematics.
+ */
+struct HL_NAVIGATION_SIM_EXPORT SimpleScenario : public Scenario {
   SimpleScenario() : Scenario() {}
 
   void init_world(World *world) override {
@@ -22,10 +33,10 @@ struct SimpleScenario : public Scenario {
     auto agent =
         std::make_shared<Agent>(0.1f, std::make_shared<DummyBehavior>(),
                                 std::make_shared<Holonomic>(1.0f),
-                                std::make_shared<WayPointsTask>(
+                                std::make_shared<WaypointsTask>(
                                     Waypoints{Vector2(1.0f, 0.0f)}, false, 0.1),
                                 nullptr, 0.1f);
-    agent->nav_behavior->set_optimal_speed(1.0f);
+    agent->get_behavior()->set_optimal_speed(1.0f);
     world->add_agent(agent);
   }
 

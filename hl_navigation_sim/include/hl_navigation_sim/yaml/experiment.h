@@ -26,6 +26,10 @@ struct convert_experiment {
     node["record_twist"] = rhs.trace.record_twist;
     node["record_cmd"] = rhs.trace.record_cmd;
     node["record_target"] = rhs.trace.record_target;
+    node["record_collisions"] = rhs.trace.record_collisions;
+    node["record_safety_violation"] = rhs.trace.record_safety_violation;
+    node["record_task_events"] = rhs.trace.record_task_events;
+    node["terminate_when_all_idle"] = rhs.terminate_when_all_idle;
     node["name"] = rhs.name;
     return node;
   }
@@ -57,8 +61,20 @@ struct convert_experiment {
     if (node["record_target"]) {
       rhs.trace.record_target = node["record_target"].as<bool>();
     }
+    if (node["record_collisions"]) {
+      rhs.trace.record_collisions = node["record_collisions"].as<bool>();
+    }
+    if (node["record_safety_violation"]) {
+      rhs.trace.record_safety_violation = node["record_safety_violation"].as<bool>();
+    }
+    if (node["record_task_events"]) {
+      rhs.trace.record_task_events = node["record_task_events"].as<bool>();
+    }
     if (node["name"]) {
       rhs.name = node["name"].as<std::string>();
+    }
+    if (node["terminate_when_all_idle"]) {
+      rhs.terminate_when_all_idle = node["terminate_when_all_idle"].as<bool>();
     }
     return true;
   }
@@ -69,14 +85,14 @@ struct convert<Experiment> {
   static Node encode(const Experiment& rhs) {
     Node node = convert_experiment::encode(rhs);
     if (rhs.scenario) {
-      node["world"] = *(rhs.scenario);
+      node["scenario"] = *(rhs.scenario);
     }
     return node;
   }
   static bool decode(const Node& node, Experiment& rhs) {
     if (convert_experiment::decode(node, rhs)) {
-      if (node["world"]) {
-        rhs.scenario = node["world"].as<std::shared_ptr<Scenario>>();
+      if (node["scenario"]) {
+        rhs.scenario = node["scenario"].as<std::shared_ptr<Scenario>>();
       }
       return true;
     }

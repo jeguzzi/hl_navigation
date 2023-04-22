@@ -8,758 +8,447 @@
 #include <geos/geom/Envelope.h>
 #include <geos/index/strtree/TemplateSTRtree.h>
 
-#include <chrono>
-#include <iostream>
 #include <memory>
-#include <tuple>
+#include <set>
 #include <utility>
 #include <vector>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/common.h"
-#include "hl_navigation/controller.h"
-#include "hl_navigation/property.h"
-#include "hl_navigation/register.h"
 #include "hl_navigation/states/geometric.h"
-#include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_sim/agent.h"
+#include "hl_navigation_sim/entity.h"
+
+#include "hl_navigation_sim_export.h"
+
+using hl_navigation::Disc;
+using hl_navigation::LineSegment;
+using hl_navigation::Neighbor;
+using hl_navigation::Vector2;
 
 namespace hl_navigation_sim {
 
-using Waypoints = std::vector<hl_navigation::Vector2>;
+/**
+ * A rectangulare region
+ */
 using BoundingBox = geos::geom::Envelope;
-using namespace hl_navigation;
 
-struct Entity {
-  static inline unsigned _uid = 0;
+// TODO(Jerome): specify direction
 
-  Entity() : uid(_uid++) {}
+/**
+ * @brief      Computes the com-penetration of a disc and a line segment
+ *
+ * @param[in]  line    The line
+ * @param[in]  center  The disc center
+ * @param[in]  radius  The disc radius
+ *
+ * @return     The penetration vector, i.e. the shortest shift that would remove
+ * overlapping, or  in case  the is not overlap.
+ */
+std::optional<Vector2> penetration_vector_inside_line(const LineSegment &line,
+                                                      const Vector2 &center,
+                                                      float radius);
 
-  unsigned uid;
-};
+float penetration_inside_line(const LineSegment &line, const Vector2 &center,
+                              float radius);
 
-class Agent;
-class World;
+float penetration_inside_disc(const Disc &disc, const Vector2 &center,
+                              float radius);
 
-struct Task : public virtual HasProperties, public virtual HasRegister<Task> {
-  explicit Task() {}
-  virtual void update([[maybe_unused]] Agent *agent) {}
-  virtual bool done() const { return false; }
-  virtual ~Task() = default;
-
-  /*
-  virtual const std::string &get_type() const = 0;
-  using Factory = std::function<std::shared_ptr<Task>()>;
-  static std::shared_ptr<Task> task_with_name(const std::string &name) {
-    if (factory.count(name)) {
-      return factory[name]();
-    }
-    return nullptr;
-  }
-  static const std::map<std::string, Factory> &all_kinematics() {
-    return factory;
-  }
-  static const std::map<std::string, Properties> &all_properties() {
-    return factory_properties;
-  }
-  static inline std::map<std::string, Factory> factory = {};
-  static inline std::map<std::string, Properties> factory_properties = {};
-  template <typename T>
-  static std::string register_type(const std::string &name) {
-    factory[name] = []() { return std::make_shared<T>(); };
-    factory_properties[name] = T::properties;
-    return name;
-  }
-  static inline std::map<std::string, Property> properties = Properties{};
-  */
-
-#if 0
-  std::string description(bool extensive = false) const {
-    std::ostringstream os;
-    os << get_type();
-    if (extensive) {
-      os << ":" << std::endl;
-      for (const auto &[k, v] : get_properties()) {
-        os << "  " << k << " = " << get(k) << "[" << v.type_name << "]"
-           << std::endl;
-      }
-    }
-    return os.str();
-  }
-#endif
-};
-
-struct StateEstimation : public virtual HasProperties,
-                         public virtual HasRegister<StateEstimation> {
-  explicit StateEstimation(World *world = nullptr) : world(world) {}
-
-  virtual void update([[maybe_unused]] Agent *agent) const {};
-
-  virtual void prepare([[maybe_unused]] Agent *agent) const {};
-
-  virtual ~StateEstimation() = default;
-
-  World *world;
-
-#if 0
-  std::string description(bool extensive = false) const {
-    std::ostringstream os;
-    os << get_type();
-    if (extensive) {
-      os << ":" << std::endl;
-      for (const auto &[k, v] : get_properties()) {
-        os << "  " << k << " = " << get(k) << "[" << v.type_name << "]"
-           << std::endl;
-      }
-    }
-    return os.str();
-  }
-#endif
-
-  /*
-    virtual const std::string &get_type() const = 0;
-    using Factory = std::function<std::shared_ptr<StateEstimation>()>;
-    static std::shared_ptr<StateEstimation> state_estimation_with_name(
-        const std::string &name) {
-      if (factory.count(name)) {
-        return factory[name]();
-      }
-      return nullptr;
-    }
-    static const std::map<std::string, Factory> &all_kinematics() {
-      return factory;
-    }
-    static const std::map<std::string, Properties> &all_properties() {
-      return factory_properties;
-    }
-    static inline std::map<std::string, Factory> factory = {};
-    static inline std::map<std::string, Properties> factory_properties = {};
-    template <typename T>
-    static std::string register_type(const std::string &name) {
-      factory[name] = []() { return std::make_shared<T>(); };
-      factory_properties[name] = T::properties;
-      return name;
-    }
-
-    static inline std::map<std::string, Property> properties = Properties{};
-    */
-};
-
-class Agent : public Entity {
- public:
-  using C = std::shared_ptr<Agent>;
-  using B = Behavior;
-  using K = Kinematic;
-  using T = Task;
-  using S = StateEstimation;
-
-  virtual ~Agent() = default;
-
-  Agent(float radius = 0.0f, std::shared_ptr<Behavior> behavior = nullptr,
-        std::shared_ptr<Kinematic> kinematic = nullptr,
-        std::shared_ptr<Task> task = nullptr,
-        std::shared_ptr<StateEstimation> estimation = nullptr,
-        float control_period = 0.0f, unsigned id = 0)
-      : Entity(),
-        id(id),
-        radius(radius),
-        mass(0.0f),
-        control_period(control_period),
-        control_deadline(0.0),
-        task(task),
-        state_estimation(estimation),
-        nav_behavior(behavior),
-        kinematic(kinematic),
-        nav_controller(nav_behavior, false, true), type("") {}
-
-  static std::shared_ptr<Agent> make(
-      float radius = 0.0f, std::shared_ptr<Behavior> behavior = nullptr,
-      std::shared_ptr<Kinematic> kinematic = nullptr,
-      std::shared_ptr<Task> task = nullptr,
-      std::shared_ptr<StateEstimation> estimation = nullptr,
-      float control_period = 0.0f, unsigned id = 0) {
-    return std::make_shared<Agent>(radius, behavior, kinematic, task,
-                                   estimation, control_period, id);
-  }
-
-  virtual GeometricState *get_geometric_state() const {
-    return dynamic_cast<GeometricState *>(nav_behavior.get());
-  }
-
-#if 0
-  std::string description(bool extensive = false) const {
-    std::ostringstream os;
-    os << "id = " << id << std::endl;
-    os << "radius = " << radius << std::endl;
-    os << "control_period = " << control_period << std::endl;
-    os << "x " << pose.position.x() << std::endl;
-    os << "pose = " << pose << std::endl;
-    os << "twist = " << twist << std::endl;
-    if (kinematic) {
-      os << "kinematic: " << kinematic->description(extensive) << std::endl;
-    }
-    if (nav_behavior) {
-      os << "navigation behavior: " << nav_behavior->description(extensive)
-         << std::endl;
-    }
-    if (state_estimation) {
-      os << "state_estimation: " << state_estimation->description(extensive)
-         << std::endl;
-    }
-    if (task) {
-      os << "task: " << task->description(extensive) << std::endl;
-    }
-
-    return os.str();
-  }
-#endif
-  void update(float dt) {
-    control_deadline -= dt;
-    if (control_deadline > 0) {
-      return;
-    }
-    control_deadline += control_period;
-    // bool v1 = dynamic_cast<GeometricState *>(nav_behavior.get()) != nullptr;
-    // std::cout << "Agent::update: behavior is geometric? " << nav_behavior <<
-    // " " << v1 << std::endl;
-
-    if (task) task->update(this);
-    if (state_estimation) state_estimation->update(this);
-    if (nav_behavior) {
-      nav_behavior->set_actuated_twist(cmd_twist);
-      nav_behavior->set_twist(twist);
-      nav_behavior->set_pose(pose);
-    }
-    cmd_twist = nav_controller.update(std::max(control_period, dt));
-    // cmd_twist = nav_behavior->get_actuated_twist(true);
-  }
-
-  void update_physics(float dt) {
-    twist = cmd_twist;  // + collision_force / mass * dt;
-    pose = pose.integrate(twist, dt);
-  }
-
-  void set_state_estimation(const std::shared_ptr<StateEstimation> &value) {
-    state_estimation = value;
-  }
-
-  std::shared_ptr<StateEstimation> get_state_estimation() const {
-    return state_estimation;
-  }
-
-  void set_behavior(const std::shared_ptr<Behavior> &value) {
-    nav_behavior = value;
-    nav_controller.set_behavior(value);
-    if (nav_behavior) {
-      nav_behavior->set_radius(radius);
-      if (!nav_behavior->get_kinematic()) {
-        nav_behavior->set_kinematic(kinematic);
-      }
-    }
-  }
-
-  std::shared_ptr<Behavior> get_behavior() const { return nav_behavior; }
-
-  void set_kinematic(const std::shared_ptr<Kinematic> &value) {
-    kinematic = value;
-    if (nav_behavior && !nav_behavior->get_kinematic()) {
-      nav_behavior->set_kinematic(kinematic);
-    }
-  }
-
-  std::shared_ptr<Kinematic> get_kinematic() const { return kinematic; }
-
-  void set_task(const std::shared_ptr<Task> &value) { task = value; }
-
-  std::shared_ptr<Task> get_task() const { return task; }
-
-  Controller *get_controller() { return &nav_controller; }
-
-  unsigned id;
-  float radius;
-  float mass;
-  float control_period;
-  float control_deadline;
-  Pose2 pose;
-  Twist2 twist;
-  Twist2 cmd_twist;
-  // Eigen::Vector2f collision_force;
-  Vector2 collision_correction;
-  std::shared_ptr<Task> task;
-  std::shared_ptr<StateEstimation> state_estimation;
-  std::shared_ptr<Behavior> nav_behavior;
-  std::shared_ptr<Kinematic> kinematic;
-  Controller nav_controller;
-  std::string type;
-};
-
-inline std::optional<Vector2> penetration(const LineSegment &line,
-                                          const Vector2 &center, float radius) {
-  float y = (center - line.p1).dot(line.e2);
-  if (abs(y) < radius) {
-    float x = (center - line.p1).dot(line.e1);
-    if (x < radius + 1e-3 || x > line.length - radius - 1e-3)
-      return std::nullopt;
-    float p = radius - abs(y);
-    if (y < 0) p *= -1;
-    return p * line.e2;
-  }
-  return std::nullopt;
-}
-
-struct Wall : Entity {
+/**
+ * @brief      A static wall.
+ *
+ * Currently, only line segment are valid shapes of walls.
+ */
+struct HL_NAVIGATION_SIM_EXPORT Wall : Entity {
+  /**
+   * @brief      Constructs a new instance.
+   *
+   * @param[in]  p1    The line segment start vertex
+   * @param[in]  p2    The line segment end vertex
+   */
   Wall(const Vector2 &p1, const Vector2 &p2) : Entity(), line(p1, p2) {}
+  /**
+   * @brief      Constructs a new instance.
+   */
   Wall() : Entity(), line() {}
+  /**
+   * @brief      Constructs a new instance.
+   *
+   * @param[in]  ls    A line segment
+   */
   Wall(const LineSegment &ls) : Entity(), line(ls) {}
+  /**
+   * @brief      LineSegment conversion operator.
+   */
   operator LineSegment() const { return line; }
 
+  /**
+   * The line segment
+   */
   LineSegment line;
 };
 
-struct Obstacle : Entity {
+/**
+ * @brief      A static obstacle with circular shape
+ */
+struct HL_NAVIGATION_SIM_EXPORT Obstacle : Entity {
+  /**
+   * @brief      Constructs a new instance.
+   *
+   * @param[in]  position  The position of the circle
+   * @param[in]  radius    The radius of the circle
+   */
   Obstacle(const Vector2 &position, float radius)
       : Entity(), disc(position, radius) {}
+  /**
+   * @brief      Constructs a new instance.
+   */
   Obstacle() : Entity(), disc() {}
+  /**
+   * @brief      Constructs a new instance.
+   *
+   * @param[in]  disc  A disc
+   */
   Obstacle(const Disc &disc) : Entity(), disc(disc) {}
+  /**
+   * @brief      Disc conversion operator.
+   */
   operator Disc() const { return disc; }
 
+  /**
+   * The disc.
+   */
   Disc disc;
 };
 
-class World {
+/**
+ * @brief      Ghost agents used in worlds that have a lattice.
+ */
+struct HL_NAVIGATION_SIM_EXPORT Ghost : Entity, Neighbor {
+  explicit Ghost(Agent *agent)
+      : Entity(agent->uid),
+        Neighbor(agent->pose.position, agent->radius, agent->twist.velocity,
+                 agent->id) {}
+};
+
+/**
+ * @brief      This class describes a world.
+ *
+ * A world implements the core part of the simulation.
+ * It holds a collection of entities as walls, obstacles, and agents.
+ *
+ * After setting up the world entities, users call \ref update or \ref run
+ * to perform one or more simulation steps, where
+ *
+ * 1. each agent updates its control
+ *
+ * 2. each agent perform actuate its control command
+ *
+ * 3. collisions are checked and resolved
+ *
+ * 4. time is advanced
+ *
+ * World simulation uses a simple collision model that does not attempt to be
+ * realistic but should be computationally efficient.
+ *
+ * 1. first runs a broad-phase using
+ *    `libgeos STR Trees
+ * <https://libgeos.org/doxygen/classgeos_1_1index_1_1strtree_1_1STRtree.html>`_
+ *    where potential collisions are found using rectangular bounding boxes.
+ * 2. then it runs a narrow-phase using the simple exact geometric shape of the
+ * obstacles and record pairs of entities that are in collision.
+ * 3. finally it resolves collisions by colliding moving minimally entities away
+ * from each other, setting to zero the component of their velocities that would
+ * attract them together.
+ */
+class HL_NAVIGATION_SIM_EXPORT World {
  public:
-  virtual ~World() = default;
+  friend struct Experiment;
+
+  using Lattice = std::optional<std::tuple<float, float>>;
 
   using A = Agent;
+
+  virtual ~World() = default;
+
+  /**
+   * @brief      Constructs a new instance.
+   */
   explicit World()
-      : agents(), obstacles(), walls(), agent_index(nullptr), ready(false), time(0.0f) {}
+      : agents(),
+        obstacles(),
+        walls(),
+        agent_index(nullptr),
+        collisions(),
+        entities(),
+        ready(false),
+        time(0.0f),
+        has_lattice(false) {}
 
-  void update(float time_step) {
-    if (!ready) {
-      prepare();
-      ready = true;
+  /**
+   * @brief      Updates world for a single time step.
+   *
+   * @param[in]  time_step  The time step
+   */
+  void update(float time_step);
+  /**
+   * @brief      Updates the world for one or more time steps
+   *
+   * @param[in]  steps      The number of steps
+   * @param[in]  time_step  The duration of each time step
+   */
+  void run(unsigned steps, float time_step);
+  /**
+   * @brief      Gets the simulation time.
+   *
+   * @return     The simulation time.
+   */
+  float get_time() const { return time; }
+
+  /**
+   * @brief      Gets the simulation step.
+   *
+   * @return     The simulation step.
+   */
+  unsigned get_step() const { return step; }
+
+  /**
+   * @brief      Adds an agent to the world.
+   *
+   * @param[in]  agent  The agent
+   */
+  void add_agent(const std::shared_ptr<Agent> &agent);
+  /**
+   * @brief      Adds a line to the world as a wall 
+   *
+   * @param[in]  line  The line
+   */
+  void add_wall(const LineSegment &line);
+  /**
+   * @brief      Adds a wall to the world
+   *
+   * @param[in]  wall  The wall
+   */
+  void add_wall(const Wall &wall);
+  /**
+   * @brief      Adds a disc the world as a static obstacle 
+   *
+   * @param[in]  disc  The disc
+   */
+  void add_obstacle(const Disc &disc);
+  /**
+   * @brief      Adds a static obstacle the world
+   *
+   * @param[in]  obstacle  The obstacle
+   */
+  void add_obstacle(const Obstacle &obstacle);
+  /**
+   * @brief      Gets all agents in this world.
+   *
+   * @return     All agents.
+   */
+  const std::vector<std::shared_ptr<Agent>> &get_agents() const;
+
+  /**
+   * @brief      Gets all neighbor of an agent (ghosts included)
+   *
+   * @param[in]  agent     The agent
+   * @param[in]  distance  The radius of the neighborhood
+   *
+   * @return     All neighbor within a circle of radius ``radius`` centered around the agent.
+   */
+  std::vector<Neighbor> get_neighbors(const Agent * agent, float distance) const;
+
+  /**
+   * @brief      Gets all agents in a bounding box.
+   *
+   * @param[in]  bb    The bounding box specified in world-fixed
+   * coordinates
+   *
+   * @return     All agents that lie in a bounding box.
+   */
+  std::vector<Agent *> get_agents_in_region(const BoundingBox &bb) const;
+  /**
+   * @brief      Gets all obstacles in this world.
+   *
+   * @return     All obstacles.
+   */
+  const std::vector<Obstacle> & get_obstacles() const;
+  /**
+   * @brief      Gets all disc shaped static obstacles in this world.
+   *
+   * @return     All obstacles.
+   */
+  std::vector<Disc> get_discs() const;
+  /**
+   * @brief      Gets all agents in a bounding box.
+   *
+   * @param[in]  bb    The bounding box specified in world-fixed
+   *
+   * @return     All obstacles that lie in a bounding box
+   */
+  std::vector<Disc *> get_static_obstacles_in_region(const BoundingBox &bb) const;
+  /**
+   * @brief      Gets all walls in this world.
+   *
+   * @return     All walls.
+   */
+  const std::vector<Wall> & get_walls() const;
+  /**
+   * @brief      Gets all line obstacles in this world.
+   *
+   * @return     All ine obstacles.
+   */
+  std::vector<LineSegment> get_line_obstacles() const;
+  /**
+   * @brief      Gets all walls in a bounding box.
+   *
+   * @param[in]  bb    The bounding box specified in world-fixed
+   *
+   * @return     All walls that lie in a bounding box
+   */
+  std::vector<LineSegment *> get_line_obstacles_in_region(const BoundingBox &bb) const;
+  /**
+   * @brief      Replaces all obstacles.
+   *
+   * @param[in]  obstacles  The new obstacles
+   */
+  void set_obstacles(const std::vector<Disc> &obstacles);
+  /**
+   * @brief      Replaces all walls.
+   *
+   * @param[in]  walls  The new walls
+   */
+  void set_walls(const std::vector<LineSegment> &walls);
+  /**
+   * @brief      Gets the colliding pairs computed during the last simulation
+   * step.
+   *
+   * @return     The colliding pair of entities.
+   */
+  const std::set<std::tuple<const Entity *, const Entity *>> &get_collisions()
+      const {
+    return collisions;
+  }
+
+  /**
+   * @brief      Calculates the safety violation,
+   * i.e. the maximal penetration of a neighbor or obstacle in the safety margin
+   * of the agent.
+   *
+   * @param[in]  agent  The agent
+   *
+   * @return     The safety violation or 0 if no violation.
+   */
+  float compute_safety_violation(const Agent *agent) const;
+
+  /**
+   * @brief      Sets the random seed
+   *
+   * @param[in]  seed  The random seed
+   */
+  static void set_seed(unsigned seed);
+
+  /**
+   * @brief      Check if all agents are idle
+   * (i.e., their tasks are done and their controller are idle).
+   *
+   * @return     True if all agents are idle
+   */
+  bool agents_are_idle() const;
+
+  /**
+   * @brief      Move agents so that they do not overlap anymore with themselves
+   * or with any obstacle
+   *
+   * @param[in]  minimal_distance    The minimal distance
+   * @param[in]  with_safety_margin  Whether the safety margin should be added
+   * to the minimal distance
+   * @param[in]  max_iterations  The maximal number of iterations to perform.
+   */
+  void space_agents_apart(float minimal_distance = 0.0f,
+                          bool with_safety_margin = false,
+                          unsigned max_iterations = 10);
+
+  // TODO(Jerome): should be private but it is needed by corridor to ensure
+  // that the controller is correcly set.
+  void prepare();
+
+  Lattice get_lattice(unsigned index) const;
+
+  void set_lattice(unsigned index, const Lattice &value);
+
+  std::vector<Vector2> lattice_grid() const;
+
+  /**
+   * @brief      Check if two entities are currently in collision
+   *
+   * @param[in]  e1    The first entity
+   * @param[in]  e2    The second entity
+   *
+   * @return     True if they are in collision.
+   */
+  bool in_collision(const Entity *e1, const Entity *e2) const;
+
+  /**
+   * @brief      Find an entity by identifier
+   *
+   * @param[in]  uid   The entity uid
+   *
+   * @return     The entity or nullptr if not found.
+   */
+  Entity * get_entity(unsigned uid) {
+    if (entities.count(uid)) {
+      return entities.at(uid);
     }
-    for (auto &a : agents) {
-      a->update(time_step);
-    }
-    for (auto &a : agents) {
-      a->update_physics(time_step);
-    }
-    update_agents_strtree();
-    update_collisions();
-    time += time_step;
+    return nullptr;
   }
 
-  void add_agent(const std::shared_ptr<Agent> &agent) {
-    // bool v1 = dynamic_cast<GeometricState *>(agent->nav_behavior.get()) !=
-    // nullptr; std::cout << "add_agent: behavior is geometric? " <<
-    // agent->nav_behavior << " " << v1 << std::endl;
-    if (agent) {
-      agents.push_back(agent);
-      ready = false;
-    }
-  }
-  void add_wall(const LineSegment &wall) {
-    walls.push_back(wall);
-    ready = false;
-  }
-  void add_obstacle(const Disc &obstacle) {
-    obstacles.push_back(obstacle);
-    ready = false;
-  }
+ private:
+  void record_collision(const Entity *e1, const Entity *e2);
 
-  void prepare() {
-    // TODO(Jerome) Should only execute it once if not already prepared.
-    update_static_strtree();
-    update_agents_strtree();
+  bool resolve_collision(Agent *a1, Agent *a2, float margin = 0.0f);
 
-    for (auto &a : agents) {
-      if (a->state_estimation) {
-        a->state_estimation->world = this;
-        a->state_estimation->prepare(a.get());
-      }
-      a->collision_correction = Vector2::Zero();
-      if (a->nav_behavior) {
-        a->nav_behavior->set_kinematic(a->kinematic);
-        a->nav_behavior->set_radius(a->radius);
-        a->nav_controller.set_behavior(a->nav_behavior);
-      }
-    }
-  }
+  // TODO(J): avoid repetitions
+  bool resolve_collision(Agent *agent, Disc *disc, float margin = 0.0f);
 
-  void run(unsigned steps, float time_step) {
-    for (size_t i = 0; i < steps; i++) {
-      update(time_step);
-    }
-  }
+  bool resolve_collision(Agent *agent, LineSegment *line, float margin = 0.0f);
 
-  std::vector<Agent *> get_neighbors(const BoundingBox &bb) const {
-    std::vector<Agent *> rs;
-    // std::transform(agents.cbegin(), agents.cend(), std::back_inserter(rs),
-    // [](const auto & a) { return &a; });
-    agent_index->query(bb, rs);
-    return rs;
-  }
+  void update_collisions();
 
-  std::vector<Disc> get_obstacles() const {
-    std::vector<Disc> discs(obstacles.size());
-    std::transform(obstacles.cbegin(), obstacles.cend(), discs.begin(),
-                   [](const auto &o) { return o.disc; });
-    return discs;
-  }
+  void update_agents_strtree();
 
-  // TODO(J): complete
-  std::vector<Disc *> get_obstacles(
-      [[maybe_unused]] const BoundingBox &bb) const {
-    return {};
-  }
+  void update_static_strtree();
 
-  std::vector<LineSegment > get_walls() const {
-    std::vector<LineSegment> lines(walls.size());
-    std::transform(walls.cbegin(), walls.cend(), lines.begin(),
-                   [](const auto &w) { return w.line; });
-    return lines;
-  }
+  bool space_agents_apart_once(float minimal_distance, bool with_safety_margin);
 
-  // TODO(J): complete
-  std::vector<LineSegment *> get_walls(
-      [[maybe_unused]] const BoundingBox &bb) const {
-    return {};
-  }
-#if 0
-  std::string description(bool extensive = false) const {
-    std::ostringstream os;
-    os << "walls:" << std::endl;
-    for (const auto &wall : walls) {
-      os << wall << std::endl;
-    }
-    os << "obstacles:" << std::endl;
-    for (const auto &o : obstacles) {
-      os << o << std::endl;
-    }
-    os << "agents:" << std::endl;
-    for (const auto &agent : agents) {
-      os << agent->description(extensive);
-    }
-    return os.str();
-  }
-#endif
+  void udpate_agent_collisions(Agent *a1);
 
-  void set_obstacles(const std::vector<Disc> &values) {
-    for (const auto &value : values) {
-      add_obstacle(value);
-    }
-  }
+  void wrap_agents_on_lattice();
 
-  void set_walls(const std::vector<LineSegment> &values) {
-    for (const auto &value : values) {
-      add_wall(value);
-    }
-  }
+  void update_agent_ghosts();
 
-  float get_time() const {
-    return time;
-  }
+  void add_entity(Entity * entity);
 
   std::vector<std::shared_ptr<Agent>> agents;
   std::vector<Obstacle> obstacles;
   std::vector<Wall> walls;
+  std::vector<Ghost> ghosts;
   std::shared_ptr<geos::index::strtree::TemplateSTRtree<Agent *>> agent_index;
-  std::shared_ptr<geos::index::strtree::TemplateSTRtree<Disc *>>
+  std::shared_ptr<geos::index::strtree::TemplateSTRtree<Ghost *>>
+      ghost_index;
+  std::shared_ptr<geos::index::strtree::TemplateSTRtree<Obstacle *>>
       obstacles_index;
-  std::shared_ptr<geos::index::strtree::TemplateSTRtree<LineSegment *>>
-      walls_index;
+  std::shared_ptr<geos::index::strtree::TemplateSTRtree<Wall *>> walls_index;
   std::vector<geos::geom::Envelope> agent_envelops;
   std::vector<geos::geom::Envelope> static_envelops;
+  std::vector<geos::geom::Envelope> ghost_envelops;
+  std::set<std::tuple<const Entity *, const Entity *>> collisions;
+  std::map<unsigned, Entity *> entities;
   bool ready;
+  unsigned step;
   float time;
-
- protected:
-  void resolve_collision(Agent *a1, Agent *a2) {
-    auto delta = a1->pose.position - a2->pose.position;
-    float p = delta.norm() - a1->radius - a2->radius;
-    if (p > 0) {
-      return;
-    }
-    auto u = delta / delta.norm();
-    auto correction = (-p * 0.5 + 1e-3) * u;
-    a1->collision_correction += correction;
-    a2->collision_correction -= correction;
-    float d = a1->twist.velocity.dot(-u);
-    if (d > 0) {
-      a1->twist.velocity += d * u;
-    }
-    d = a2->twist.velocity.dot(u);
-    if (d > 0) {
-      a2->twist.velocity -= d * u;
-    }
-    // auto force = -p * k * delta / delta.norm();
-    // std::cout << force << std::endl;
-    // a1->collision_force += force;
-    // a2->collision_force -= force;
-  }
-
-  // TODO(J): avoid repetitions
-  void resolve_collision(Agent *agent, Disc *disc) {
-    auto delta = agent->pose.position - disc->position;
-    float p = delta.norm() - agent->radius - disc->radius;
-    if (p > 0) {
-      return;
-    }
-    auto u = delta / delta.norm();
-    auto correction = (-p * 1.0 + 1e-3) * u;
-    agent->collision_correction += correction;
-    float d = agent->twist.velocity.dot(-u);
-    if (d > 0) {
-      agent->twist.velocity += d * u;
-    }
-  }
-
-  void resolve_collision(Agent *agent, LineSegment *line) {
-    if (auto p = penetration(*line, agent->pose.position, agent->radius)) {
-      auto n = p->norm();
-      auto u = *p / n;
-      agent->collision_correction = (n + 1e-3) * u;
-      float d = agent->twist.velocity.dot(u);
-      if (d > 0) {
-        agent->twist.velocity += d * u;
-      }
-    }
-  }
-
-  void update_collisions() {
-    for (size_t i = 0; i < agents.size(); i++) {
-      Agent *a1 = agents[i].get();
-      agent_index->query(agent_envelops[i], [this, a1](Agent *a2) {
-        if (a1 < a2) resolve_collision(a1, a2);
-      });
-      obstacles_index->query(agent_envelops[i],
-                             [this, a1](Disc *o) { resolve_collision(a1, o); });
-      walls_index->query(agent_envelops[i], [this, a1](LineSegment *w) {
-        resolve_collision(a1, w);
-      });
-    }
-    for (auto &a : agents) {
-      a->pose.position += a->collision_correction;
-      a->collision_correction = Vector2::Zero();
-    }
-    // TODO(Jerome): queryPairs not yet released ... but does more or less the
-    // above agent_index->queryPairs([this](Agent * a1, Agent * a2) {
-    // resolve_collision(a1, a2); });
-  }
-
-  void update_agents_strtree() {
-    agent_envelops.clear();
-    agent_index =
-        std::make_shared<geos::index::strtree::TemplateSTRtree<Agent *>>(
-            agents.size());
-    for (const auto &agent : agents) {
-      auto &bb =
-          agent_envelops.emplace_back(agent->pose.position[0] - agent->radius,
-                                      agent->pose.position[0] + agent->radius,
-                                      agent->pose.position[1] - agent->radius,
-                                      agent->pose.position[1] + agent->radius);
-      agent_index->insert(&bb, (void *)(agent.get()));
-    }
-  }
-
-  void update_static_strtree() {
-    static_envelops.clear();
-    obstacles_index =
-        std::make_shared<geos::index::strtree::TemplateSTRtree<Disc *>>(
-            obstacles.size());
-    walls_index =
-        std::make_shared<geos::index::strtree::TemplateSTRtree<LineSegment *>>(
-            walls.size());
-    // TODO(J): should coordinates be ordered?
-    for (const auto &wall : walls) {
-      const Vector2 &p1 = wall.line.p1;
-      const Vector2 &p2 = wall.line.p2;
-      auto &bb = static_envelops.emplace_back(p1[0], p2[0], p1[1], p2[1]);
-      walls_index->insert(&bb, (void *)(&wall.line));
-    }
-    for (const auto &obstacle : obstacles) {
-      const Vector2 &p = obstacle.disc.position;
-      const float r = obstacle.disc.radius;
-      auto &bb =
-          static_envelops.emplace_back(p[0] - r, p[0] + r, p[1] - r, p[1] + r);
-      obstacles_index->insert(&bb, (void *)(&obstacle.disc));
-    }
-  }
-};
-
-// TODO(Jerome) replace Disk::social margin with Disk::type (unsigned)
-
-struct WayPointsTask : Task {
-  using Callback = std::function<void(const Vector2 &)>;
-
-  WayPointsTask(Waypoints waypoints_ = {}, bool loop_ = default_loop,
-                float tolerance_ = default_tolerance)
-      : Task(),
-        waypoints(waypoints_),
-        waypoint(waypoints.begin()),
-        loop(loop_),
-        tolerance(tolerance_),
-        callbacks() {}
-
-  virtual ~WayPointsTask() = default;
-
-  void update(Agent *agent) override {
-    if (agent->nav_controller.idle()) {
-      if (waypoint != waypoints.end()) {
-        agent->nav_controller.go_to_position(*waypoint, tolerance);
-        for (const auto &cb : callbacks) {
-          cb(*waypoint);
-        }
-        ++waypoint;
-        if (loop && waypoint == waypoints.end()) {
-          waypoint = waypoints.begin();
-        }
-      }
-    }
-  }
-
-  bool done() const override { return waypoint == waypoints.end(); }
-
-  void set_waypoints(const Waypoints &value) {
-    waypoints = value;
-    waypoint = waypoints.begin();
-  }
-  void set_tolerance(float value) { tolerance = std::max(value, 0.0f); }
-  void set_loop(bool value) { loop = value; }
-  Waypoints get_waypoints() const { return waypoints; }
-  float get_tolerance() const { return tolerance; }
-  float get_loop() const { return loop; }
-
-  void add_callback(const Callback &value) { callbacks.push_back(value); }
-
-  void clear_callbacks() { callbacks.clear(); }
-
-  Waypoints waypoints;
-  Waypoints::iterator waypoint;
-  bool loop;
-  float tolerance;
-  std::vector<Callback> callbacks;
-
-  virtual const Properties &get_properties() const override {
-    return properties;
-  };
-
-  inline static const bool default_loop = true;
-  inline static const bool default_tolerance = 1.0f;
-
-  static inline std::map<std::string, Property> properties = Properties{
-      {"waypoints",
-       make_property<Waypoints, WayPointsTask>(&WayPointsTask::get_waypoints,
-                                               &WayPointsTask::set_waypoints,
-                                               Waypoints{}, "waypoints")},
-      {"loop", make_property<bool, WayPointsTask>(&WayPointsTask::get_loop,
-                                                  &WayPointsTask::set_loop,
-                                                  default_loop, "loop")},
-      {"tolerance",
-       make_property<float, WayPointsTask>(&WayPointsTask::get_tolerance,
-                                           &WayPointsTask::set_tolerance,
-                                           default_tolerance, "tolerance")},
-  };
-
-  std::string get_type() const override { return type; }
-  inline const static std::string type =
-      register_type<WayPointsTask>("WayPoints");
-};
-
-struct BoundedStateEstimation : public StateEstimation {
-  BoundedStateEstimation(World *world_ = nullptr, float field_of_view_ = 0.0f,
-                         float range_of_view_ = 0.0f)
-      : StateEstimation(world_),
-        field_of_view(field_of_view_),
-        range_of_view(range_of_view_) {}
-
-  virtual ~BoundedStateEstimation() = default;
-
-  void update(Agent *agent) const override {
-    // bool v1 = dynamic_cast<GeometricState *>(agent->nav_behavior.get()) !=
-    // nullptr; std::cout << "SE::update: behavior is geometric? " <<
-    // agent->nav_behavior << " " << v1 << std::endl; GeometricState *state =
-    //     dynamic_cast<GeometricState *>(agent->nav_behavior.get());
-    GeometricState *state = agent->get_geometric_state();
-    if (state) {
-      state->set_neighbors(neighbors(agent));
-    } else {
-      std::cerr << "Not a geometric state" << std::endl;
-      // << typeid(*agent->nav_behavior.get()).name() << std::endl;
-    }
-  }
-
-  void prepare(Agent *agent) const override {
-    // if (GeometricState *state =
-    //         dynamic_cast<GeometricState *>(agent->nav_behavior.get())) {
-    if (GeometricState *state = agent->get_geometric_state()) {
-      state->set_static_obstacles(world->get_obstacles());
-      state->set_line_obstacles(world->get_walls());
-    }
-  }
-
-  virtual std::vector<Neighbor> neighbors(const Agent *agent) const {
-    std::vector<Neighbor> ns;
-
-    auto const cs = world->get_neighbors(bounding_box(agent));
-    for (const Agent *neighbor : cs) {
-      if (neighbor != agent && visible(agent, neighbor)) {
-        ns.push_back(perceive_neighbor(agent, neighbor));
-      }
-    }
-    return ns;
-  }
-
-  virtual Neighbor perceive_neighbor([[maybe_unused]] const Agent *agent,
-                                     const Agent *neighbor) const {
-    return Neighbor(neighbor->pose.position, neighbor->radius,
-                    neighbor->twist.velocity, neighbor->id);
-  }
-
-  virtual bool visible([[maybe_unused]] const Agent *agent,
-                       [[maybe_unused]] const Agent *neighbor) const {
-    return true;
-  }
-
-  BoundingBox bounding_box(const Agent *agent) const {
-    return {agent->pose.position[0] - range_of_view,
-            agent->pose.position[0] + range_of_view,
-            agent->pose.position[1] - range_of_view,
-            agent->pose.position[1] + range_of_view};
-  }
-
-  void set_range_of_view(float v) { range_of_view = v; }
-
-  float get_range_of_view() const { return range_of_view; }
-
-  void set_field_of_view(float v) { field_of_view = v; }
-
-  float get_field_of_view() const { return field_of_view; }
-
-  virtual const Properties &get_properties() const override {
-    return properties;
-  };
-
-  static inline std::map<std::string, Property> properties =
-      Properties{
-          {"field_of_view", make_property<float, BoundedStateEstimation>(
-                                &BoundedStateEstimation::get_field_of_view,
-                                &BoundedStateEstimation::set_field_of_view,
-                                0.0f, "Field of view (< 0 infinite)")},
-          {"range_of_view", make_property<float, BoundedStateEstimation>(
-                                &BoundedStateEstimation::get_range_of_view,
-                                &BoundedStateEstimation::set_range_of_view,
-                                0.0f, "Range of view (< 0 =infinite)")},
-      } +
-      StateEstimation::properties;
-
-  std::string get_type() const override { return type; }
-  inline const static std::string type =
-      register_type<BoundedStateEstimation>("Bounded");
-
- private:
-  float field_of_view;
-  float range_of_view;
+  bool has_lattice;
+  std::array<Lattice, 2> lattice;
 };
 
 }  // namespace hl_navigation_sim

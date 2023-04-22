@@ -8,8 +8,8 @@
 
 namespace py = pybind11;
 
-using hl_navigation::HasRegister;
 using hl_navigation::HasProperties;
+using hl_navigation::HasRegister;
 using hl_navigation::Properties;
 using hl_navigation::Property;
 
@@ -86,15 +86,14 @@ struct PyHasRegister : public virtual hl_navigation::HasRegister<T> {
     type_properties()[type][name] = std::move(p);
   }
 
-    std::string get_type() const override {
+  std::string get_type() const override {
     try {
       auto value = py::cast(this).attr("_type");
       return value.template cast<std::string>();
     } catch (const std::exception &e) {
       return "";
-    }  
+    }
   }
-
 };
 
 template <typename T>
@@ -104,14 +103,21 @@ void declare_register(py::module &m, const std::string &typestr) {
   std::string pyclass_name = typestr + std::string("Register");
   py::class_<Register, PyRegister, std::shared_ptr<Register>>(
       m, pyclass_name.c_str())
-      .def_static("add_property", &PyRegister::add_property_py)
+      .def_static("_add_property", &PyRegister::add_property_py)
       .def_property_readonly_static(
           "types", [](py::object /* self */) { return PyRegister::types(); })
       .def_property_readonly_static(
           "type_properties",
           [](py::object /* self */) { return PyRegister::type_properties(); })
-      .def_static("make_type", &PyRegister::make_type)
-      .def_static("register_type", &PyRegister::register_type_py);
+      .def_static("make_type", &PyRegister::make_type, py::arg("name"), R"doc(
+Create an object of a sub-class selected by name.
+
+:param type:
+    The associated type name.
+
+:return:
+    An object of a registered sub-class or ``None`` in case the desired name is not found.)doc")
+      .def_static("_register_type", &PyRegister::register_type_py);
 }
 
 #endif  // HL_NAVIGATION_PY_REGISTER_H

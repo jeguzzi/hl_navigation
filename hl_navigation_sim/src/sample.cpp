@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  auto scenario = YAML::load<hl_navigation_sim::Scenario>(node);
+  auto scenario = YAML::load_node<hl_navigation_sim::Scenario>(node);
   std::cout << YAML::dump<hl_navigation_sim::Scenario>(scenario.get());
   std::cout << std::endl;
   std::cout << "====================" << std::endl;

@@ -12,20 +12,24 @@
 #include "hl_navigation/behavior.h"
 #include "hl_navigation/collision_computation.h"
 #include "hl_navigation/common.h"
+#include "hl_navigation_export.h"
 
 namespace hl_navigation {
 
 /**
- * @brief      TODO
+ * @brief      This class extend \ref CollisionComputation to cache the results.
  *
+ * It assumes that the agents is only interested in possible collisions when
+ * moving in directions comprised in an interval \f$[\alpha, \alpha +
+ * \Delta]\f$, represented by in \f$N\f$ points at regular steps, only up to a
+ * maximal distance \f$D\f$, and that the agent moves at at given speed.
  */
-class CachedCollisionComputation : public CollisionComputation {
+class HL_NAVIGATION_EXPORT CachedCollisionComputation
+    : public CollisionComputation {
  public:
   /**
-   * Marks yet-not-computed entries in \ref get_cache
+   * Construct an instance
    */
-  static constexpr int uncomputed = -2;
-
   CachedCollisionComputation()
       : CollisionComputation(),
         from_relative_angle(0.0),
@@ -36,6 +40,11 @@ class CachedCollisionComputation : public CollisionComputation {
         dynamic_cache(),
         static_cache() {}
 
+  /**
+   * @brief      Sets the resolution: the number of discrete angles \f$N\f$.
+   *
+   * @param[in]  value  A positive value
+   */
   void set_resolution(size_t value) {
     if (value > 0 && value != resolution) {
       resolution = value;
@@ -47,18 +56,37 @@ class CachedCollisionComputation : public CollisionComputation {
     }
   }
 
+  /**
+   * @brief      Gets the resolution: the number of discrete angles \f$N\f$.
+   *
+   * @return     The size of the cache.
+   */
   size_t get_resolution() const { return resolution; }
 
-  void set_min_angle(float value) {
+  /**
+   * @brief      Sets the cache interval lower bound \f$\alpha\f$.
+   *
+   * @param[in]  value  The lower bound
+   */
+  void set_min_angle(Radians value) {
     value = normalize(value);
     if (value != from_relative_angle) {
       from_relative_angle = value;
       reset();
     }
   }
-
+  /**
+   * @brief      Gets the cache interval lower bound \f$\alpha\f$.
+   *
+   * @return     The lower bound.
+   */
   float get_min_angle() const { return from_relative_angle; }
 
+  /**
+   * @brief      Sets the cache interval length \f$\Delta\f$.
+   *
+   * @param[in]  value  The interval length
+   */
   void set_length(float value) {
     if (value > 0) {
       value = std::min<float>(value, 2 * M_PI);
@@ -69,8 +97,18 @@ class CachedCollisionComputation : public CollisionComputation {
     }
   }
 
+  /**
+   * @brief      Gets the cache interval length \f$\Delta\f$.
+   *
+   * @return     The interval length
+   */
   float get_length() const { return length; }
 
+  /**
+   * @brief      Sets the maximal distance \f$D\f$ to consider
+   *
+   * @param[in]  value  The maximal distance
+   */
   void set_max_distance(float value) {
     if (value > 0 && value != max_distance) {
       max_distance = value;
@@ -78,20 +116,50 @@ class CachedCollisionComputation : public CollisionComputation {
     }
   }
 
+  /**
+   * @brief      Gets the maximal distance \f$D\f$ to consider
+   *
+   * @return     The maximal distance
+   */
   float get_max_distance() const { return max_distance; }
 
+  /**
+   * @brief      Sets the agent speed.
+   *
+   * @param[in]  value  The speed
+   */
   void set_speed(float value) {
-    if (value > 0 and value != speed) {
+    if (value > 0 && value != speed) {
       speed = value;
     }
     std::fill(dynamic_cache.begin(), dynamic_cache.end(), uncomputed);
   }
 
+  /**
+   * @brief      Gets the agent speed.
+   *
+   * @return     The agent speed.
+   */
   float get_speed() const { return speed; }
 
-  // angle is absolute
+  /**
+   * @brief      Returns the free distance if the agent will be static
+   *
+   * @param[in]  angle              The angle (absolute)
+   * @param[in]  include_neighbors  Indicates if the neighbors should be
+   * included in the computation
+   *
+   * @return     The distance in direction `angle` before possibly colliding
+   */
   float static_free_distance(Radians angle, bool include_neighbors = true);
-  // angle is absolute
+
+  /**
+   * @brief      Returns the free distance if the agent will be move
+   *
+   * @param[in]  angle         The angle (absolute)
+   *
+   * @return     The distance in direction `angle` before possibly colliding
+   */
   float dynamic_free_distance(Radians angle);
 
   void setup(Pose2 pose_, float margin_,
@@ -112,6 +180,9 @@ class CachedCollisionComputation : public CollisionComputation {
     reset();
   }
 
+  /**
+   * @brief      Resets the cache.
+   */
   void reset() {
     std::fill(static_cache[false].begin(), static_cache[false].end(),
               uncomputed);
@@ -120,14 +191,12 @@ class CachedCollisionComputation : public CollisionComputation {
   }
 
   /**
-   * @brief      Gets a pointer where collision distances are cached. Similar to
-   * \ref get_collision_distance but no effort is made to compute entry not
-   * already computed by \ref cmd_twist. Negative entries means:
-   *               - \ref uncomputed = -2 -> distance not computed
-   *               - \ref NO_COLLISION = -1 -> no collision (up to \ref
-   * get_horizon)
-   *
+   * @brief      Gets a pointer where collision distances are cached. Negative
+   * entries mean distance not computed (-2) or no collision (-1).
+
    * @param[in]  assuming_static  The assuming static
+   * @param[in]  include_neighbors  Indicates if the neighbors should be
+   * included in the computation
    *
    * @return     The collision distance cache.
    */
@@ -137,9 +206,23 @@ class CachedCollisionComputation : public CollisionComputation {
     return dynamic_cache;
   }
 
+  /**
+   * @brief      Returns the free distance to collision for the cached
+   * interval of headings.
+   *
+   * @param[in]  dynamic       If the agent is moving
+   *
+   * @return     The distance before possibly colliding for each direction
+   * in the interval \f$[\alpha, \alpha + \Delta]\f$.
+   */
   CollisionMap get_free_distance(bool dynamic = false);
 
  private:
+  /**
+   * Marks yet-not-computed entries in \ref get_cache
+   */
+  static constexpr int uncomputed = -2;
+
   float from_relative_angle;
   float length;
   size_t resolution;
