@@ -71,15 +71,16 @@ static std::shared_ptr<Kinematics> make_kinematics(const std::string &name,
                                                  float max_speed,
                                                  float max_angular_speed,
                                                  float axis) {
-  if (name == "TwoWheeled") {
-    return std::make_shared<TwoWheeled>(max_speed, axis);
-  } else if (name == "FourWheeled") {
-    return std::make_shared<FourWheeled>(max_speed, axis);
-  } else if (name == "Forward") {
-    return std::make_shared<Forward>(max_speed, max_angular_speed);
-  } else {
-    return std::make_shared<Holonomic>(max_speed, max_angular_speed);
+  auto kinematics = Kinematics::make_type(name);
+  if (kinematics) {
+    kinematics->set_max_speed(max_speed);
+    kinematics->set_max_angular_speed(max_angular_speed);
+    if (WheeledKinematics * wk = dynamic_cast<WheeledKinematics *>(kinematics.get())) {
+      wk->set_axis(axis);
+    }
+    return kinematics;
   }
+  return std::make_shared<OmnidirectionalKinematics>(max_speed, max_angular_speed);
 }
 
 static Behavior::Heading heading_from_string(const std::string &name) {
@@ -148,7 +149,7 @@ static Pose3 pose_from(const geometry_msgs::msg::Pose &pose) {
 }
 
 static Twist3 twist_from(const geometry_msgs::msg::Twist &t) {
-  return {vector_from(t.linear), static_cast<Radians>(t.angular.z), false};
+  return {vector_from(t.linear), static_cast<Radians>(t.angular.z), Frame::absolute};
 }
 
 static std::string tolower(const std::string &value) {
@@ -550,7 +551,7 @@ class ROSControllerNode : public rclcpp::Node {
       geometry_msgs::msg::TwistStamped msg;
       msg.header.frame_id = fixed_frame;
       msg.header.stamp = now();
-      if (twist.relative) {
+      if (twist.frame == Frame::relative) {
         const auto behavior = controller.get_behavior();
         if (!behavior) return;
         Twist2 a_twist = behavior->to_absolute(twist.project());
@@ -566,7 +567,7 @@ class ROSControllerNode : public rclcpp::Node {
     } else {
       // publish in robot frame
       geometry_msgs::msg::Twist msg;
-      if (!twist.relative) {
+      if (twist.frame == Frame::absolute) {
         const auto behavior = controller.get_behavior();
         if (!behavior) return;
         Twist2 r_twist = behavior->to_relative(twist.project());
@@ -617,8 +618,7 @@ class ROSControllerNode : public rclcpp::Node {
     auto param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     param_desc.read_only = true;
     auto kinematics = make_kinematics(
-        declare_parameter("kinematics.type", std::string("TwoWheeled"),
-                          param_desc),
+        declare_parameter("kinematics.type", std::string("2WDiff"),param_desc),
         declare_parameter("kinematics.max_speed", 1.0, param_desc),
         declare_parameter("kinematics.max_angular_speed", 1.0, param_desc),
         declare_parameter("kinematics.wheel_axis", 1.0, param_desc));

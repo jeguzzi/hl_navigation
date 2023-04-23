@@ -68,7 +68,7 @@ Example
    name: my_group
    number: 4
    kinematics:
-     type: Holonomic
+     type: Omni
      # implicit constant
      max_speed: 1.0  
    behavior:
@@ -149,7 +149,7 @@ Example
      - type: my_type
        number: 2
        kinematics:
-         type: Holonomic
+         type: Omni
          max_speed: 1.0
        behavior:
          type: Dummy

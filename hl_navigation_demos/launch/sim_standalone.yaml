@@ -19,7 +19,7 @@ scenario:
       control_period: 0.1
       speed_tolerance: 0.02
       kinematics:
-        type: TwoWheeled
+        type: 2WDiff
         wheel_axis: 0.094
         max_speed: 0.166
       behavior:

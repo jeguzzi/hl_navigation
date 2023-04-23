@@ -157,8 +157,8 @@ struct SimpleControl {
 /**
  * @brief      Three-dimensional twist composed of  velocity and angular speed.
  *
- * Twist coordinates may be in a fixed frame or in the agent's own frame, as
- * specified by \ref relative.
+ * Twist3 coordinates may be in a fixed frame or in the agent's own frame, as
+ * specified by \ref frame.
  */
 struct Twist3 {
   /**
@@ -170,26 +170,24 @@ struct Twist3 {
    */
   Radians angular_speed;
   /**
-   * If true, the twist is relative to the agent's own frame of reference.
+   * The frame of reference.
    */
-  bool relative;
+  Frame frame;
 
   Twist3(const Vector3& velocity, Radians angular_speed = 0.0,
-         bool relative = false)
-      : velocity(velocity), angular_speed(angular_speed), relative(relative) {}
+         Frame frame = Frame::absolute)
+      : velocity(velocity), angular_speed(angular_speed), frame(frame) {}
   Twist3() : Twist3(Vector3{}) {}
   Twist3(const Twist2& twist, float vz)
       : velocity{twist.velocity.x(), twist.velocity.x(), vz},
         angular_speed(twist.angular_speed),
-        relative(twist.relative) {}
+        frame(twist.frame) {}
   /**
    * @brief      Project to the two dimensional plane.
    *
    * @return     The projected twist
    */
-  Twist2 project() const {
-    return {velocity.head<2>(), angular_speed, relative};
-  }
+  Twist2 project() const { return {velocity.head<2>(), angular_speed, frame}; }
 };
 
 /**
@@ -272,17 +270,11 @@ class HL_NAVIGATION_EXPORT Controller3 : public Controller {
    * @brief      Constructs a new instance.
    *
    * @param[in]  behavior                   The navigation behavior
-   * @param[in]  compute_relative_twist     The compute relative twist
-   * @param[in]  set_cmd_twist_as_actuated  Indicates if the behavior should set
-   * the twist as automatically actuated in \ref Behavior::cmd_twist
    * @param[in]  limit_to_2d                Whether to limit the control to 2D
    */
   Controller3(std::shared_ptr<Behavior> behavior = nullptr,
-              std::optional<bool> compute_relative_twist = std::nullopt,
-              bool set_cmd_twist_as_actuated = true, bool limit_to_2d = false)
-      : Controller(behavior, compute_relative_twist, set_cmd_twist_as_actuated),
-        altitude(),
-        limit_to_2d{limit_to_2d} {}
+              bool limit_to_2d = false)
+      : Controller(behavior), altitude(), limit_to_2d{limit_to_2d} {}
 
   /**
    * @brief      Sets the neighbors.
@@ -404,13 +396,7 @@ class HL_NAVIGATION_EXPORT Controller3 : public Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> go_to_position(const Vector3& point,
-                                         float tolerance) {
-    altitude.target = point[2];
-    altitude.mode = SimpleControl::Mode::value;
-    altitude.target_set = true;
-    return Controller::go_to_position(point.head<2>(), tolerance);
-  }
+  std::shared_ptr<Action> go_to_position(const Vector3& point, float tolerance);
   /**
    * @brief      Starts an action to go to a 3D pose.
    *
@@ -427,13 +413,7 @@ class HL_NAVIGATION_EXPORT Controller3 : public Controller {
    */
   std::shared_ptr<Action> go_to_pose(const Pose3& pose,
                                      float position_tolerance,
-                                     float orientation_tolerance) {
-    altitude.target = pose.position[2];
-    altitude.target_set = true;
-    altitude.mode = SimpleControl::Mode::value;
-    return Controller::go_to_pose(pose.project(), position_tolerance,
-                                  orientation_tolerance);
-  }
+                                     float orientation_tolerance);
   /**
    * @brief      Starts an action to follow a 3D point.
    *
@@ -446,12 +426,7 @@ class HL_NAVIGATION_EXPORT Controller3 : public Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_point(const Vector3& point) {
-    altitude.target = point[2];
-    altitude.target_set = true;
-    altitude.mode = SimpleControl::Mode::value;
-    return Controller::follow_point(point.head<2>());
-  }
+  std::shared_ptr<Action> follow_point(const Vector3& point);
   /**
    * @brief      Starts an action to follow a 3D pose.
    *
@@ -464,12 +439,7 @@ class HL_NAVIGATION_EXPORT Controller3 : public Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_pose(const Pose3& pose) {
-    altitude.target = pose.position[2];
-    altitude.target_set = true;
-    altitude.mode = SimpleControl::Mode::value;
-    return Controller::follow_pose(pose.project());
-  }
+  std::shared_ptr<Action> follow_pose(const Pose3& pose);
   /**
    * @brief      Starts an action to follow a 3D velocity.
    *
@@ -480,12 +450,7 @@ class HL_NAVIGATION_EXPORT Controller3 : public Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_velocity(const Vector3& velocity) {
-    altitude.target_speed = velocity[2];
-    altitude.target_speed_set = true;
-    altitude.mode = SimpleControl::Mode::speed;
-    return Controller::follow_velocity(velocity.head<2>());
-  }
+  std::shared_ptr<Action> follow_velocity(const Vector3& velocity);
   /**
    * @brief      Starts an action to follow a 3D twist.
    *
@@ -496,31 +461,14 @@ class HL_NAVIGATION_EXPORT Controller3 : public Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_twist(const Twist3& twist) {
-    altitude.target_speed = twist.velocity[2];
-    altitude.target_speed_set = true;
-    altitude.mode = SimpleControl::Mode::speed;
-    return Controller::follow_twist(twist.project());
-  }
+  std::shared_ptr<Action> follow_twist(const Twist3& twist);
 
   /**
    * @private
    */
-  float distance_to_target() const override {
+  float estimate_time_until_target_satisfied() const override {
     // Expect[tolerance >= 0];
-    if (behavior) {
-      return std::max(Controller::distance_to_target(),
-                      abs(altitude.target - altitude.value));
-    }
-    return 0.0f;
-  }
-
-  /**
-   * @private
-   */
-  float time_to_target(float tolerance = 0.0f) const override {
-    // Expect[tolerance >= 0];
-    const float t = Controller::time_to_target(tolerance);
+    const float t = Controller::estimate_time_until_target_satisfied();
     if (limit_to_2d) {
       return t;
     }
@@ -539,32 +487,13 @@ class HL_NAVIGATION_EXPORT Controller3 : public Controller {
   /**
    * @brief      Updates the control for time step, computing a 3D command.
    *
-   * Internally calls \ref Behavior::cmd_twist for collision avoidance.
+   * Internally calls \ref Behavior::compute_cmd for collision avoidance.
    *
    * @param[in]  time_step  The time step
    *
    * @return     The command twist to execute the current action
    */
-  Twist3 update_3d(float time_step) {
-    if (action && behavior) {
-      action->update(this, time_step);
-      Behavior::Mode mode = Behavior::Mode::stop;
-      if (action->done()) {
-        action = nullptr;
-      } else if (action->running()) {
-        mode = action->mode();
-      }
-      Twist2 twist = behavior->cmd_twist(
-          time_step, mode, compute_relative_twist, set_cmd_twist_as_actuated);
-      const float cmd_z = limit_to_2d ? 0.0f : altitude.update(time_step);
-      Twist3 cmd = Twist3(twist, cmd_z);
-      if (cmd_cb_3) {
-        (*cmd_cb_3)(cmd);
-      }
-      return cmd;
-    }
-    return {};
-  }
+  Twist3 update_3d(float time_step);
 
   /**
    * @brief      Sets the callback called each time a command is computed for an

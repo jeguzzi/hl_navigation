@@ -130,7 +130,7 @@ void Trace::update(const World &world, unsigned step) {
   }
   if (record_cmd) {
     for (const auto &agent : world.get_agents()) {
-      const auto twist = agent->cmd_twist;
+      const auto twist = agent->last_cmd;
       *cmd_ptr++ = twist.velocity[0];
       *cmd_ptr++ = twist.velocity[1];
       *cmd_ptr++ = twist.angular_speed;
@@ -139,10 +139,13 @@ void Trace::update(const World &world, unsigned step) {
   if (record_target) {
     for (const auto &agent : world.get_agents()) {
       if (auto b = agent->get_behavior()) {
-        const auto pose = b->get_target_pose();
-        *target_ptr++ = pose.position[0];
-        *target_ptr++ = pose.position[1];
-        *target_ptr++ = pose.orientation;
+        // TODO(Jerome): adapt to the changed target format
+        const auto target = b->get_target();
+        const auto position = target.position.value_or(Vector2::Zero());
+        const auto orientation = target.orientation.value_or(0.0f);
+        *target_ptr++ = position[0];
+        *target_ptr++ = position[1];
+        *target_ptr++ = orientation;
       }
     }
   }
@@ -205,6 +208,12 @@ void Trace::finalize(const World &world, HighFive::Group *group) {
       group->createGroup("agent_" + std::to_string(i))
           .createDataSet<float>("task", HighFive::DataSpace({n, ds.size() / n}))
           .write_raw(ds.data());
+    }
+    for (const auto & agent : world.get_agents()) {
+      if (Task *task = agent->get_task()) {
+        // TODO(Jerome): should remove just the callback we added.
+        task->clear_callbacks();
+      }
     }
   }
 }

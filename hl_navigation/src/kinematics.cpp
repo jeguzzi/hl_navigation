@@ -2,37 +2,39 @@
 
 namespace hl_navigation {
 
-Twist2 Holonomic::feasible(const Twist2& twist) const {
+Twist2 OmnidirectionalKinematics::feasible(const Twist2& twist) const {
   return {clamp_norm(twist.velocity, get_max_speed()),
           std::clamp(twist.angular_speed, -get_max_angular_speed(),
                      get_max_angular_speed()),
-          twist.relative};
+          twist.frame};
 }
 
-Twist2 Forward::feasible(const Twist2& twist) const {
-  assert(twist.relative);
+Twist2 AheadKinematics::feasible(const Twist2& twist) const {
+  assert(twist.frame == Frame::relative);
   return {{std::clamp(twist.velocity[0], 0.0f, get_max_speed()), 0},
           std::clamp(twist.angular_speed, -get_max_angular_speed(),
                      get_max_angular_speed()),
-          true};
+          twist.frame};
 }
 
-Twist2 Wheeled::feasible(const Twist2& value) const {
+Twist2 WheeledKinematics::feasible(const Twist2& value) const {
   return twist(wheel_speeds(value));
 }
 
-Twist2 TwoWheeled::twist(const WheelSpeeds& speeds) const {
+Twist2 TwoWheelsDifferentialDriveKinematics::twist(
+    const WheelSpeeds& speeds) const {
   if (speeds.size() == 2) {
     // {left, right}
     return {{0.5f * (speeds[0] + speeds[1]), 0.0f},
             (speeds[1] - speeds[0]) / axis,
-            true};
+            Frame::relative};
   }
   return {};
 }
 
-WheelSpeeds TwoWheeled::wheel_speeds(const Twist2& twist) const {
-  assert(twist.relative);
+WheelSpeeds TwoWheelsDifferentialDriveKinematics::wheel_speeds(
+    const Twist2& twist) const {
+  assert(twist.frame == Frame::relative);
   // {left, right}
   float max_speed = get_max_speed();
   const float rotation =
@@ -50,19 +52,20 @@ WheelSpeeds TwoWheeled::wheel_speeds(const Twist2& twist) const {
   return {left, right};
 }
 
-Twist2 FourWheeled::twist(const WheelSpeeds& speeds) const {
+Twist2 FourWheelsOmniDriveKinematics::twist(const WheelSpeeds& speeds) const {
   if (speeds.size() == 4) {
     // {front left, rear left, rear right, rear left}
     return {{0.25f * (speeds[0] + speeds[1] + speeds[2] + speeds[3]),
              0.25f * (-speeds[0] + speeds[1] - speeds[2] + speeds[3])},
             0.25f * (-speeds[0] - speeds[1] + speeds[2] + speeds[3]) / axis,
-            true};
+            Frame::relative};
   }
   return {};
 }
 
-WheelSpeeds FourWheeled::wheel_speeds(const Twist2& twist) const {
-  assert(twist.relative);
+WheelSpeeds FourWheelsOmniDriveKinematics::wheel_speeds(
+    const Twist2& twist) const {
+  assert(twist.frame == Frame::relative);
   // {front left, rear left, rear right, rear left}
   float max_speed = get_max_speed();
   const float rotation =

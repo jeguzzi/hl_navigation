@@ -2,14 +2,14 @@
 
   <!-- KINEMATIC -->
 
-  <!-- Robot kinematics class: one of 'TwoWheeled', 'Holonomic', 'Forward', 'FourWheeled'  -->
-  <arg name="kinematics_type" default="TwoWheeled"/>
+  <!-- Robot kinematics class: one of 'Omni', 'Ahead', '2WDiff', '4WOmni'  -->
+  <arg name="kinematics_type" default="2WDiff"/>
   <!-- The maximal speed -->
-  <arg name="kinematics_maximal_speed" default="0.3"/>
+  <arg name="kinematics_max_speed" default="0.3"/>
   <!-- The maximal angular speed -->
-  <arg name="kinematics_maximal_angular_speed" default="0.2"/>
+  <arg name="kinematics_max_angular_speed" default="0.2"/>
   <!-- The wheel axis length -->
-  <arg name="kinematics_axis_length" default="1.0"/>
+  <arg name="kinematics_wheel_axis" default="1.0"/>
   <!-- The radius -->
   <arg name="radius" default="0.3"/>
 
@@ -71,9 +71,9 @@
 
       <param name="kinematics.type" value="$(var kinematics_type)" />
       <param name="radius" value="$(var radius)" />
-      <param name="kinematics.wheel_axis" value="$(var kinematics_axis_length)" />
-      <param name="kinematics.maximal_speed" value="$(var kinematics_maximal_speed)" />
-      <param name="kinematics.maximal_angular_speed" value="$(var kinematics_maximal_angular_speed)" />
+      <param name="kinematics.wheel_axis" value="$(var kinematics_wheel_axis)" />
+      <param name="kinematics.max_speed" value="$(var kinematics_max_speed)" />
+      <param name="kinematics.max_angular_speed" value="$(var kinematics_max_angular_speed)" />
       
       <param name="behavior" value="$(var behavior)" />
       <param name="publish_cmd_stamped" value="$(var publish_cmd_stamped)" />

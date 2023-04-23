@@ -42,6 +42,11 @@ std::string to_string(const bool &value) {
 }
 
 template <>
+std::string to_string(const Frame &frame) {
+  return frame == Frame::relative ? "Frame.relative" : "Frame.absolute";
+}
+
+template <>
 std::string to_string(const Pose2 &value) {
   return "Pose2(" + to_string(value.position) + ", " +
          std::to_string(value.orientation) + ")";
@@ -50,8 +55,51 @@ std::string to_string(const Pose2 &value) {
 template <>
 std::string to_string(const Twist2 &value) {
   return "Twist2(" + to_string(value.velocity) + ", " +
-         std::to_string(value.angular_speed) + ", " +
-         to_string(value.relative) + ")";
+         std::to_string(value.angular_speed) + ", " + to_string(value.frame) +
+         ")";
+}
+
+template <>
+std::string to_string(const Target &value) {
+  std::string r = "Target(";
+  bool first = true;
+  if (value.position) {
+    if (!first) r += ", ";
+    r += "position=" + to_string(*value.position);
+    first = false;
+  }
+  if (value.orientation) {
+    if (!first) r += ", ";
+    r += "orientation=" + to_string(*value.orientation);
+    first = false;
+  }
+  if (value.direction) {
+    if (!first) r += ", ";
+    r += "direction=" + to_string(*value.direction);
+    first = false;
+  }
+  if (value.speed) {
+    if (!first) r += ", ";
+    r += "speed=" + to_string(*value.speed);
+    first = false;
+  }
+  if (value.angular_speed) {
+    if (!first) r += ", ";
+    r += "angular_speed=" + to_string(*value.angular_speed);
+    first = false;
+  }
+  if (value.position_tolerance) {
+    if (!first) r += ", ";
+    r += "position_tolerance=" + to_string(value.position_tolerance);
+    first = false;
+  }
+  if (value.orientation_tolerance) {
+    if (!first) r += ", ";
+    r += "orientation_tolerance=" + to_string(value.orientation_tolerance);
+    first = false;
+  }
+  r += ")";
+  return r;
 }
 
 template <>
@@ -79,31 +127,47 @@ class PyBehavior : public Behavior, virtual public PyHasRegister<Behavior> {
   using Native = Behavior;
 
   /* Trampolines (need one for each virtual function) */
-  Twist2 cmd_twist(float time_step, Mode mode, bool relative,
-                   bool set_as_actuated) override {
-    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist, time_step, mode, relative,
-                      set_as_actuated);
+  Twist2 compute_cmd(float time_step, std::optional<Frame> frame) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, compute_cmd, time_step, frame);
   }
-  Vector2 compute_desired_velocity(float time_step) override {
-    PYBIND11_OVERRIDE(Vector2, Behavior, compute_desired_velocity, time_step);
+  Vector2 desired_velocity_towards_point(const Vector2 &point, float speed,
+                                         float time_step) override {
+    PYBIND11_OVERRIDE(Vector2, Behavior, desired_velocity_towards_point, point,
+                      speed, time_step);
+  }
+  Vector2 desired_velocity_towards_velocity(const Vector2 &velocity,
+                                            float time_step) override {
+    PYBIND11_OVERRIDE(Vector2, Behavior, desired_velocity_towards_velocity,
+                      velocity, time_step);
   }
   Twist2 twist_towards_velocity(const Vector2 &absolute_velocity,
-                                bool relative) override {
+                                Frame frame) override {
     PYBIND11_OVERRIDE(Twist2, Behavior, twist_towards_velocity,
-                      absolute_velocity, relative);
+                      absolute_velocity, frame);
   }
-  Twist2 cmd_twist_towards_target(float time_step, bool relative) override {
-    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_target, time_step,
-                      relative);
+  Twist2 cmd_twist_towards_point(const Vector2 &point, float speed,
+                                 float time_step, Frame frame) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_point, point, speed,
+                      time_step, frame);
   }
-  Twist2 cmd_twist_towards_target_orientation(float time_step,
-                                              bool relative) override {
-    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_target_orientation,
-                      time_step, relative);
+  Twist2 cmd_twist_towards_velocity(const Vector2 &velocity, float time_step,
+                                    Frame frame) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_velocity, velocity,
+                      time_step, frame);
   }
-  Twist2 cmd_twist_towards_stopping(float time_step, bool relative) override {
+  Twist2 cmd_twist_towards_orientation(float orientation, float angular_speed,
+                                       float time_step, Frame frame) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_orientation,
+                      orientation, angular_speed, time_step, frame);
+  }
+  Twist2 cmd_twist_towards_angular_speed(float angular_speed, float time_step,
+                                         Frame frame) override {
+    PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_angular_speed,
+                      angular_speed, time_step, frame);
+  }
+  Twist2 cmd_twist_towards_stopping(float time_step, Frame frame) override {
     PYBIND11_OVERRIDE(Twist2, Behavior, cmd_twist_towards_stopping, time_step,
-                      relative);
+                      frame);
   }
 
   EnvironmentState *get_environment_state() override {
@@ -188,9 +252,13 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .def_property("properties", &HasProperties::get_properties, nullptr,
                     DOC(hl_navigation_HasProperties, property_properties));
 
+  py::enum_<Frame>(m, "Frame", DOC(hl_navigation_Frame))
+      .value("relative", Frame::relative, DOC(hl_navigation_Frame, relative))
+      .value("absolute", Frame::absolute, DOC(hl_navigation_Frame, absolute));
+
   py::class_<Twist2>(m, "Twist2", DOC(hl_navigation_Twist2))
-      .def(py::init<Vector2, float, bool>(), py::arg("velocity"),
-           py::arg("angular_speed") = 0.0f, py::arg("relative") = false,
+      .def(py::init<Vector2, float, Frame>(), py::arg("velocity"),
+           py::arg("angular_speed") = 0.0f, py::arg("frame") = Frame::absolute,
            DOC(hl_navigation_Twist2, Twist2))
       .def(py::self == py::self)
       .def(py::self != py::self)
@@ -198,8 +266,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
                      DOC(hl_navigation_Twist2, velocity))
       .def_readwrite("angular_speed", &Twist2::angular_speed,
                      DOC(hl_navigation_Twist2, angular_speed))
-      .def_readwrite("relative", &Twist2::relative,
-                     DOC(hl_navigation_Twist2, relative))
+      .def_readwrite("frame", &Twist2::frame, DOC(hl_navigation_Twist2, frame))
       .def("rotate", &Twist2::rotate, py::arg("angle"),
            DOC(hl_navigation_Twist2, rotate))
       .def("__repr__", &to_string<Twist2>);
@@ -213,9 +280,62 @@ PYBIND11_MODULE(_hl_navigation, m) {
                      DOC(hl_navigation_Pose2, orientation))
       .def("rotate", &Pose2::rotate, py::arg("angle"),
            DOC(hl_navigation_Pose2, rotate))
-      .def("integrate", &Pose2::integrate, py::arg("twist"), py::arg("time"),
-           DOC(hl_navigation_Pose2, rotate))
+      .def("integrate", &Pose2::integrate, py::arg("twist"),
+           py::arg("time_step"), DOC(hl_navigation_Pose2, rotate))
       .def("__repr__", &to_string<Pose2>);
+
+  py::class_<Target>(m, "Target", DOC(hl_navigation_Target))
+      .def(py::init<std::optional<Vector2>, std::optional<Radians>,
+                    std::optional<float>, std::optional<Vector2>,
+                    std::optional<float>, float, float>(),
+           py::arg("position") = py::none(),
+           py::arg("orientation") = py::none(), py::arg("speed") = py::none(),
+           py::arg("direction") = py::none(),
+           py::arg("angular_speed") = py::none(),
+           py::arg("position_tolerance") = 0.0f,
+           py::arg("orientation_tolerance") = 0.0f,
+           DOC(hl_navigation_Target, Target))
+      .def_readwrite("position", &Target::position,
+                     DOC(hl_navigation_Target, position))
+      .def_readwrite("orientation", &Target::orientation,
+                     DOC(hl_navigation_Target, orientation))
+      .def_readwrite("speed", &Target::speed, DOC(hl_navigation_Target, speed))
+      .def_readwrite("angular_speed", &Target::angular_speed,
+                     DOC(hl_navigation_Target, angular_speed))
+      .def_readwrite("direction", &Target::direction,
+                     DOC(hl_navigation_Target, direction))
+      .def_readwrite("position_tolerance", &Target::position_tolerance,
+                     DOC(hl_navigation_Target, position_tolerance))
+      .def_readwrite("orientation_tolerance", &Target::orientation_tolerance,
+                     DOC(hl_navigation_Target, orientation_tolerance))
+      .def("satisfied",
+           py::overload_cast<const Vector2 &>(&Target::satisfied, py::const_),
+           DOC(hl_navigation_Target, satisfied))
+      .def("satisfied",
+           py::overload_cast<float>(&Target::satisfied, py::const_),
+           DOC(hl_navigation_Target, satisfied, 2))
+      .def("satisfied",
+           py::overload_cast<const Pose2 &>(&Target::satisfied, py::const_),
+           DOC(hl_navigation_Target, satisfied, 3))
+      .def_property("valid", &Target::valid, nullptr,
+                    DOC(hl_navigation_Target, valid))
+      .def_static("Point", &Target::Point, py::arg("point"),
+                  py::arg("tolerance") = 0.0f, DOC(hl_navigation_Target, Point))
+      .def_static("Pose", &Target::Pose, py::arg("pose"),
+                  py::arg("position_tolerance") = 0.0f,
+                  py::arg("orientation_tolerance") = 0.0f,
+                  DOC(hl_navigation_Target, Pose))
+      .def_static("Orientation", &Target::Orientation, py::arg("orientation"),
+                  py::arg("tolerance") = 0.0f,
+                  DOC(hl_navigation_Target, Orientation))
+      .def_static("Velocity", &Target::Velocity, py::arg("velocity"),
+                  DOC(hl_navigation_Target, Velocity))
+      .def_static("Direction", &Target::Direction, py::arg("direction"),
+                  DOC(hl_navigation_Target, Direction))
+      .def_static("Twist", &Target::Twist, py::arg("twist"),
+                  DOC(hl_navigation_Target, Twist))
+      .def_static("Stop", &Target::Point, DOC(hl_navigation_Target, Stop))
+      .def("__repr__", &to_string<Target>);
 
   py::class_<Disc>(m, "Disc", DOC(hl_navigation_Disc))
       .def(py::init<Vector2, float>(), py::arg("position"), py::arg("radius"),
@@ -276,34 +396,45 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .def("feasible", &Kinematics::feasible,
            DOC(hl_navigation_Kinematics, feasible));
 
-  py::class_<Holonomic, Kinematics, std::shared_ptr<Holonomic>>(
-      m, "Holonomic", DOC(hl_navigation_Holonomic))
+  py::class_<OmnidirectionalKinematics, Kinematics,
+             std::shared_ptr<OmnidirectionalKinematics>>(
+      m, "OmnidirectionalKinematics",
+      DOC(hl_navigation_OmnidirectionalKinematics))
       .def(py::init<float, float>(), py::arg("max_speed"),
            py::arg("max_angular_speed"),
-           DOC(hl_navigation_Holonomic, Holonomic));
+           DOC(hl_navigation_OmnidirectionalKinematics,
+               OmnidirectionalKinematics));
 
-  py::class_<Forward, Kinematics, std::shared_ptr<Forward>>(
-      m, "Forward", DOC(hl_navigation_Forward))
+  py::class_<AheadKinematics, Kinematics, std::shared_ptr<AheadKinematics>>(
+      m, "AheadKinematics", DOC(hl_navigation_AheadKinematics))
       .def(py::init<float, float>(), py::arg("max_speed"),
-           py::arg("max_angular_speed"), DOC(hl_navigation_Forward, Forward));
+           py::arg("max_angular_speed"),
+           DOC(hl_navigation_AheadKinematics, AheadKinematics));
 
-  py::class_<Wheeled, Kinematics, std::shared_ptr<Wheeled>>(
-      m, "Wheeled", DOC(hl_navigation_Wheeled))
-      .def_property("axis", &Wheeled::get_axis, nullptr,
-                    DOC(hl_navigation_Wheeled, property_axis))
-      .def("twist", &Wheeled::twist, DOC(hl_navigation_Wheeled, twist))
-      .def("wheel_speeds", &Wheeled::wheel_speeds,
-           DOC(hl_navigation_Wheeled, wheel_speeds));
+  py::class_<WheeledKinematics, Kinematics, std::shared_ptr<WheeledKinematics>>(
+      m, "WheeledKinematics", DOC(hl_navigation_WheeledKinematics))
+      .def_property("axis", &WheeledKinematics::get_axis, nullptr,
+                    DOC(hl_navigation_WheeledKinematics, property_axis))
+      .def("twist", &WheeledKinematics::twist,
+           DOC(hl_navigation_WheeledKinematics, twist))
+      .def("wheel_speeds", &WheeledKinematics::wheel_speeds,
+           DOC(hl_navigation_WheeledKinematics, wheel_speeds));
 
-  py::class_<TwoWheeled, Wheeled, std::shared_ptr<TwoWheeled>>(
-      m, "TwoWheeled", DOC(hl_navigation_TwoWheeled))
+  py::class_<TwoWheelsDifferentialDriveKinematics, WheeledKinematics,
+             std::shared_ptr<TwoWheelsDifferentialDriveKinematics>>(
+      m, "TwoWheelsDifferentialDriveKinematics",
+      DOC(hl_navigation_TwoWheelsDifferentialDriveKinematics))
       .def(py::init<float, float>(), py::arg("max_speed"), py::arg("axis"),
-           DOC(hl_navigation_TwoWheeled, TwoWheeled));
+           DOC(hl_navigation_TwoWheelsDifferentialDriveKinematics,
+               TwoWheelsDifferentialDriveKinematics));
 
-  py::class_<FourWheeled, Wheeled, std::shared_ptr<FourWheeled>>(
-      m, "FourWheeled", DOC(hl_navigation_FourWheeled))
+  py::class_<FourWheelsOmniDriveKinematics, WheeledKinematics,
+             std::shared_ptr<FourWheelsOmniDriveKinematics>>(
+      m, "FourWheelsOmniDriveKinematics",
+      DOC(hl_navigation_FourWheelsOmniDriveKinematics))
       .def(py::init<float, float>(), py::arg("max_speed"), py::arg("axis"),
-           DOC(hl_navigation_FourWheeled, FourWheeled));
+           DOC(hl_navigation_FourWheelsOmniDriveKinematics,
+               FourWheelsOmniDriveKinematics));
 
   py::class_<SocialMargin::Modulation,
              std::shared_ptr<SocialMargin::Modulation>>(
@@ -401,16 +532,6 @@ PYBIND11_MODULE(_hl_navigation, m) {
       .value("velocity", Behavior::Heading::velocity,
              DOC(hl_navigation_Behavior_Heading, velocity));
 
-  py::enum_<Behavior::Mode>(behavior, "Mode", DOC(hl_navigation_Behavior_Mode))
-      .value("move", Behavior::Mode::move,
-             DOC(hl_navigation_Behavior_Mode, move))
-      .value("turn", Behavior::Mode::turn,
-             DOC(hl_navigation_Behavior_Mode, turn))
-      .value("stop", Behavior::Mode::stop,
-             DOC(hl_navigation_Behavior_Mode, stop))
-      .value("follow", Behavior::Mode::follow,
-             DOC(hl_navigation_Behavior_Mode, follow));
-
   behavior
       .def(py::init<std::shared_ptr<Kinematics>, float>(),
            py::arg("kinematics") = py::none(), py::arg("radius") = 0.0,
@@ -453,21 +574,28 @@ PYBIND11_MODULE(_hl_navigation, m) {
                     DOC(hl_navigation_Behavior, property_orientation))
       .def_property("default_cmd_frame", &Behavior::default_cmd_frame, nullptr,
                     DOC(hl_navigation_Behavior, default_cmd_frame))
+      .def_property(
+          "assume_cmd_is_actuated", &Behavior::get_assume_cmd_is_actuated,
+          &Behavior::set_assume_cmd_is_actuated,
+          DOC(hl_navigation_Behavior, property_assume_cmd_is_actuated))
+
       .def_readonly("social_margin", &Behavior::social_margin,
                     DOC(hl_navigation_Behavior, social_margin))
       .def_property(
           "twist", [](const Behavior &self) { return self.get_twist(); },
           &Behavior::set_twist, DOC(hl_navigation_Behavior, property_twist))
-      .def("get_twist", &Behavior::get_twist, py::arg("relative") = false,
+      .def("get_twist", &Behavior::get_twist,
+           py::arg("frame") = Frame::absolute,
            DOC(hl_navigation_Behavior, get_twist))
       .def_property(
           "velocity", [](const Behavior &self) { return self.get_velocity(); },
           [](Behavior &self, const Vector2 v) { return self.set_velocity(v); },
           DOC(hl_navigation_Behavior, property_velocity))
-      .def("get_velocity", &Behavior::get_velocity, py::arg("relative") = false,
+      .def("get_velocity", &Behavior::get_velocity,
+           py::arg("frame") = Frame::absolute,
            DOC(hl_navigation_Behavior, get_velocity))
       .def("set_velocity", &Behavior::set_velocity, py::arg("velocity"),
-           py::arg("relative") = false,
+           py::arg("frame") = Frame::absolute,
            DOC(hl_navigation_Behavior, set_velocity))
       .def_property("angular_speed", &Behavior::get_angular_speed,
                     &Behavior::set_angular_speed,
@@ -481,7 +609,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
           &Behavior::set_actuated_twist,
           DOC(hl_navigation_Behavior, property_actuated_twist))
       .def("get_actuated_twist", &Behavior::get_actuated_twist,
-           py::arg("relative") = false,
+           py::arg("frame") = Frame::absolute,
            DOC(hl_navigation_Behavior, get_actuated_twist))
       .def_property(
           "velocity", [](const Behavior &self) { return self.get_velocity(); },
@@ -492,35 +620,20 @@ PYBIND11_MODULE(_hl_navigation, m) {
                     DOC(hl_navigation_Behavior, property_actuated_wheel_speeds))
       .def("actuate",
            py::overload_cast<const Twist2 &, float>(&Behavior::actuate),
-           py::arg("twist"), py::arg("time"),
+           py::arg("twist"), py::arg("time_step"),
            DOC(hl_navigation_Behavior, actuate))
       .def("actuate", py::overload_cast<float>(&Behavior::actuate),
-           py::arg("time"), DOC(hl_navigation_Behavior, actuate, 2))
-
+           py::arg("time_step"), DOC(hl_navigation_Behavior, actuate, 2))
       .def_property("heading_behavior", &Behavior::get_heading_behavior,
                     &Behavior::set_heading_behavior,
                     DOC(hl_navigation_Behavior, property_heading_behavior))
-      .def_property("target_pose", &Behavior::get_target_pose,
-                    &Behavior::set_target_pose,
-                    DOC(hl_navigation_Behavior, property_target_pose))
-      .def_property("target_position", &Behavior::get_target_position,
-                    &Behavior::set_target_position,
-                    DOC(hl_navigation_Behavior, property_target_position))
-      .def_property("target_orientation", &Behavior::get_target_orientation,
-                    &Behavior::set_target_orientation,
-                    DOC(hl_navigation_Behavior, property_target_orientation))
-      .def_property("target_velocity", &Behavior::get_target_velocity,
-                    &Behavior::set_target_velocity,
-                    DOC(hl_navigation_Behavior, property_target_velocity))
-      .def_property("target_angular_speed", &Behavior::get_target_angular_speed,
-                    &Behavior::set_target_angular_speed,
-                    DOC(hl_navigation_Behavior, property_target_angular_speed))
-      .def("cmd_twist",
-           py::overload_cast<float, Behavior::Mode, std::optional<bool>, bool>(
-               &Behavior::cmd_twist),
-           py::arg("time_step"), py::arg("mode") = Behavior::Mode::move,
-           py::arg("relative") = py::none(), py::arg("set_as_actuated") = true,
-           DOC(hl_navigation_Behavior, cmd_twist))
+      .def_property("target", &Behavior::get_target, &Behavior::set_target,
+                    DOC(hl_navigation_Behavior, property_target))
+      .def("check_if_target_satisfied", &Behavior::check_if_target_satisfied,
+           DOC(hl_navigation_Behavior, check_if_target_satisfied))
+      .def("compute_cmd", &Behavior::compute_cmd, py::arg("time_step"),
+           py::arg("frame") = py::none(),
+           DOC(hl_navigation_Behavior, compute_cmd))
       .def_property("desired_velocity", &Behavior::get_desired_velocity,
                     nullptr,
                     DOC(hl_navigation_Behavior, property_desired_velocity))
@@ -529,6 +642,16 @@ PYBIND11_MODULE(_hl_navigation, m) {
           DOC(hl_navigation_HasRegister, property_type))
       .def("to_frame", &Behavior::to_frame,
            DOC(hl_navigation_Behavior, to_frame))
+      .def("feasible_speed", &Behavior::feasible_speed,
+           DOC(hl_navigation_Behavior, feasible_speed))
+      .def("feasible_angular_speed", &Behavior::feasible_angular_speed,
+           DOC(hl_navigation_Behavior, feasible_angular_speed))
+      .def("feasible_twist", &Behavior::feasible_twist,
+           DOC(hl_navigation_Behavior, feasible_twist))
+
+      .def("estimate_time_until_target_satisfied",
+           &Behavior::estimate_time_until_target_satisfied,
+           DOC(hl_navigation_Behavior, estimate_time_until_target_satisfied))
       .def_property("environment_state",
                     py::cpp_function(&Behavior::get_environment_state,
                                      py::return_value_policy::reference),
@@ -546,7 +669,6 @@ PYBIND11_MODULE(_hl_navigation, m) {
     return (dynamic_cast<GeometricState *>(obj->get_environment_state())) !=
            nullptr;
   });
-
 
   py::class_<EnvironmentState, std::shared_ptr<EnvironmentState>>(
       m, "EnvironmentState", DOC(hl_navigation_EnvironmentState));
@@ -635,10 +757,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
                      DOC(hl_navigation_Action, done_cb));
 
   py::class_<Controller>(m, "Controller", DOC(hl_navigation_Controller))
-      .def(py::init<std::shared_ptr<Behavior>, float, float>(),
-           py::arg("behavior") = nullptr,
-           py::arg("compute_relative_twist") = true,
-           py::arg("set_cmd_twist_as_actuated") = true,
+      .def(py::init<std::shared_ptr<Behavior>>(), py::arg("behavior") = nullptr,
            DOC(hl_navigation_Controller, Controller))
       .def_property("state", &Controller::get_state, nullptr,
                     DOC(hl_navigation_Controller, property_state))
@@ -658,6 +777,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
            DOC(hl_navigation_Controller, follow_point))
       .def("follow_pose", &Controller::follow_pose,
            DOC(hl_navigation_Controller, follow_pose))
+      .def("follow_direction", &Controller::follow_direction,
+           DOC(hl_navigation_Controller, follow_direction))
       .def("follow_velocity", &Controller::follow_velocity,
            DOC(hl_navigation_Controller, follow_velocity))
       .def("follow_twist", &Controller::follow_twist,

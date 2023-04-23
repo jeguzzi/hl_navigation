@@ -111,18 +111,10 @@ struct HL_NAVIGATION_SIM_EXPORT WaypointsTask : Task {
    */
   float get_loop() const { return loop; }
   /**
-   * @brief      Adds a callback called after triggering a new goal
+   * @brief      Gets the properties.
    *
-   * @param[in]  value  The desired callback
-   */
-  //void add_callback(const Callback &value) { callbacks.push_back(value); }
-  /**
-   * @brief      Remove any callbacks
-   */
-  //void clear_callbacks() { callbacks.clear(); }
-
-  /**
    * @private
+   * @return     The properties.
    */
   virtual const Properties &get_properties() const override {
     return properties;

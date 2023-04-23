@@ -19,7 +19,7 @@ class Obstacle;
 
 namespace hl_navigation {
 
-// TODO(J): complete the effective center -> use Holonomic.
+// TODO(J): complete the effective center -> use Omni.
 
 /**
  * @brief      Optimal Reciprocal Collision Avoidance
@@ -133,8 +133,9 @@ class HL_NAVIGATION_EXPORT ORCABehavior : public Behavior {
 
  protected:
   Twist2 twist_towards_velocity(const Vector2& absolute_velocity,
-                                bool relative) override;
-  Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
+                                Frame frame) override;
+  Vector2 desired_velocity_towards_point(const Vector2 & point, float speed, float time_step) override;
+  Vector2 desired_velocity_towards_velocity(const Vector2 & velocity, float time_step) override;
 
  private:
   GeometricState state;
@@ -150,7 +151,9 @@ class HL_NAVIGATION_EXPORT ORCABehavior : public Behavior {
   void add_obstacle(const Disc& disc, float range, bool push_away = false,
                     float epsilon = 2e-3);
   void prepare_line_obstacles();
-  void prepare();
+  void prepare(const Vector2 & target_velocity, float dt);
+
+  Vector2 effective_position() const;
 
  private:
   inline static std::string type = register_type<ORCABehavior>("ORCA");

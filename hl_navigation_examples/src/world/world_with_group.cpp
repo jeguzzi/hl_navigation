@@ -9,8 +9,6 @@
 #include "hl_navigation_sim/world.h"
 #include "hl_navigation_sim/yaml/world.h"
 
-using hl_navigation::DummyBehavior;
-using hl_navigation::Holonomic;
 using hl_navigation::Vector2;
 
 namespace sim = hl_navigation_sim;

@@ -9,8 +9,6 @@
 #include "RVO/Obstacle.h"
 #include "RVO/Vector2.h"
 
-#define DEFAULT_TIME_STEP 0.1
-
 namespace hl_navigation {
 
 ORCABehavior::ORCABehavior(std::shared_ptr<Kinematics> kinematics, float radius)
@@ -19,7 +17,6 @@ ORCABehavior::ORCABehavior(std::shared_ptr<Kinematics> kinematics, float radius)
       use_effective_center(false),
       _RVOAgent(std::make_unique<RVO::Agent>(nullptr)) {
   _RVOAgent->maxNeighbors_ = 1000;
-  _RVOAgent->timeStep_ = DEFAULT_TIME_STEP;
   _RVOAgent->timeHorizon_ = 10.0f;
 }
 
@@ -52,20 +49,20 @@ void ORCABehavior::add_line_obstacle(const LineSegment &line) {
 
 void ORCABehavior::add_obstacle(const Disc &obstacle, float rangeSq,
                                 bool push_away, float epsilon) {
-    auto a = std::make_unique<RVO::Agent>(nullptr);
-    a->velocity_ = RVO::Vector2(0, 0);
-    a->prefVelocity_ = a->velocity_;
-    Vector2 p = obstacle.position;
-    const float margin = obstacle.radius + safety_margin + radius;
-    const Vector2 delta = obstacle.position - pose.position;
-    const float distance = delta.norm() - margin;
-    if (push_away && distance < epsilon) {
-      p += delta / delta.norm() * (-distance + epsilon);
-    }
-    a->position_ = RVO::Vector2((float)p.x(), (float)p.y());
-    a->radius_ = obstacle.radius + safety_margin;
-    _RVOAgent->insertAgentNeighbor(a.get(), rangeSq);
-    rvo_neighbors.push_back(std::move(a));
+  auto a = std::make_unique<RVO::Agent>(nullptr);
+  a->velocity_ = RVO::Vector2(0, 0);
+  a->prefVelocity_ = a->velocity_;
+  Vector2 p = obstacle.position;
+  const float margin = obstacle.radius + safety_margin + radius;
+  const Vector2 delta = obstacle.position - pose.position;
+  const float distance = delta.norm() - margin;
+  if (push_away && distance < epsilon) {
+    p += delta / delta.norm() * (-distance + epsilon);
+  }
+  a->position_ = RVO::Vector2((float)p.x(), (float)p.y());
+  a->radius_ = obstacle.radius + safety_margin;
+  _RVOAgent->insertAgentNeighbor(a.get(), rangeSq);
+  rvo_neighbors.push_back(std::move(a));
 }
 
 void ORCABehavior::add_neighbor(const Neighbor &neighbor, float rangeSq,
@@ -101,15 +98,21 @@ void ORCABehavior::set_time_horizon(float value) {
   _RVOAgent->timeHorizon_ = value;
 }
 float ORCABehavior::get_time_horizon() const { return _RVOAgent->timeHorizon_; }
-void ORCABehavior::set_time_step(float value) { _RVOAgent->timeStep_ = value; }
-float ORCABehavior::get_time_step() const { return _RVOAgent->timeStep_; }
 
-
-void ORCABehavior::prepare() {
+Vector2 ORCABehavior::effective_position() const {
   if (is_using_effective_center()) {
-    Wheeled *wk = dynamic_cast<Wheeled *>(kinematics.get());
+    return pose.position + unit(pose.orientation) * D;
+  }
+  return pose.position;
+}
+
+void ORCABehavior::prepare(const Vector2 &target_velocity, float dt) {
+  // TODO(Jerome): check if maxSpeed_ should be set to target or to max
+  // TODO(Jerome): avoid repetitions (effective_position vs this function)
+  if (is_using_effective_center()) {
+    WheeledKinematics *wk = dynamic_cast<WheeledKinematics *>(kinematics.get());
     D = wk->get_axis() * 0.5;
-    RVO::Vector2 delta =
+    const RVO::Vector2 delta =
         RVO::Vector2(cosf(pose.orientation), sinf(pose.orientation)) * D;
     _RVOAgent->position_ =
         RVO::Vector2(pose.position.x(), pose.position.y()) + delta;
@@ -118,20 +121,18 @@ void ORCABehavior::prepare() {
         twist.velocity.x() - sin(pose.orientation) * D * twist.angular_speed,
         twist.velocity.y() + cos(pose.orientation) * D * twist.angular_speed);
     _RVOAgent->maxSpeed_ =
-        optimal_speed / sqrt(1 + RVO::sqr(0.5 * wk->get_axis() / D));
+        target_velocity.norm() / sqrt(1 + RVO::sqr(0.5 * wk->get_axis() / D));
   } else {
     _RVOAgent->radius_ = radius;
     _RVOAgent->velocity_ = RVO::Vector2(twist.velocity.x(), twist.velocity.y());
     _RVOAgent->position_ = RVO::Vector2(pose.position.x(), pose.position.y());
-    _RVOAgent->maxSpeed_ = optimal_speed;
+    _RVOAgent->maxSpeed_ = target_velocity.norm();
   }
+  _RVOAgent->timeStep_ = dt;
   // TODO(Jerome): why 2 * ... verify
   _RVOAgent->neighborDist_ = 2 * horizon;
-
-  RVO::Vector2 t =
-      RVO::Vector2(target_pose.position.x(), target_pose.position.y()) -
-      _RVOAgent->position_;
-  _RVOAgent->prefVelocity_ = t * _RVOAgent->maxSpeed_ / abs(t);
+  _RVOAgent->prefVelocity_ =
+      RVO::Vector2(target_velocity.x(), target_velocity.y());
 
   const float rangeSq = (horizon * 2) * (horizon * 2);
   if (state.changed(GeometricState::LINE_OBSTACLES)) {
@@ -145,7 +146,8 @@ void ORCABehavior::prepare() {
       _RVOAgent->insertObstacleNeighbor(obstacle.get(), rangeSq);
     }
   }
-  if (state.changed(GeometricState::STATIC_OBSTACLES | GeometricState::NEIGHBORS)) {
+  if (state.changed(GeometricState::STATIC_OBSTACLES |
+                    GeometricState::NEIGHBORS)) {
     _RVOAgent->agentNeighbors_.clear();
     rvo_neighbors.clear();
     for (const auto &n : state.get_neighbors()) {
@@ -158,34 +160,42 @@ void ORCABehavior::prepare() {
   state.reset_changes();
 }
 
-Vector2 ORCABehavior::compute_desired_velocity(float dt) {
-  prepare();
-  set_time_step(dt);
+Vector2 ORCABehavior::desired_velocity_towards_velocity(
+    const Vector2 &velocity, float dt) {
+  prepare(velocity, dt);
   _RVOAgent->computeNewVelocity();
   return Vector2(_RVOAgent->newVelocity_.x(), _RVOAgent->newVelocity_.y());
 }
 
+Vector2 ORCABehavior::desired_velocity_towards_point(
+    const Vector2 &point, float speed, float dt) {
+  const auto delta = point - effective_position();
+  const float n = delta.norm();
+  Vector2 velocity;
+  if (n) {
+    velocity = delta / n * std::max(0.0f, speed);
+  }
+  return desired_velocity_towards_velocity(velocity, dt);
+}
+
 // TODO(J 2023): review ... should I check feasibility?
 Twist2 ORCABehavior::twist_towards_velocity(const Vector2 &absolute_velocity,
-                                            bool relative) {
+                                            Frame frame) {
   if (is_using_effective_center()) {
     Radians angle = orientation_of(absolute_velocity) - pose.orientation;
     float speed = absolute_velocity.norm();
     if (speed) {
-      Wheeled *wk = dynamic_cast<Wheeled *>(kinematics.get());
+      WheeledKinematics *wk = dynamic_cast<WheeledKinematics *>(kinematics.get());
       WheelSpeeds speeds = {
           speed * (cosf(angle) - wk->get_axis() * 0.5f / D * sinf(angle)),
           speed * (cosf(angle) + wk->get_axis() * 0.5f / D * sinf(angle))};
       Twist2 twist = wk->twist(speeds);
-      if (!relative) {
-        return to_absolute(twist);
-      }
-      return twist;
+      return to_frame(twist, frame);
     } else {
-      return {{}, 0.0f, relative};
+      return {Vector2::Zero(), 0.0f, frame};
     }
   }
-  return Behavior::twist_towards_velocity(absolute_velocity, relative);
+  return Behavior::twist_towards_velocity(absolute_velocity, frame);
 }
 
 // const char *ORCABehavior::name = register_type<ORCABehavior>("ORCA");

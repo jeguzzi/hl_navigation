@@ -10,47 +10,30 @@
     - gradient in case of divergence
 """
 
-
 from typing import Tuple, Callable, Optional
 
 import numpy as np
 
-from hl_navigation import (
-    Behavior,
-    GeometricState,
-    Kinematics,
-    Neighbor,
-    Disc,
-    LineSegment,
-    Vector2
-)
+from hl_navigation import (Behavior, GeometricState, Kinematics, Neighbor,
+                           Disc, LineSegment, Vector2)
 
 # Jerome: what about the radius and safety margin?
 
 
 # value and gradient
 # in the paper, called b
-def neighbor_distance(
-    position: Vector2, neighbor: Neighbor, step_duration: float
-) -> Tuple[float, Vector2]:
+def neighbor_distance(position: Vector2, neighbor: Neighbor,
+                      step_duration: float) -> Tuple[float, Vector2]:
     delta = position - neighbor.position
     step = neighbor.velocity * step_duration
     n1 = np.linalg.norm(delta, axis=-1)
     n2 = np.linalg.norm(delta - step, axis=-1)
     n3 = np.linalg.norm(step)
     # Can this be negative?
-    b = 0.5 * np.sqrt((n1 + n2) ** 2 - n3**2)
+    b = 0.5 * np.sqrt((n1 + n2)**2 - n3**2)
     if b:
-        grad = (
-            0.5
-            / b
-            * (
-                2 * delta
-                + 2 * (delta - step)
-                + 0.5 * n1 / n2 * (delta - step)
-                + 0.5 * n2 / n1 * delta
-            )
-        )
+        grad = (0.5 / b * (2 * delta + 2 * (delta - step) + 0.5 * n1 / n2 *
+                           (delta - step) + 0.5 * n2 / n1 * delta))
     else:
         # TODO
         grad = np.zeros(2)
@@ -67,7 +50,8 @@ def disc_distance(position: Vector2, disc: Disc) -> Tuple[float, Vector2]:
     return distance, grad
 
 
-def segment_distance(position: Vector2, line: LineSegment) -> Tuple[float, Vector2]:
+def segment_distance(position: Vector2,
+                     line: LineSegment) -> Tuple[float, Vector2]:
     delta = position - line.p1
     x = delta.dot(line.e1)
     if x < 0:
@@ -110,16 +94,17 @@ class ExponentialPotential(Potential):
 
 
 class SocialForceBehavior(Behavior, name="SocialForce"):
+
     def __init__(
-        self,
-        kinematics: Optional[Kinematics] = None,
-        radius: float = 0.0,
-        tau: float = 0.5,
-        step_duration: float = 1.0,
-        phi: float = 1.75,
-        c: float = 0.5,
-        v: Potential = ExponentialPotential(2.1, 0.3),
-        u: Potential = ExponentialPotential(10, 0.2),
+            self,
+            kinematics: Optional[Kinematics] = None,
+            radius: float = 0.0,
+            tau: float = 0.5,
+            step_duration: float = 1.0,
+            phi: float = 1.75,
+            c: float = 0.5,
+            v: Potential = ExponentialPotential(2.1, 0.3),
+            u: Potential = ExponentialPotential(10, 0.2),
     ):
         Behavior.__init__(self, kinematics, radius)
         self.tau = tau
@@ -134,30 +119,40 @@ class SocialForceBehavior(Behavior, name="SocialForce"):
         return self._state
 
     def potential(self) -> Callable[[Vector2], float]:
-        ps = (
-            [self.neighbor_potential(neighbor) for neighbor in self._state.neighbors]
-            + [self.obstacle_potential(obstacle) for obstacle in self._state.static_obstacles]
-            + [self.segment_potential(line) for line in self._state.line_obstacles]
-        )
+        ps = ([
+            self.neighbor_potential(neighbor)
+            for neighbor in self._state.neighbors
+        ] + [
+            self.obstacle_potential(obstacle)
+            for obstacle in self._state.static_obstacles
+        ] + [
+            self.segment_potential(line) for line in self._state.line_obstacles
+        ])
 
         def f(position: Vector2) -> float:
             return sum(p(position) for p in ps)
 
         return f
 
-    def neighbor_potential(self, neighbor: Neighbor) -> Callable[[Vector2], float]:
+    def neighbor_potential(self,
+                           neighbor: Neighbor) -> Callable[[Vector2], float]:
+
         def f(position: Vector2) -> float:
-            value, _ = neighbor_distance(position, neighbor, self.step_duration)
+            value, _ = neighbor_distance(position, neighbor,
+                                         self.step_duration)
             return self.v(value)[0]
 
         return f
 
     def neighbor_repulsion_force(self, neighbor: Neighbor) -> Vector2:
-        value, grad = neighbor_distance(self.position, neighbor, self.step_duration)
+        value, grad = neighbor_distance(self.position, neighbor,
+                                        self.step_duration)
         _, p_grad = self.v(value)
         return -grad * p_grad
 
-    def obstacle_potential(self, obstacle: Neighbor) -> Callable[[Vector2], float]:
+    def obstacle_potential(self,
+                           obstacle: Neighbor) -> Callable[[Vector2], float]:
+
         def f(position: Vector2) -> float:
             value, _ = disc_distance(position, obstacle)
             return self.u(value)[0]
@@ -169,7 +164,9 @@ class SocialForceBehavior(Behavior, name="SocialForce"):
         _, p_grad = self.u(value)
         return -grad * p_grad
 
-    def segment_potential(self, line: LineSegment) -> Callable[[Vector2], float]:
+    def segment_potential(self,
+                          line: LineSegment) -> Callable[[Vector2], float]:
+
         def f(position: Vector2) -> float:
             value, _ = segment_distance(position, line)
             return self.u(value)[0]
@@ -192,28 +189,38 @@ class SocialForceBehavior(Behavior, name="SocialForce"):
 
     # TODO attractive effects
     # TODO fluctuations
-    def compute_desired_velocity(self, dt: float) -> Vector2:
-        # Target is in general an area,
-        # then target_position is the closed point in that area
-        e = self.target_position - self.position
-        e /= np.linalg.norm(e)
-        target_velocity = e * self.optimal_speed
+    #
+    def desired_velocity_towards_velocity(self, target_velocity: Vector2,
+                                          time_step: float) -> Vector2:
         # acceleration towards desired velocity
+        speed = np.linalg.norm(target_velocity)
+        if not speed:
+            return (0, 0)
+        e = target_velocity / speed
         force = (target_velocity - self.velocity) / self.tau
         # repulsion from neighbors
         force += sum(
             self.weighted(self.neighbor_repulsion_force(neighbor), e, -1)
-            for neighbor in self._state.neighbors
-        )
+            for neighbor in self._state.neighbors)
         force += sum(
             self.weighted(self.obstacle_repulsion_force(obstacle), e, -1)
-            for obstacle in self._state.static_obstacles
-        )
+            for obstacle in self._state.static_obstacles)
         force += sum(
             self.weighted(self.segment_repulsion_force(line), e, -1)
-            for line in self._state.line_obstacles
-        )
-        desired_velocity = self.actuated_twist.velocity + dt * force
+            for line in self._state.line_obstacles)
+        desired_velocity = self.actuated_twist.velocity + time_step * force
         # no need to clamp norm ... this will be done the superclass
         # are we sure?
         return desired_velocity
+
+    def desired_velocity_towards_point(self, point: Vector2, speed: float,
+                                       time_step: float) -> Vector2:
+        # Target is in general an area,
+        # then target position is the closed point in that area
+        delta = point - self.position
+        dist = np.linalg.norm(delta)
+        if not dist:
+            return (0, 0)
+        velocity = delta / np.linalg.norm(delta) * speed
+        return self.desired_velocity_towards_velocity(velocity,
+                                                      time_step)

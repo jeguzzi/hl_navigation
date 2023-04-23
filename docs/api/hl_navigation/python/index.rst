@@ -9,6 +9,7 @@ Python API
    auto_registration
    yaml
    kinematics
+   target
    behaviors/index
    state
    collision_computation

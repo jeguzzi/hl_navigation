@@ -20,7 +20,7 @@ obstacles:
 groups:
   -
     kinematics:
-      type: Holonomic
+      type: Omni
       max_speed: 1.0
       wheel_axis: 0.12
     behavior:

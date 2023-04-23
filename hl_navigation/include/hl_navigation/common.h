@@ -27,6 +27,18 @@ using Vector2 = Eigen::Vector2f;
  * Angle in radians.
  */
 using Radians = float;
+
+enum class Frame {
+  /**
+   * agent-fixed frame
+   */
+  relative,
+  /**
+   * world-fixed frame
+   */
+  absolute
+};
+
 /**
  * A vector that holds wheel speeds. The order depends on the kinematics.
  */
@@ -104,8 +116,7 @@ inline Vector2 clamp_norm(const Vector2& vector, float max_length) {
  * @brief      Two-dimensional twist composed of planar velocity and angular
  * speed.
  *
- * Twist coordinates may be in a fixed frame or in the agent's own frame, as
- * specified by \ref relative.
+ * Twist coordinates are in the frame specified by \ref frame.
  */
 struct Twist2 {
   /**
@@ -117,13 +128,13 @@ struct Twist2 {
    */
   Radians angular_speed;
   /**
-   * If true, the twist is relative to the agent's own frame of reference.
+   * Frame of reference.
    */
-  bool relative;
+  Frame frame;
 
   Twist2(const Vector2& velocity, Radians angular_speed = 0.0,
-         bool relative = false)
-      : velocity(velocity), angular_speed(angular_speed), relative(relative) {}
+         Frame frame = Frame::absolute)
+      : velocity(velocity), angular_speed(angular_speed), frame(frame) {}
   Twist2() : Twist2({0.0f, 0.0f}) {}
   /**
    * @brief      Rotate the twist by an angle.
@@ -144,7 +155,8 @@ struct Twist2 {
    * @return     The result of the equality
    */
   bool operator==(const Twist2& other) const {
-    return velocity == other.velocity && angular_speed == other.angular_speed;
+    return velocity == other.velocity && angular_speed == other.angular_speed &&
+           frame == other.frame;
   }
 
   /**
@@ -159,7 +171,7 @@ struct Twist2 {
 
 /**
  * @brief      Two-dimensional pose composed of planar position and
- * orientatation. Poses are assumed to be the world-fixed frame.
+ * orientation. Poses are assumed to be the world-fixed frame.
  */
 struct Pose2 {
   /**
@@ -194,9 +206,10 @@ struct Pose2 {
    * @return     The result of ``pose + dt * twist`` (in world frame)
    */
   Pose2 integrate(const Twist2& twist, float dt) {
-    return {position + dt * (twist.relative ? ::hl_navigation::rotate(
-                                                  twist.velocity, orientation)
-                                            : twist.velocity),
+    return {position +
+                dt * (twist.frame == Frame::relative
+                          ? ::hl_navigation::rotate(twist.velocity, orientation)
+                          : twist.velocity),
             orientation + dt * twist.angular_speed};
   }
 
@@ -225,9 +238,9 @@ struct Pose2 {
  * @brief  An helper class that track changes.
  *
  * Changes are tracked by a bit mask, where the bit index corresponds to
- * different fields that may change. The class is mainly used for tracking changes in
- * a \ref Behavior to enable caching when the relevant part of
- * the state has not changed.
+ * different fields that may change. The class is mainly used for tracking
+ * changes in a \ref Behavior to enable caching when the relevant part of the
+ * state has not changed.
  */
 class TrackChanges {
  public:
@@ -262,6 +275,12 @@ class TrackChanges {
 }  // namespace hl_navigation
 
 inline std::ostream& operator<<(std::ostream& os,
+                                const hl_navigation::Frame& frame) {
+  os << "Frame::" << (frame == hl_navigation::Frame::relative ? "relative" : "absolute");
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os,
                                 const hl_navigation::Vector2& vector) {
   os << "Vector2(" << vector[0] << ", " << vector[1] << ")";
   return os;
@@ -270,7 +289,7 @@ inline std::ostream& operator<<(std::ostream& os,
 inline std::ostream& operator<<(std::ostream& os,
                                 const hl_navigation::Twist2& twist) {
   os << "Twist2(" << twist.velocity << ", " << twist.angular_speed << ", "
-     << std::boolalpha << twist.relative << ")";
+     << twist.frame << ")";
   return os;
 }
 

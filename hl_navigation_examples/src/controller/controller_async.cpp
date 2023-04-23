@@ -12,7 +12,7 @@
 using hl_navigation::Action;
 using hl_navigation::DummyBehavior;
 using hl_navigation::Controller;
-using hl_navigation::Holonomic;
+using hl_navigation::OmnidirectionalKinematics;
 using hl_navigation::Twist2;
 using hl_navigation::Vector2;
 
@@ -32,7 +32,7 @@ void move(Controller *controller, Vector2 target) {
 }
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
-  auto behavior = std::make_shared<DummyBehavior>(std::make_shared<Holonomic>(1.0, 1.0), 0.1);
+  auto behavior = std::make_shared<DummyBehavior>(std::make_shared<OmnidirectionalKinematics>(1.0, 1.0), 0.1);
   Controller controller(behavior);
   controller.set_speed_tolerance(0.05);
   float dt = 0.03;

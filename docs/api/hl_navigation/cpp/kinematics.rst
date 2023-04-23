@@ -9,40 +9,40 @@ Kinematics
 Abstract classes
 ================
 
-Kinematics
-----------
+Kinematics base class
+---------------------
 
 .. doxygenclass:: hl_navigation::Kinematics
    :members:
 
-Wheeled
--------
+Wheeled kinematics based class
+------------------------------
 
 .. doxygentypedef:: hl_navigation::WheelSpeeds
 
-.. doxygenclass:: hl_navigation::Wheeled
+.. doxygenclass:: hl_navigation::WheeledKinematics
    :members:
 
-Holonomic
-=========
+Omnidirectional
+===============
 
-.. doxygenclass:: hl_navigation::Holonomic
+.. doxygenclass:: hl_navigation::OmnidirectionalKinematics
    :members:
 
-Forward
-=======
+Ahead
+=====
 
-.. doxygenclass:: hl_navigation::Forward
+.. doxygenclass:: hl_navigation::AheadKinematics
    :members:
 
-Two-Wheeled
-===========
+Two wheels differential drive
+=============================
 
-.. doxygenclass:: hl_navigation::TwoWheeled
+.. doxygenclass:: hl_navigation::TwoWheelsDifferentialDriveKinematics
    :members:
 
-Four-Wheeled
-============
+Four wheels omnidirectional drive
+=================================
 
-.. doxygenclass:: hl_navigation::FourWheeled
+.. doxygenclass:: hl_navigation::FourWheelsOmniDriveKinematics
    :members:

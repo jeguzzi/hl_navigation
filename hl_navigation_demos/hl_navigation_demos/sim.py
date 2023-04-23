@@ -16,7 +16,7 @@ class ThymioDemo(sim.Scenario, name="PyThymioDemo"):  # type: ignore[call-arg]
         for i in range(2):
             task = sim.WaypointsTask(targets, True, 0.2)
             se = sim.BoundedStateEstimation(world, 1.0, 1.0)
-            kinematics = nav.kinematics.TwoWheeled(0.166, 0.094)
+            kinematics = nav.kinematics.TwoWheelsDifferentialDriveKinematics(0.166, 0.094)
             behavior = nav.Behavior.make_type(self.behavior_type)
             agent = sim.Agent(0.08, behavior, kinematics, task, se, 0.02)
             agent.behavior.optimal_speed = 0.12
@@ -44,7 +44,7 @@ def main() -> None:
     demo = sim.Experiment(0.02, 50 * 60)
     demo.scenario = ThymioDemo(arg.behavior)
     demo.save_directory = "."
-    demo.record_pose = True
+    demo.trace.record_pose = True
     demo.name = "PyThymioDemo";
     print("Start simulating 1 minute at 50 ticks per second")
     begin = time.time()

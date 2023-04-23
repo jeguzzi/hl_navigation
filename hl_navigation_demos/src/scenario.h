@@ -20,7 +20,7 @@ using hl_navigation::Behavior;
 using hl_navigation::make_property;
 using hl_navigation::Properties;
 using hl_navigation::Property;
-using hl_navigation::TwoWheeled;
+using hl_navigation::TwoWheelsDifferentialDriveKinematics;
 using hl_navigation::Vector2;
 namespace sim = hl_navigation_sim;
 
@@ -33,7 +33,7 @@ struct ThymioDemo : public sim::Scenario {
     for (size_t i = 0; i < 2; i++) {
       auto task = std::make_shared<sim::WaypointsTask>(targets, true, 0.2);
       auto se = std::make_shared<sim::BoundedStateEstimation>(1.0);
-      auto kinematics = std::make_shared<TwoWheeled>(0.166, 0.094);
+      auto kinematics = std::make_shared<TwoWheelsDifferentialDriveKinematics>(0.166, 0.094);
       auto behavior = Behavior::make_type(behavior_type);
       auto agent = sim::Agent::make(0.08, behavior, kinematics, task, se, 0.02);
       behavior->set_optimal_speed(0.12);

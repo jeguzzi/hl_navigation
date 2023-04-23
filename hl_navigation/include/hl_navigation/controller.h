@@ -49,16 +49,7 @@ struct HL_NAVIGATION_EXPORT Action {
    * @param      controller  The controller ticking the action
    * @param[in]  dt          The time step
    */
-  void update(Controller *controller, float dt) {
-    if (state == State::running) {
-      const float progress = tick(controller, dt);
-      if (done()) {
-        if (done_cb) (*done_cb)(state);
-      } else {
-        if (running_cb) (*running_cb)(progress);
-      }
-    }
-  }
+  void update(Controller *controller, float dt);
 
   /**
    * A callback called when the action is running
@@ -92,13 +83,7 @@ struct HL_NAVIGATION_EXPORT Action {
   /**
    * @brief      Abort the action, calling the \ref done_cb if set.
    */
-  void abort() {
-    if (state == State::running) {
-      state = State::failure;
-      if (done_cb) (*done_cb)(state);
-    }
-  }
-
+  void abort();
   /**
    * @brief      Pure virtual method to tick the action
    * that has need to be overridden by sub-classes.
@@ -109,57 +94,22 @@ struct HL_NAVIGATION_EXPORT Action {
    *
    * @return     A measure of progress
    */
-  virtual float tick(Controller *controller, float dt) = 0;
-
-  /**
-   * @brief      Virtual method to get the desired behavior mode
-   * that should be overridden by sub-classes.
-   * The default implementation makes the agent stop.
-   *
-   * @private
-   *
-   * @return     The desired behavior mode
-   */
-  virtual Behavior::Mode mode() { return Behavior::Mode::stop; }
+  virtual float tick(Controller *controller, float dt);
 
   virtual ~Action() { abort(); }
 };
 
 struct HL_NAVIGATION_EXPORT FollowTwistAction : public Action {
   using Action::Action;
-
-  float tick(Controller *controller, float dt) override;
-  Behavior::Mode mode() override { return Behavior::Mode::follow; };
 };
 
 struct HL_NAVIGATION_EXPORT FollowAction : Action {
-  bool has_target_orientation;
-
-  FollowAction(bool has_target_orientation)
-      : Action(), has_target_orientation(has_target_orientation) {}
-
-  float tick(Controller *controller, float dt) override;
-
-  Behavior::Mode mode() override { return Behavior::Mode::follow; };
+  using Action::Action;
 };
 
 struct HL_NAVIGATION_EXPORT MoveAction : Action {
-  Behavior::Mode move_state;
-  bool has_target_orientation;
-  float position_tolerance;
-  float orientation_tolerance;
-
-  MoveAction(bool has_target_orientation, float position_tolerance,
-             float orientation_tolerance)
-      : Action(),
-        move_state(Behavior::Mode::move),
-        has_target_orientation(has_target_orientation),
-        position_tolerance(position_tolerance),
-        orientation_tolerance(orientation_tolerance) {}
-
+  using Action::Action;
   float tick(Controller *controller, float dt) override;
-
-  Behavior::Mode mode() override { return move_state; }
 };
 
 /**
@@ -174,10 +124,6 @@ struct HL_NAVIGATION_EXPORT MoveAction : Action {
  * reached
  *
  * - follow a velocity/twist
- *
- * It automatically switches between different
- * \ref Behavior::Mode, possibly making the agents turns towards target
- * orientation after a target position has been reached.
  *
  * *Typical usage of a controller*
  *
@@ -202,82 +148,25 @@ class HL_NAVIGATION_EXPORT Controller {
    * @brief      Constructs a new instance.
    *
    * @param[in]  behavior                  The navigation behavior
-   * @param[in]  compute_relative_twist    The frame to pass to \ref
-   * Behavior::cmd_twist
-   * @param[in]  set_cmd_twist_as_actuated Indicates if the behavior should set
-   * the twist as automatically actuated in \ref Behavior::cmd_twist.
    */
-  Controller(std::shared_ptr<Behavior> behavior = nullptr,
-             std::optional<bool> compute_relative_twist = std::nullopt,
-             bool set_cmd_twist_as_actuated = true)
-      : behavior(behavior),
-        speed_tolerance(1e-2),
-        compute_relative_twist(compute_relative_twist),
-        set_cmd_twist_as_actuated(set_cmd_twist_as_actuated) {}
+  Controller(std::shared_ptr<Behavior> behavior = nullptr)
+      : behavior(behavior), speed_tolerance(1e-2) {}
 
   virtual ~Controller() = default;
 
   /**
    * @private
-  */
-  virtual float distance_to_target() const {
-    // Expect[tolerance >= 0];
+   */
+  virtual float estimate_time_until_target_satisfied() const {
     if (behavior) {
-      return (behavior->get_target_position() - behavior->get_position())
-          .norm();
+      return behavior->estimate_time_until_target_satisfied();
     }
-    return 0.0f;
+    return std::numeric_limits<float>::infinity();
   }
 
   /**
    * @private
-  */
-  virtual float distance_to_target_orientation() const {
-    // Expect[tolerance >= 0];
-    if (behavior) {
-      return abs(normalize(behavior->get_target_orientation() -
-                           behavior->get_orientation()));
-    }
-    return 0.0f;
-  }
-
-  /**
-   * @private
-  */
-  virtual float time_to_target(float tolerance = 0.0f) const {
-    // Expect[tolerance >= 0];
-    if (behavior) {
-      const float distance = distance_to_target();
-      const float speed = behavior->get_optimal_speed();
-      if (speed > 0) {
-        return (distance - tolerance) / speed;
-      } else {
-        return std::numeric_limits<float>::infinity();
-      }
-    }
-    return 0.0f;
-  }
-
-  /**
-   * @private
-  */
-  virtual float time_to_target_orientation(float tolerance = 0.0f) const {
-    // Expect[tolerance >= 0];
-    if (behavior) {
-      const float distance = distance_to_target_orientation();
-      const float speed = behavior->get_optimal_angular_speed();
-      if (speed > 0) {
-        return (distance - tolerance) / speed;
-      } else {
-        return std::numeric_limits<float>::infinity();
-      }
-    }
-    return 0.0f;
-  }
-
-  /**
-   * @private
-  */
+   */
   virtual bool is_still() const {
     if (behavior) {
       return behavior->get_speed() < speed_tolerance;
@@ -338,19 +227,7 @@ class HL_NAVIGATION_EXPORT Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> go_to_position(const Vector2 &point,
-                                         float tolerance) {
-    if (action) {
-      action->abort();
-    }
-    if (behavior) {
-      behavior->set_target_position(point);
-    }
-    action = std::make_shared<MoveAction>(false, tolerance, -1.0f);
-    action->state = Action::State::running;
-    action->update(this, 0.0);
-    return action;
-  }
+  std::shared_ptr<Action> go_to_position(const Vector2 &point, float tolerance);
   /**
    * @brief      Starts an action to go to a pose.
    *
@@ -367,20 +244,7 @@ class HL_NAVIGATION_EXPORT Controller {
    */
   std::shared_ptr<Action> go_to_pose(const Pose2 &pose,
                                      float position_tolerance,
-                                     float orientation_tolerance) {
-    if (action) {
-      action->abort();
-    }
-    if (behavior) {
-      behavior->set_target_position(pose.position);
-      behavior->set_target_orientation(pose.orientation);
-    }
-    action = std::make_shared<MoveAction>(true, position_tolerance,
-                                          orientation_tolerance);
-    action->state = Action::State::running;
-    action->update(this, 0.0);
-    return action;
-  }
+                                     float orientation_tolerance);
   /**
    * @brief      Starts an action to follow a point.
    *
@@ -393,20 +257,7 @@ class HL_NAVIGATION_EXPORT Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_point(const Vector2 &point) {
-    if (!std::dynamic_pointer_cast<FollowAction>(action)) {
-      if (action) {
-        action->abort();
-      }
-      action = std::make_shared<FollowAction>(false);
-      action->state = Action::State::running;
-      action->update(this, 0.0);
-    }
-    if (behavior) {
-      behavior->set_target_position(point);
-    }
-    return action;
-  }
+  std::shared_ptr<Action> follow_point(const Vector2 &point);
   /**
    * @brief      Starts an action to follow a pose
    *
@@ -419,38 +270,19 @@ class HL_NAVIGATION_EXPORT Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_pose(const Pose2 &pose) {
-    if (!std::dynamic_pointer_cast<FollowAction>(action)) {
-      if (action) {
-        action->abort();
-      }
-      action = std::make_shared<FollowAction>(false);
-      action->state = Action::State::running;
-      action->update(this, 0.0);
-    }
-    if (behavior) {
-      behavior->set_target_position(pose.position);
-      behavior->set_target_orientation(pose.orientation);
-    }
-    return action;
-  }
+  std::shared_ptr<Action> follow_pose(const Pose2 &pose);
   /**
    * @brief      Starts an action to follow a target direction.
    *
    * If an action is already running, the controller aborts it, unless it was
    * following a velocity/twist, in which case it just updates the target.
    *
-   * @param[in]  direction              The target direction. Must have positive norm.
+   * @param[in]  direction              The target direction. Must have positive
+   * norm.
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_direction(const Vector2 &direction) {
-    auto norm = direction.norm();
-    if (norm && behavior) {
-      return follow_velocity(behavior->get_optimal_speed() * direction / norm);
-    } 
-    return nullptr;
-  }
+  std::shared_ptr<Action> follow_direction(const Vector2 &direction);
   /**
    * @brief      Starts an action to follow a target velocity.
    *
@@ -461,20 +293,7 @@ class HL_NAVIGATION_EXPORT Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_velocity(const Vector2 &velocity) {
-    if (!std::dynamic_pointer_cast<FollowTwistAction>(action)) {
-      if (action) {
-        action->abort();
-      }
-      action = std::make_shared<FollowTwistAction>();
-      action->state = Action::State::running;
-      action->update(this, 0.0);
-    }
-    if (behavior) {
-      behavior->set_target_velocity(velocity);
-    }
-    return action;
-  }
+  std::shared_ptr<Action> follow_velocity(const Vector2 &velocity);
   /**
    * @brief      Starts an action to follow a target twist.
    *
@@ -485,21 +304,7 @@ class HL_NAVIGATION_EXPORT Controller {
    *
    * @return     The new action.
    */
-  std::shared_ptr<Action> follow_twist(const Twist2 &twist) {
-    if (!std::dynamic_pointer_cast<FollowTwistAction>(action)) {
-      if (action) {
-        action->abort();
-      }
-      action = std::make_shared<FollowTwistAction>();
-      action->state = Action::State::running;
-      action->update(this, 0.0);
-    }
-    if (behavior) {
-      behavior->set_target_velocity(twist.velocity);
-      // TODO(Jerome): complete
-    }
-    return action;
-  }
+  std::shared_ptr<Action> follow_twist(const Twist2 &twist);
   /**
    * @brief      Returns whether the control action is idle.
    *
@@ -510,42 +315,18 @@ class HL_NAVIGATION_EXPORT Controller {
   /**
    * @brief      Abort the running action.
    */
-  void stop() {
-    if (action) {
-      action->abort();
-      action = nullptr;
-    }
-  }
+  void stop();
 
   /**
    * @brief      Updates the control for time step.
    *
-   * Internally calls \ref Behavior::cmd_twist for collision avoidance.
+   * Internally calls \ref Behavior::compute_cmd for collision avoidance.
    *
    * @param[in]  time_step  The time step
    *
    * @return     The command twist to execute the current action
    */
-  Twist2 update(float time_step) {
-    if (action) {
-      action->update(this, time_step);
-      if (action && action->done()) {
-        action = nullptr;
-      }
-    }
-    if (action && behavior) {
-      const Behavior::Mode mode =
-          action->running() ? action->mode() : Behavior::Mode::stop;
-      Twist2 cmd = behavior->cmd_twist(time_step, mode, compute_relative_twist,
-                                       set_cmd_twist_as_actuated);
-      if (cmd_cb) {
-        (*cmd_cb)(cmd);
-      }
-      return cmd;
-    }
-    return {};
-  }
-
+  Twist2 update(float time_step);
   /**
    * @brief      Sets the callback called each time a command is computed for an
    * active action.
@@ -561,13 +342,6 @@ class HL_NAVIGATION_EXPORT Controller {
    * Speed tolerance to transition to idle
    */
   float speed_tolerance;
-  std::optional<bool> compute_relative_twist;
-  /**
-   * Specify if the command returned by \ref update can be considered as
-   * accepted/actuated, see the corresponding argument of \ref
-   * Behavior::target_twist (default: True)
-   */
-  bool set_cmd_twist_as_actuated;
 
  private:
   std::optional<std::function<void(const Twist2 &)>> cmd_cb;

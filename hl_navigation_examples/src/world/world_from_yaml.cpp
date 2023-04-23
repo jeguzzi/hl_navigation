@@ -16,7 +16,7 @@ obstacles:
     radius: 0.5
 agents:
   - kinematics:
-      type: Holonomic
+      type: Omni
       max_speed: 1.0
     behavior:
       type: HL

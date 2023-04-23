@@ -16,16 +16,16 @@ void Agent::update(float dt, float time, World * world) {
   if (task) task->update(this, world, time);
   if (state_estimation) state_estimation->update(this, world);
   if (behavior) {
-    behavior->set_actuated_twist(cmd_twist);
+    behavior->set_actuated_twist(last_cmd);
     behavior->set_twist(twist);
     behavior->set_pose(pose);
   }
-  cmd_twist = controller.update(std::max(control_period, dt));
-  // cmd_twist = behavior->get_actuated_twist(true);
+  last_cmd = controller.update(std::max(control_period, dt));
+  // last_cmd = behavior->get_actuated_twist(true);
 }
 
 void Agent::actuate(float dt) {
-  twist = cmd_twist;  // + collision_force / mass * dt;
+  twist = last_cmd;  // + collision_force / mass * dt;
   pose = pose.integrate(twist, dt);
 }
 

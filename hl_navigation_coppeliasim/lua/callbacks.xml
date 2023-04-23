@@ -402,7 +402,7 @@
     </struct>
     <struct name="kinematics_t">
         <description>TODO</description>
-        <param name="type" type="int">
+        <param name="type" type="string">
           <description>The type</description>
         </param>
         <param name="max_speed" type="float" default="0.0">
@@ -411,7 +411,7 @@
         <param name="max_angular_speed" type="float" default="0.0">
           <description>The maximal angular speed</description>
         </param>
-        <param name="axis_length" type="float" default="0.0">
+        <param name="wheel_axis" type="float" default="0.0">
             <description>The axis length</description>
         </param>
     </struct>  
@@ -477,12 +477,6 @@
       <item name="running" />
       <item name="failure" />
       <item name="success" />
-    </enum>
-    <enum name="Kinematics" item-prefix="" base="0">
-      <item name="holonomic" />
-      <item name="frontal" />
-      <item name="two_wheeled" />
-      <item name="four_wheeled" />
     </enum>
     <enum name="Heading" item-prefix="" base="0">
       <item name="off" />

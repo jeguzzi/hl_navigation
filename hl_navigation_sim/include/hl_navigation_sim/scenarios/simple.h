@@ -15,7 +15,7 @@
 #include "hl_navigation_sim_export.h"
 
 using hl_navigation::DummyBehavior;
-using hl_navigation::Holonomic;
+using hl_navigation::OmnidirectionalKinematics;
 
 namespace hl_navigation_sim {
 
@@ -32,7 +32,7 @@ struct HL_NAVIGATION_SIM_EXPORT SimpleScenario : public Scenario {
     Scenario::init_world(world);
     auto agent =
         std::make_shared<Agent>(0.1f, std::make_shared<DummyBehavior>(),
-                                std::make_shared<Holonomic>(1.0f),
+                                std::make_shared<OmnidirectionalKinematics>(1.0f),
                                 std::make_shared<WaypointsTask>(
                                     Waypoints{Vector2(1.0f, 0.0f)}, false, 0.1),
                                 nullptr, 0.1f);

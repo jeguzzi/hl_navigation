@@ -377,13 +377,20 @@ struct convert<PyExperiment> {
 
 }  // namespace YAML
 
-static unsigned empty_unsigned_buffer[1];
-static py::memoryview empty_unsigned_view = py::memoryview::from_buffer(
-    empty_unsigned_buffer, {0}, {static_cast<unsigned>(sizeof(unsigned))});
 
-static float empty_float_buffer[1];
-static py::memoryview empty_float_view = py::memoryview::from_buffer(
-    empty_float_buffer, {0}, {static_cast<unsigned>(sizeof(float))});
+static py::memoryview empty_unsigned_view() {
+  static unsigned empty_unsigned_buffer;
+  return py::memoryview::from_memory(&empty_unsigned_buffer, 0, true);
+}
+
+
+static py::memoryview empty_float_view() {
+  static float empty_float_buffer;
+  return py::memoryview::from_memory(&empty_float_buffer, 0, true);
+}
+
+// static py::memoryview empty_float_view = py::memoryview::from_memory(
+//     &empty_float_buffer, {0}, {static_cast<unsigned>(sizeof(float))});
 
 static py::memoryview trace_view(const Trace *trace, const float *data) {
   const std::array<ssize_t, 3> shape{trace->steps, trace->number, 3};
@@ -447,8 +454,8 @@ Creates a rectangular region
       .def_readwrite("pose", &Agent::pose, DOC(hl_navigation_sim_Agent, pose))
       .def_readwrite("twist", &Agent::twist,
                      DOC(hl_navigation_sim_Agent, twist))
-      .def_readwrite("cmd_twist", &Agent::cmd_twist,
-                     DOC(hl_navigation_sim_Agent, cmd_twist))
+      .def_readwrite("last_cmd", &Agent::last_cmd,
+                     DOC(hl_navigation_sim_Agent, last_cmd))
       .def_readonly("tags", &Agent::tags, DOC(hl_navigation_sim_Agent, tags))
       .def_property(
           "position", [](const Agent *agent) { return agent->pose.position; },
@@ -676,7 +683,7 @@ Creates a rectangular region
             if (trace->record_pose) {
               return trace_view(trace, trace->pose_data.data());
             }
-            return empty_float_view;
+            return empty_float_view();
           },
           nullptr, R"doc(
 The recorded poses of the agents
@@ -699,7 +706,7 @@ not been recorded in the trace.
             if (trace->record_twist) {
               return trace_view(trace, trace->twist_data.data());
             }
-            return empty_float_view;
+            return empty_float_view();
           },
           nullptr, R"doc(
 The recorded twist of the agents
@@ -745,7 +752,7 @@ not been recorded in the trace.
             if (trace->record_cmd) {
               return trace_view(trace, trace->cmd_data.data());
             }
-            return empty_float_view;
+            return empty_float_view();
           },
           nullptr, R"doc(
 The recorded commands of the agents
@@ -772,7 +779,7 @@ not been recorded in the trace.
               return py::memoryview::from_buffer(
                   trace->safety_violation_data.data(), shape, strides);
             }
-            return empty_float_view;
+            return empty_float_view();
           },
           nullptr, R"doc(
 The recorded amounts of safety violation")
@@ -798,7 +805,7 @@ not been recorded in the trace.
               return py::memoryview::from_buffer(trace->collisions_data.data(),
                                                  shape, strides);
             }
-            return empty_unsigned_view;
+            return empty_unsigned_view();
           },
           nullptr, R"doc(
 The recorded collisions between pairs of entities as
@@ -826,7 +833,7 @@ not been recorded in the trace.
                   static_cast<ssize_t>(sizeof(float) * m), sizeof(float)};
               return py::memoryview::from_buffer(data.data(), shape, strides);
             }
-            return empty_float_view;
+            return empty_float_view();
           },
           R"doc(
 The recorded events logged by the task of an agent 

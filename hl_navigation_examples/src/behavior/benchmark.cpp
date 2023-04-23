@@ -54,11 +54,11 @@ void run(const char *behavior = "HL", const char *path_ = "", float radius = 4,
   for (auto &[target, position] : task) {
     for (size_t i = 0; i < number; i++) {
       auto agent = Behavior::make_type(behavior);
-      agent->set_kinematics(std::make_shared<Holonomic>(1.0, 1.0));
+      agent->set_kinematics(std::make_shared<OmnidirectionalKinematics>(1.0, 1.0));
       agent->set_radius(0.1);
       agent->set_horizon(1.0);
       agent->set_position(position(i));
-      agent->set_target_position(target);
+      agent->set_target(Target::Point(target));
       // agent->social_margin.set_modulation(SocialMargin::LinearModulation(1.0f));
       // agent->social_margin.set(0, 0.25f);
       agents.push_back(agent);
@@ -69,7 +69,7 @@ void run(const char *behavior = "HL", const char *path_ = "", float radius = 4,
   std::transform(agents.cbegin(), agents.cend(), std::back_inserter(neighbors),
                  [](auto &agent) {
                    return Neighbor(agent->get_position(), 0.1,
-                                   agent->get_velocity(false), 0);
+                                   agent->get_velocity(Frame::absolute), 0);
                  });
 
   std::ofstream stream;
@@ -82,16 +82,16 @@ void run(const char *behavior = "HL", const char *path_ = "", float radius = 4,
     size_t j = 0;
     for (auto &agent : agents) {
       neighbors[j].position = agent->get_position();
-      neighbors[j].velocity = agent->get_velocity(false);
+      neighbors[j].velocity = agent->get_velocity(Frame::absolute);
       j++;
     }
     j = 0;
     for (auto &agent : agents) {
-      auto g = agent->get_target_position();
+      auto g = *(agent->get_target().position);
       auto p = agent->get_position();
       if ((g[0] == 0 && p[1] / g[1] > 0.75) ||
           (g[1] == 0 && p[0] / g[0] > 0.75)) {
-        agent->set_target_position(-g);
+        agent->set_target(Target::Point(-g));
       }
       if (GeometricState *state = dynamic_cast<GeometricState *>(agent->get_environment_state())) {
         std::vector<Neighbor> agent_neighbors;
@@ -104,7 +104,7 @@ void run(const char *behavior = "HL", const char *path_ = "", float radius = 4,
         state->set_neighbors(agent_neighbors);
         // std::cout << *state << std::endl;
       }
-      const auto twist = agent->cmd_twist(dt);
+      const auto twist = agent->compute_cmd(dt);
       agent->actuate(twist, dt);
       if (stream.is_open()) {
         const auto p = agent->get_position();

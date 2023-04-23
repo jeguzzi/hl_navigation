@@ -2,50 +2,49 @@
 Kinematics
 ==========
 
-
 Abstract classes
 ================
 
-Kinematics
-----------
-
+Kinematics base class
+---------------------
 
 .. autoclass:: hl_navigation.Kinematics
    :members:
    :inherited-members:
    :exclude-members: __new__
 
-Wheeled
--------
+Wheeled kinematics based class
+------------------------------
 
-.. autoclass:: hl_navigation.kinematics.Wheeled
+
+.. autoclass:: hl_navigation.kinematics.WheeledKinematics
    :members:
    :show-inheritance:
 
-Holonomic
-=========
+Omnidirectional
+===============
 
-.. autoclass:: hl_navigation.kinematics.Holonomic
+.. autoclass:: hl_navigation.kinematics.OmnidirectionalKinematics
    :members:
    :show-inheritance:
 
-Forward
-=======
+Ahead
+=====
 
-.. autoclass:: hl_navigation.kinematics.Forward
+.. autoclass:: hl_navigation.kinematics.AheadKinematics
    :members:
    :show-inheritance:
 
-Two-Wheeled
-===========
+Two wheels differential drive
+=============================
 
-.. autoclass:: hl_navigation.kinematics.TwoWheeled
+.. autoclass:: hl_navigation.kinematics.TwoWheelsDifferentialDriveKinematics
    :members:
    :show-inheritance:
 
-Four-Wheeled
-============
+Four wheels omnidirectional drive
+=================================
 
-.. autoclass:: hl_navigation.kinematics.FourWheeled
+.. autoclass:: hl_navigation.kinematics.FourWheelsOmniDriveKinematics
    :members:
    :show-inheritance:

@@ -19,18 +19,16 @@ using namespace hl_navigation;
 
 static std::shared_ptr<hl_navigation::Kinematics> make_kinematics(
     const kinematics_t &k) {
-  switch (k.type) {
-    case sim_hlnavigation_holonomic:
-      return std::make_shared<Holonomic>(k.max_speed, k.max_angular_speed);
-    case sim_hlnavigation_frontal:
-      return std::make_shared<Forward>(k.max_speed, k.max_angular_speed);
-    case sim_hlnavigation_two_wheeled:
-      return std::make_shared<TwoWheeled>(k.max_speed, k.axis_length);
-    case sim_hlnavigation_four_wheeled:
-      return std::make_shared<FourWheeled>(k.max_speed, k.axis_length);
-    default:
-      return nullptr;
+  auto kinematics = Kinematics::make_type(k.type);
+  if (!kinematics) {
+    kinematics = std::make_shared<OmnidirectionalKinematics>();
   }
+  kinematics->set_max_speed(k.max_speed);
+  kinematics->set_max_angular_speed(k.max_angular_speed);
+  if (WheeledKinematics *wk = dynamic_cast<WheeledKinematics *>(kinematics.get())) {
+    wk->set_axis(k.wheel_axis);
+  }
+  return kinematics;
 }
 
 static vector2_t to_vector2_t(const Vector2 &v) {
@@ -151,8 +149,7 @@ class Plugin : public sim::Plugin {
       return;
     }
     out->handle = handle;  // TODO(J): add -1 to mark failures
-    auto behavior =
-        Behavior::make_type(in->behavior);
+    auto behavior = Behavior::make_type(in->behavior);
     behavior->set_radius(in->radius);
     behavior->set_kinematics(kinematics);
     auto controller = std::make_unique<Controller3>(behavior);
@@ -227,7 +224,8 @@ class Plugin : public sim::Plugin {
   void set_static_obstacles(set_static_obstacles_in *in,
                             set_static_obstacles_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior.get_environment_state())) {
+    if (GeometricState *state =
+            dynamic_cast<GeometricState *>(behavior->get_environment_state())) {
       std::vector<Disc> obstacles;
       std::transform(in->obstacles.cbegin(), in->obstacles.cend(),
                      std::back_inserter(obstacles), [](const obstacle_t &o) {
@@ -240,7 +238,8 @@ class Plugin : public sim::Plugin {
 
   void set_neighbors(set_neighbors_in *in, set_neighbors_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior.get_environment_state())) {
+    if (GeometricState *state =
+            dynamic_cast<GeometricState *>(behavior->get_environment_state())) {
       std::vector<Neighbor> obstacles;
       std::transform(in->neighbors.cbegin(), in->neighbors.cend(),
                      std::back_inserter(obstacles), [](const neighbor_t &o) {
@@ -255,7 +254,8 @@ class Plugin : public sim::Plugin {
   void set_line_obstacles(set_line_obstacles_in *in,
                           set_line_obstacles_out *out) {
     auto behavior = behavior_at_index(in->handle);
-    if (GeometricState *state = dynamic_cast<GeometricState *>(behavior.get_environment_state())) {
+    if (GeometricState *state =
+            dynamic_cast<GeometricState *>(behavior->get_environment_state())) {
       std::vector<LineSegment> obstacles;
       std::transform(in->obstacles.cbegin(), in->obstacles.cend(),
                      std::back_inserter(obstacles), [](line_t o) {

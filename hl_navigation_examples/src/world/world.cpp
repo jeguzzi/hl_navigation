@@ -13,7 +13,7 @@
 #include "hl_navigation_sim/tasks/waypoints.h"
 
 using hl_navigation::DummyBehavior;
-using hl_navigation::Holonomic;
+using hl_navigation::OmnidirectionalKinematics;
 using hl_navigation::Vector2;
 namespace sim = hl_navigation_sim;
 
@@ -22,7 +22,7 @@ int main() {
   world.add_wall(sim::Wall{Vector2{-1.0f, -1.f}, Vector2{-1.f, 1.f}});
   world.add_obstacle(sim::Obstacle{Vector2{2.f, 0.f}, 0.5f});
   auto a = std::make_shared<sim::Agent>(
-      0.1, std::make_shared<DummyBehavior>(), std::make_shared<Holonomic>(1.0),
+      0.1, std::make_shared<DummyBehavior>(), std::make_shared<OmnidirectionalKinematics>(1.0),
       std::make_shared<sim::WaypointsTask>(sim::Waypoints{{1, 0}}, false, 0.1),
       nullptr, 0.1);
   world.add_agent(std::move(a));

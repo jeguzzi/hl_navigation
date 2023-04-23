@@ -17,13 +17,13 @@ namespace hl_navigation {
  * @brief      Abstract Kinematics type.
  *
  * A kinematics is used to
- * 
+ *
  * - validated twist in the agent's frame as feasible
- * 
+ *
  * - convert between wheel speeds and body twist
- * 
+ *
  * - store maximal linear and angular speed
- * 
+ *
  * - store the number of degrees of freedom
  */
 class HL_NAVIGATION_EXPORT Kinematics : virtual public HasProperties,
@@ -41,8 +41,8 @@ class HL_NAVIGATION_EXPORT Kinematics : virtual public HasProperties,
    *
    * @param[in]  twist  The desired twist
    *
-   * @return     The same desired twist if feasible else the nearest feasible value. 
-   * How this is defined depends on the concrete sub-class.
+   * @return     The same desired twist if feasible else the nearest feasible
+   * value. How this is defined depends on the concrete sub-class.
    */
   virtual Twist2 feasible(const Twist2& twist) const = 0;
 
@@ -100,7 +100,7 @@ class HL_NAVIGATION_EXPORT Kinematics : virtual public HasProperties,
 /**
  * @brief      Unconstrained kinematics (e.g., quad-copters)
  */
-class HL_NAVIGATION_EXPORT Holonomic : public Kinematics {
+class HL_NAVIGATION_EXPORT OmnidirectionalKinematics : public Kinematics {
  public:
   /**
    * @brief      Constructs a new instance.
@@ -108,7 +108,8 @@ class HL_NAVIGATION_EXPORT Holonomic : public Kinematics {
    * @param[in]  max_speed          The maximal speed
    * @param[in]  max_angular_speed  The maximal angular speed
    */
-  Holonomic(float max_speed = 0.0f, float max_angular_speed = 0.0f)
+  OmnidirectionalKinematics(float max_speed = 0.0f,
+                            float max_angular_speed = 0.0f)
       : Kinematics(max_speed, max_angular_speed) {}
 
   /**
@@ -134,14 +135,15 @@ class HL_NAVIGATION_EXPORT Holonomic : public Kinematics {
   std::string get_type() const override { return type; }
 
  private:
-  inline static std::string type = register_type<Holonomic>("Holonomic");
+  inline static std::string type =
+      register_type<OmnidirectionalKinematics>("Omni");
 };
 
 /**
- * @brief      Kinematics for non-wheeled agents that head towards where they move
- * (e.g., people)
+ * @brief      Kinematics for non-wheeled agents that head towards where they
+ * move (e.g., people)
  */
-class HL_NAVIGATION_EXPORT Forward : public Kinematics {
+class HL_NAVIGATION_EXPORT AheadKinematics : public Kinematics {
  public:
   /**
    * @brief      Constructs a new instance.
@@ -149,7 +151,7 @@ class HL_NAVIGATION_EXPORT Forward : public Kinematics {
    * @param[in]  max_speed          The maximal speed
    * @param[in]  max_angular_speed  The maximal angular speed
    */
-  Forward(float max_speed = 0.0f, float max_angular_speed = 0.0f)
+  AheadKinematics(float max_speed = 0.0f, float max_angular_speed = 0.0f)
       : Kinematics(max_speed, max_angular_speed) {}
 
   /**
@@ -175,20 +177,20 @@ class HL_NAVIGATION_EXPORT Forward : public Kinematics {
   std::string get_type() const override { return type; }
 
  private:
-  inline static std::string type = register_type<Forward>("Forward");
+  inline static std::string type = register_type<AheadKinematics>("Ahead");
 };
 
 /**
  * @brief      Abstract wheeled kinematics
- * 
- * *Properties*: wheel_axis (float) 
+ *
+ * *Properties*: wheel_axis (float)
  */
-class HL_NAVIGATION_EXPORT Wheeled : public Kinematics {
+class HL_NAVIGATION_EXPORT WheeledKinematics : public Kinematics {
  public:
-  Wheeled(float max_speed, float max_angular_speed, float axis)
+  WheeledKinematics(float max_speed, float max_angular_speed, float axis)
       : Kinematics(max_speed, max_angular_speed), axis(axis) {}
 
-  virtual ~Wheeled() = default;
+  virtual ~WheeledKinematics() = default;
 
   /**
    * @brief      Returns whether the kinematics has wheels.
@@ -245,9 +247,9 @@ class HL_NAVIGATION_EXPORT Wheeled : public Kinematics {
    * @private
    */
   static inline std::map<std::string, Property> properties = Properties{
-      {"wheel_axis",
-       make_property<float, Wheeled>(&Wheeled::get_axis, &Wheeled::set_axis,
-                                     0.0f, "Wheel Axis")},
+      {"wheel_axis", make_property<float, WheeledKinematics>(
+                         &WheeledKinematics::get_axis,
+                         &WheeledKinematics::set_axis, 0.0f, "Wheel Axis")},
   };
 
  protected:
@@ -255,9 +257,10 @@ class HL_NAVIGATION_EXPORT Wheeled : public Kinematics {
 };
 
 /**
- * @brief      Differential two-wheeled robot (e.g., a wheelchair)
+ * @brief   Two differential drive wheels (left, right) (e.g., a wheelchair)
  */
-class HL_NAVIGATION_EXPORT TwoWheeled : public Wheeled {
+class HL_NAVIGATION_EXPORT TwoWheelsDifferentialDriveKinematics
+    : public WheeledKinematics {
  public:
   /**
    * @brief      Constructs a new instance.
@@ -266,8 +269,10 @@ class HL_NAVIGATION_EXPORT TwoWheeled : public Wheeled {
    * @param[in]  axis               The wheel axis (i.e., the distance between
    * the wheels)
    */
-  TwoWheeled(float max_speed = 0.0f, float axis = 0.0f)
-      : Wheeled(max_speed, (axis > 0) ? 2 * max_speed / axis : 0.0f, axis) {}
+  TwoWheelsDifferentialDriveKinematics(float max_speed = 0.0f,
+                                       float axis = 0.0f)
+      : WheeledKinematics(max_speed, (axis > 0) ? 2 * max_speed / axis : 0.0f,
+                          axis) {}
 
   /**
    * @brief      Returns the degrees of freedom
@@ -287,8 +292,8 @@ class HL_NAVIGATION_EXPORT TwoWheeled : public Wheeled {
   }
 
   /**
-   * @brief      See \ref Wheeled::twist.
-   *
+   * @brief      See \ref WheeledKinematics::twist.
+   * 
    * @param[in]  speeds  The wheel speeds in the order {left, right}
    *
    * @return     The corresponding twist
@@ -296,7 +301,7 @@ class HL_NAVIGATION_EXPORT TwoWheeled : public Wheeled {
   Twist2 twist(const WheelSpeeds& speeds) const override;
 
   /**
-   * @brief      See \ref Wheeled::wheel_speeds.
+   * @brief      See \ref WheeledKinematics::wheel_speeds.
    *
    * @param[in]  twist  The twist
    *
@@ -310,18 +315,20 @@ class HL_NAVIGATION_EXPORT TwoWheeled : public Wheeled {
   std::string get_type() const override { return type; }
 
  private:
-  inline static std::string type = register_type<TwoWheeled>("TwoWheeled");
+  inline static std::string type =
+      register_type<TwoWheelsDifferentialDriveKinematics>("2WDiff");
 };
 
 // TODO(Jerome): make it general
 
 /**
- * @brief      Differential four-wheeled robot (e.g., a Robomaster)
+ * @brief      Four Omni-differential wheels (e.g., a Robomaster)
  *
  * \warning We assume that the distance between front and back wheel centers is
  * the same as the lateral distance.
  */
-class HL_NAVIGATION_EXPORT FourWheeled : public Wheeled {
+class HL_NAVIGATION_EXPORT FourWheelsOmniDriveKinematics
+    : public WheeledKinematics {
  public:
   /**
    * @brief      Constructs a new instance.
@@ -330,8 +337,9 @@ class HL_NAVIGATION_EXPORT FourWheeled : public Wheeled {
    * @param[in]  axis               The wheel axis (i.e., the distance between
    * the wheels)
    */
-  FourWheeled(float max_speed = 0.0f, float axis = 0.0f)
-      : Wheeled(max_speed, axis > 0 ? max_speed / axis : 0.0f, axis) {}
+  FourWheelsOmniDriveKinematics(float max_speed = 0.0f, float axis = 0.0f)
+      : WheeledKinematics(max_speed, axis > 0 ? max_speed / axis : 0.0f, axis) {
+  }
 
   /**
    * @brief      Returns the degrees of freedom
@@ -351,7 +359,7 @@ class HL_NAVIGATION_EXPORT FourWheeled : public Wheeled {
   }
 
   /**
-   * @brief      See \ref Wheeled::twist.
+   * @brief      See \ref WheeledKinematics::twist.
    *
    * @param[in]  speeds  The wheel speeds in the order {front left, rear left,
    * rear right, rear left}
@@ -361,7 +369,7 @@ class HL_NAVIGATION_EXPORT FourWheeled : public Wheeled {
   Twist2 twist(const WheelSpeeds& speeds) const override;
 
   /**
-   * @brief      See \ref Wheeled::wheel_speeds.
+   * @brief      See \ref WheeledKinematics::wheel_speeds.
    *
    * @param[in]  twist  The twist
    *
@@ -376,7 +384,8 @@ class HL_NAVIGATION_EXPORT FourWheeled : public Wheeled {
   std::string get_type() const override { return type; }
 
  private:
-  inline static std::string name = register_type<FourWheeled>("FourWheeled");
+  inline static std::string name =
+      register_type<FourWheelsOmniDriveKinematics>("4WOmni");
 };
 
 }  // namespace hl_navigation

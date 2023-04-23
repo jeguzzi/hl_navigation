@@ -16,15 +16,15 @@ def main(behavior_name: str = 'HL') -> None:
         print(f'No behavior with name {behavior_name}')
         sys.exit(1)
     print(f'Use behavior {behavior_name}')
-    behavior.kinematics = nav.kinematics.Holonomic(1.0, 1.0)
+    behavior.kinematics = nav.kinematics.OmnidirectionalKinematics(1.0, 1.0)
     behavior.radius = 0.1
     dt = 0.1
     behavior.horizon = 5.0
     behavior.position = (0.0, 0.05)
-    behavior.target_position = (10.0, 0.0)
+    behavior.target = nav.Target(position=(10.0, 0.0))
     behavior.environment_state.static_obstacles = [nav.Disc(position=(1.5, 0.0), radius=0.5)]
     for _ in range(30):
-        cmd = behavior.cmd_twist(dt, True)
+        cmd = behavior.compute_cmd(dt)
         behavior.actuate(cmd, dt)
     pose = behavior.pose
     twist = behavior.twist

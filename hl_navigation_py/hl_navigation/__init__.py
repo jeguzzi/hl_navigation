@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Union, ParamSpec, TypeVar, List
-import pkg_resources
+from typing import Any, Callable, List, ParamSpec, TypeVar, Union
+
 import numpy
+import pkg_resources
 
 from ._hl_navigation import Action
 from ._hl_navigation import Behavior as _Behavior
 from ._hl_navigation import (CachedCollisionComputation, CollisionComputation,
-                             Controller, Disc, GeometricState)
+                             Controller, Disc, Frame, GeometricState)
 from ._hl_navigation import Kinematics as _Kinematics
-from ._hl_navigation import (SocialMargin, LineSegment, Neighbor, Pose2,
-                             Twist2, dump, load_behavior, load_kinematics,
-                             load_plugins)
+from ._hl_navigation import (LineSegment, Neighbor, Pose2, SocialMargin,
+                             Target, Twist2, dump, load_behavior,
+                             load_kinematics)
 
 Vector2 = 'numpy.ndarray[numpy.float32[2, 1]]'
 PropertyField = Union[bool, int, float, str, Vector2, List[bool], List[int],
@@ -107,8 +108,7 @@ class Kinematics(_Kinematics):
         _Kinematics.__init__(self, max_speed, max_angular_speeed)
 
 
-from . import behaviors
-from . import kinematics
+from . import behaviors, kinematics
 
 
 def load_py_plugins():
@@ -118,9 +118,8 @@ def load_py_plugins():
 
 
 __all__ = [
-    'Behavior', 'Pose2', 'Twist2', 'Disc', 'Neighbor', 'LineSegment',
+    'Behavior', 'Pose2', 'Twist2', 'Target', 'Disc', 'Neighbor', 'LineSegment',
     'Kinematics', 'Action', 'Controller', 'CollisionComputation'
-    'CachedCollisionComputation'
-    'GeometricState', 'dump', 'load_behavior', 'load_kinematics',
-    'load_plugins', 'load_py_plugins'
+    'CachedCollisionComputation', 'Frame', 'GeometricState', 'dump',
+    'load_behavior', 'load_kinematics', 'load_py_plugins'
 ]

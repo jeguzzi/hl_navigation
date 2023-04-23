@@ -131,7 +131,6 @@ struct HL_NAVIGATION_SIM_EXPORT Trace {
    *
    * @param[in]  world  The world
    * @param      group  The dataset group where to store data
-   * @param[in]  steps  The simulation steps done.
    */
   void finalize(const World &world, HighFive::Group  * group);
 };

@@ -30,14 +30,14 @@ static std::vector<float> relax(const std::vector<float> &v0,
 static hl_navigation::Twist2 relax(const hl_navigation::Twist2 &v0,
                                    const hl_navigation::Twist2 &v1, float tau,
                                    float dt) {
-  assert(v1.relative == v0.relative);
+  assert(v1.frame == v0.frame);
   if (tau == 0) {
     return v1;
   }
   return {{relax(v0.velocity[0], v1.velocity[0], tau, dt),
            relax(v0.velocity[1], v1.velocity[1], tau, dt)},
           relax(v0.angular_speed, v1.angular_speed, tau, dt),
-          v1.relative};
+          v1.frame};
 }
 
 namespace hl_navigation {
@@ -69,11 +69,12 @@ DiscCache HLBehavior::make_obstacle_cache(const Disc &obstacle, bool push_away,
 // HLBehavior::~HLBehavior() = default;
 
 CollisionComputation::CollisionMap HLBehavior::get_collision_distance(
-    bool assuming_static) {
-  prepare();
+    bool assuming_static, std::optional<float> speed) {
+  float target_speed = speed.value_or(cached_target_speed);
+  prepare(target_speed);
   return collision_computation.get_free_distance_for_sector(
       pose.orientation - aperture, 2 * aperture, resolution, effective_horizon,
-      !assuming_static, optimal_speed);
+      !assuming_static, target_speed);
 }
 
 // distance from agent center to target
@@ -88,9 +89,11 @@ static inline float distance_from_target(Radians angle, float free_distance,
 
 // TODO(J:revision2023): check why we need effective_horizon
 // output is in absolute frame
-Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
-  prepare();
-  const Vector2 delta_target = target_pose.position - pose.position;
+Vector2 HLBehavior::desired_velocity_towards_point(const Vector2 &point,
+                                                   float target_speed,
+                                                   [[maybe_unused]] float dt) {
+  prepare(target_speed);
+  const Vector2 delta_target = point - pose.position;
   const Radians start_angle = orientation_of(delta_target);
   const Radians relative_start_angle = start_angle - pose.orientation;
   const Radians da = get_angular_resolution();
@@ -121,7 +124,7 @@ Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
       if (inside) {
         // free distance to travel before collision
         const float free_distance = collision_computation.dynamic_free_distance(
-            start_angle + s_angle, max_distance, optimal_speed);
+            start_angle + s_angle, max_distance, target_speed);
         const float dist =
             distance_from_target(angle, free_distance, max_distance);
         if (dist < optimal_distance_from_target) {
@@ -137,21 +140,33 @@ Vector2 HLBehavior::compute_desired_velocity([[maybe_unused]] float dt) {
   if (!found) return Vector2::Zero();
   const float static_distance = collision_computation.static_free_distance(
       start_angle + optimal_angle, max_distance);
-  const float desired_speed = fmin(optimal_speed, static_distance / eta);
+  const float desired_speed = fmin(target_speed, static_distance / eta);
   return desired_speed * unit(start_angle + optimal_angle);
 }
 
-void HLBehavior::prepare() {
+Vector2 HLBehavior::desired_velocity_towards_velocity(
+    const Vector2 &target_velocity, float dt) {
+  const float speed = target_velocity.norm();
+  if (speed) {
+    return desired_velocity_towards_point(
+        pose.position + target_velocity / speed * effective_horizon, speed, dt);
+  }
+  return Vector2::Zero();
+}
+
+void HLBehavior::prepare(float target_speed) {
   effective_horizon = horizon;
   if (state.changed() ||
       Behavior::changed(POSITION | ORIENTATION | RADIUS | HORIZON |
-                        SAFETY_MARGIN)) {
+                        SAFETY_MARGIN) ||
+      target_speed != cached_target_speed) {
+    cached_target_speed = target_speed;
     std::vector<DiscCache> ns;
     ns.reserve(state.get_neighbors().size());
     for (const Neighbor &d : state.get_neighbors()) {
       const auto c = make_neighbor_cache(d, true, 2e-3);
       if (collision_computation.dynamic_may_collide(c, effective_horizon,
-                                                    optimal_speed)) {
+                                                    target_speed)) {
         ns.push_back(c);
       }
     }
@@ -182,24 +197,23 @@ Twist2 HLBehavior::relax(const Twist2 &value, float dt) const {
     // TODO(Jerome old): same than before when I relaxed the absolute velocity,
     // not the relative but different than original paper CHANGED(J 2023): relax
     // in arbitrary frame
-    return ::relax(actuated_twist.relative == value.relative
+    return ::relax(actuated_twist.frame == value.frame
                        ? actuated_twist
-                       : to_frame(actuated_twist, value.relative),
+                       : to_frame(actuated_twist, value.frame),
                    value, tau, dt);
   }
 }
 
-Twist2 HLBehavior::cmd_twist(float dt, Mode mode, bool relative,
-                             bool set_as_actuated) {
+Twist2 HLBehavior::compute_cmd(float dt, std::optional<Frame> frame) {
   if (!kinematics) {
     std::cerr << "Missing kinematics" << std::endl;
     return {};
   }
-  Twist2 twist = Behavior::cmd_twist(dt, mode, relative, false);
+  Twist2 twist = Behavior::compute_cmd(dt, frame);
   if (tau > 0) {
     twist = relax(twist, dt);
   }
-  if (set_as_actuated) {
+  if (assume_cmd_is_actuated) {
     actuated_twist = twist;
   }
   return twist;

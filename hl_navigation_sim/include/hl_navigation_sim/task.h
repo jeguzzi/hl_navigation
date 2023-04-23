@@ -60,7 +60,9 @@ struct HL_NAVIGATION_SIM_EXPORT Task : public virtual HasProperties, public virt
   /**
    * @brief      Tick the task, possibly updating the navigation goal of the agent.
    *
-   * @param      agent  The agent ticking the task.
+   * @param      agent  The agent ticking the task
+   * @param      world  The world the agent is part of
+   * @param[in]  time   The simulation time
    */
   virtual void update(Agent *agent, World * world, float time) {}
 

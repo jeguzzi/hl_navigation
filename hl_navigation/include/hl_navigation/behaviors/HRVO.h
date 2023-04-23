@@ -53,7 +53,8 @@ class HL_NAVIGATION_EXPORT HRVOBehavior : public Behavior {
   }
 
  protected:
-  Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
+  Vector2 desired_velocity_towards_point(const Vector2 & point, float speed, float time_step) override;
+  Vector2 desired_velocity_towards_velocity(const Vector2 & velocity, float time_step) override;
 
  private:
   GeometricState state;
@@ -64,7 +65,7 @@ class HL_NAVIGATION_EXPORT HRVOBehavior : public Behavior {
                     float epsilon = 2e-3);
   void add_obstacle(const Disc& disc, bool push_away = false,
                     float epsilon = 2e-3);
-  void prepare();
+  void prepare(const Vector2 & target_velocity);
 
  private:
   inline static std::string type =

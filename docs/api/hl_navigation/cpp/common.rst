@@ -12,6 +12,8 @@ Two dimensional
 
 .. doxygentypedef:: hl_navigation::Radians
 
+.. doxygenenum:: hl_navigation::Frame
+
 .. doxygentypedef:: hl_navigation::Vector2
 
 .. doxygenfunction:: hl_navigation::orientation_of

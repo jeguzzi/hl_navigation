@@ -35,7 +35,8 @@ class HL_NAVIGATION_EXPORT DummyBehavior : public Behavior {
   std::string get_type() const override { return type; }
 
  protected:
-  Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
+  Vector2 desired_velocity_towards_point(const Vector2 & point, float speed, float time_step) override;
+  Vector2 desired_velocity_towards_velocity(const Vector2 & velocity, float time_step) override;
 
  private:
   static inline const std::string type = register_type<DummyBehavior>("Dummy");

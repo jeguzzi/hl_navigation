@@ -87,11 +87,12 @@ struct HL_NAVIGATION_SIM_EXPORT BoundedStateEstimation
   std::string get_type() const override { return type; }
 
   /**
-   * @brief      Gets the neighbors
+   * @brief      Gets the neighbors that lie within \ref get_range_of_view from the agent.
    *
    * @param[in]  agent  The agent
+   * @param[in]  world  The world the agent is part of.
    *
-   * @return     { description_of_the_return_value }
+   * @return     A list of neighbors around the agent 
    */
   virtual std::vector<Neighbor> neighbors_of_agent(const Agent *agent,
                                                    const World *world) const;

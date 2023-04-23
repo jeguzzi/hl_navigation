@@ -27,7 +27,7 @@ std::unique_ptr<sim::Sampler<T>> make_const(const T& value) {
  *
  *  number: 1
  *  kinematics:
- *    type: Holonomic
+ *    type: Omni
  *    max_speed: 1.0
  *  behavior:
  *    type: Dummy
@@ -44,9 +44,9 @@ inline sim::AgentSampler<sim::World> agents() {
   group.name = "agents";
   group.number = 1;
   group.behavior = sim::BehaviorSampler<>("Dummy");
-  group.kinematics = sim::KinematicsSampler<>("Holonomic");
+  group.kinematics = sim::KinematicsSampler<>("Omni");
   group.kinematics.max_speed = make_const<float>(1.0f);
-  group.task = sim::TaskSampler<>("WaypointsTask");
+  group.task = sim::TaskSampler<>("Waypoints");
   group.task.properties["waypoints"] =
       make_const_property<sim::Waypoints>({{1.0f, 0.0f}});
   group.radius = make_const<float>(0.1f);
@@ -59,7 +59,7 @@ inline sim::AgentSampler<sim::World> agents() {
  *
  *  number: 2
  *  kinematics:
- *    type: TwoWheeled
+ *    type: 2WDiff
  *    max_speed: 1.0
  *    wheel_axis: 0.12
  *  behavior:
@@ -90,14 +90,14 @@ inline sim::AgentSampler<sim::World> robots() {
   group.behavior = sim::BehaviorSampler<>("HL");
   group.behavior.safety_margin = make_const<float>(0.5f);
   group.behavior.properties["tau"] = make_const_property<float>(0.25f);
-  group.kinematics = sim::KinematicsSampler<>("TwoWheeled");
+  group.kinematics = sim::KinematicsSampler<>("2WDiff");
   group.kinematics.max_speed = make_const<float>(1.0f);
   group.kinematics.properties["wheel_axis"] = make_const_property<float>(0.12f);
   group.state_estimation =
-      sim::StateEstimationSampler<>("BoundedStateEstimation");
+      sim::StateEstimationSampler<>("Bounded");
   group.state_estimation.properties["range_of_view"] =
       make_const_property<float>(10.0f);
-  group.task = sim::TaskSampler<>("WaypointsTask");
+  group.task = sim::TaskSampler<>("Waypoints");
   group.task.properties["loop"] = make_const_property<bool>(true);
   group.task.properties["waypoints"] =
       make_const_property<sim::Waypoints>({{1.0f, 0.0f}, {-1.0f, 0.0f}});

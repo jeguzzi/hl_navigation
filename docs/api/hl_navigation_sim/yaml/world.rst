@@ -36,7 +36,7 @@ Example
        radius: 0.5
    groups:
      - kinematics:
-         type: Holonomic
+         type: Omni
          max_speed: 1.0
        behavior:
          type: Dummy

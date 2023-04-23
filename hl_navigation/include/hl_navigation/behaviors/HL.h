@@ -29,10 +29,10 @@ namespace hl_navigation {
  *     "Human-friendly robot navigation in dynamic environments,"
  *     Robotics and Automation (ICRA), 2013 IEEE International Conference on,
  *     vol., no., pp.423,430, 6-10 May 2013
- *     
- * *Properties*: tau (float), eta (float), aperture (float), resolution(int)  
- * 
- * *State*: \ref GeometricState 
+ *
+ * *Properties*: tau (float), eta (float), aperture (float), resolution(int)
+ *
+ * *State*: \ref GeometricState
  */
 class HL_NAVIGATION_EXPORT HLBehavior : public Behavior {
  public:
@@ -72,7 +72,8 @@ class HL_NAVIGATION_EXPORT HLBehavior : public Behavior {
         aperture(default_aperture),
         resolution(std::min(default_resolution, max_resolution)),
         collision_computation(),
-        state() {}
+        state(),
+        cached_target_speed(0.0f) {}
   ~HLBehavior() = default;
 
   // -------------------------- BEHAVIOR PARAMETERS
@@ -147,16 +148,17 @@ class HL_NAVIGATION_EXPORT HLBehavior : public Behavior {
    * at regular intervals.
    *
    * @param[in]  assuming_static  If True, all obstacles are assumed static.
+   * @param[in]  speed  The desired speed. Will be set to the last used target
+   * speed if not specified.
    *
    * @return     A vector of pairs <angle, distance> of size \ref
    * get_resolution. Angles are in the agent frame.
    */
   CollisionComputation::CollisionMap get_collision_distance(
-      bool assuming_static = false);
-
+      bool assuming_static = false, std::optional<float> speed = std::nullopt);
 
   /** @private
-  */
+   */
   virtual const Properties &get_properties() const override {
     return properties;
   };
@@ -184,14 +186,28 @@ class HL_NAVIGATION_EXPORT HLBehavior : public Behavior {
       Behavior::properties;
 
   /** @private
-  */
+   */
   std::string get_type() const override { return type; }
 
   /** @private
-  */
-  EnvironmentState * get_environment_state() override {
-    return &state;
-  }
+   */
+  EnvironmentState *get_environment_state() override { return &state; }
+
+  /**
+   * @brief      Override \ref Behavior::compute_cmd adding target velocity
+   * relaxation
+   *
+   * The target velocities (twist or wheel speeds, depending on the \ref
+   * get_kinematics) are relaxed over time \f$\eta\f$ as \f$ \dot v = (v_t - v)
+   * / \eta \f$, where \f$v_t\f$ is the instantaneous desired value computed by
+   * \ref Behavior::compute_cmd.
+   *
+   * If \f$\eta=0\f$, no relaxation is performed and the desired target velocity
+   * is returned.
+   *
+   */
+  Twist2 compute_cmd(float time_step,
+                     std::optional<Frame> frame = std::nullopt) override;
 
  protected:
   float effective_horizon;
@@ -201,26 +217,14 @@ class HL_NAVIGATION_EXPORT HLBehavior : public Behavior {
   unsigned int resolution;
   CollisionComputation collision_computation;
   GeometricState state;
+  float cached_target_speed;
 
-  /**
-   * @brief      Override \ref Behavior::cmd_twist adding target velocity
-   * relaxation
-   *
-   * The target velocities (twist or wheel speeds, depending on the \ref
-   * get_kinematics) are relaxed over time \f$\eta\f$ as \f$ \dot v = (v_t - v) /
-   * \eta \f$, where \f$v_t\f$ is the instantaneous desired value computed by
-   * \ref Behavior::cmd_twist.
-   *
-   * If \f$\eta=0\f$, no relaxation is performed and the desired target velocity
-   * is returned.
-   *
-   */
-  Twist2 cmd_twist(float time_step, Mode mode, bool relative,
-                   bool set_as_actuated) override;
+  Vector2 desired_velocity_towards_point(const Vector2 &value, float speed,
+                                         float time_step) override;
+  Vector2 desired_velocity_towards_velocity(const Vector2 &value,
+                                            float time_step) override;
 
-  Vector2 compute_desired_velocity([[maybe_unused]] float time_step) override;
-
-  void prepare();
+  void prepare(float speed);
   Vector2 compute_repulsive_force(bool &inside_obstacle);
   Twist2 relax(const Twist2 &twist, float dt) const;
   unsigned int index_of_relative_angle(Radians relative_angle);
@@ -236,7 +240,6 @@ class HL_NAVIGATION_EXPORT HLBehavior : public Behavior {
                                 bool push_away = false, float epsilon = 2e-3);
   DiscCache make_obstacle_cache(const Disc &obstacle, bool push_away = false,
                                 float epsilon = 2e-3);
-
 
  private:
   inline static std::string type = register_type<HLBehavior>("HL");

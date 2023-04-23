@@ -1,10 +1,12 @@
-from .._hl_navigation import (Holonomic, Forward, Wheeled, TwoWheeled,
-                              FourWheeled)
+from .._hl_navigation import (OmnidirectionalKinematics, AheadKinematics,
+                              WheeledKinematics,
+                              TwoWheelsDifferentialDriveKinematics,
+                              FourWheelsOmniDriveKinematics)
 
 __all__ = [
-    'Holonomic',
-    'Forward',
-    'Wheeled',
-    'TwoWheeled',
-    'FourWheeled',
+    'OmnidirectionalKinematics',
+    'AheadKinematics',
+    'WheeledKinematics',
+    'TwoWheelsDifferentialDriveKinematics',
+    'FourWheelsOmniDriveKinematics',
 ]

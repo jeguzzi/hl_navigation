@@ -39,23 +39,16 @@ namespace hl_navigation_sim {
  * Agents have a circular shape which should match the shape of their navigation
  * \ref hl_navigation::Behavior.
  *
- * The agent main API are \ref update and \ref actuate which
- * are called during \ref World::update to first compute the agent control
- * command and then to actuate it.
- *
  * The role of task and state estimation is to provide goals and
- * environment state (perception) to the behavior in \ref update,
- * while actuation of the behavior output,
- * is taken and actuated this class when calling \ref actuate.
+ * environment state (perception) to the behavior.
  *
- * Agents also have a public identifies \ref id that is accessible by the
+ * Agents have a public identifies \ref id that is accessible by the
  * other agents' state estimation and may be passed to their behavior as \ref
  * hl_navigation::Neighbor::id. This identifier may not be unique (e.g., may be
  * used to identifies *groups* of agents).
  *
- * Agents runs their update at the rate set by \ref control_period. That is,
- * if the world is updated at a faster rate, the agent does not update its
- * control each time \ref update is called.
+ * Agents runs their update at the rate set by \ref control_period even if
+ * the world is updated at a faster rate.
  */
 class HL_NAVIGATION_SIM_EXPORT Agent : public Entity {
  public:
@@ -97,7 +90,7 @@ class HL_NAVIGATION_SIM_EXPORT Agent : public Entity {
         state_estimation(estimation),
         behavior(behavior),
         kinematics(kinematics),
-        controller(behavior, false, true),
+        controller(behavior),
         control_deadline(0.0),
         collision_correction() {}
 
@@ -239,7 +232,7 @@ class HL_NAVIGATION_SIM_EXPORT Agent : public Entity {
   /**
    * The last control command
    */
-  Twist2 cmd_twist;
+  Twist2 last_cmd;
   /**
    * @brief The type of the agent.
    *

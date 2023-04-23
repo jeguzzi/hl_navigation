@@ -20,8 +20,10 @@ using hl_navigation::Disc;
 using hl_navigation::GeometricState;
 using hl_navigation::Neighbor;
 using hl_navigation::Twist2;
-using hl_navigation::TwoWheeled;
+using hl_navigation::TwoWheelsDifferentialDriveKinematics;
 using hl_navigation::Vector2;
+using hl_navigation::Frame;
+
 
 static void show_usage(std::string name) {
   std::vector<std::string> keys = Behavior::types();
@@ -55,7 +57,7 @@ static void run(const char *behavior = "HL") {
   std::vector<Disc> obstacles = {Disc({0.0f, 0.0f}, 0.1)};
   Vector2 target{1.0, 0.0};
   for (size_t i = 0; i < 2; i++) {
-    auto kinematics = std::make_shared<TwoWheeled>(0.166, 0.094);
+    auto kinematics = std::make_shared<TwoWheelsDifferentialDriveKinematics>(0.166, 0.094);
     auto agent = Behavior::make_type(behavior);
     agent->set_kinematics(kinematics);
     agent->set_radius(0.08);
@@ -82,7 +84,7 @@ static void run(const char *behavior = "HL") {
         for (auto &neighbor : agents) {
           if (neighbor == agent) continue;
           neighbors.emplace_back(neighbor->get_position(), 0.08,
-                                 neighbor->get_velocity(false), 0);
+                                 neighbor->get_velocity(Frame::absolute), 0);
         }
         state->set_neighbors(neighbors);
       }

@@ -2,6 +2,8 @@
 Geometry
 ========
 
+.. autoclass:: hl_navigation.Frame
+   :members:
 
 .. py:class:: Vector2
    :module: hl_navigation

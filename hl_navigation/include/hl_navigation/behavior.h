@@ -18,6 +18,7 @@
 #include "hl_navigation/register.h"
 #include "hl_navigation/social_margin.h"
 #include "hl_navigation/state.h"
+#include "hl_navigation/target.h"
 #include "hl_navigation_export.h"
 
 namespace hl_navigation {
@@ -45,40 +46,35 @@ namespace hl_navigation {
  *
  * 1. update the agent's state with \ref set_pose and \ref set_twist (or other
  *    convenience methods)
+ *    
+ * 2. update the target with \ref set_target 
  *
- * 2. update the state of the local environment for the concrete sub-class
+ * 3. update the environment state \ref get_environment_state
  *
- * 3. update the target with \ref set_target_pose (or other
- *    convenience methods)
+ * 4. ask for a control commands by calling \ref compute_cmd
  *
- * 4. ask for a control commands by calling \ref cmd_twist
- *
- * 5. actuate the control commands [not part of this API]
+ * 5. actuate the control commands through user code
  */
 class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
                                       virtual public HasRegister<Behavior>,
                                       protected TrackChanges {
  public:
   using HasRegister<Behavior>::C;
-  /**
-   * @brief      Modes for \ref Behavior::cmd_twist
-   */
-  enum class Mode {
-    move,   /**< move towards the target position */
-    follow, /**< follow the target velocity */
-    turn,   /**< turn-in-place towards the target orientation */
-    stop    /**< stop */
-  };
 
   /**
-   * @brief      Different behavior variants for the angular motion
+   * @brief      Different behavior variants for the angular
+   * motion when it is no constrained by the kinematics or already specified by
+   * the current target.
+   *
+   * They ability to apply them depends on the kinematics and on the current
+   * target.
    */
   enum class Heading {
-    idle,                 /**< never turn */
-    target_point,         /**< turn towards the target position */
-    target_angle,         /**< turn towards the target orientation */
-    target_angular_speed, /**< follow a target angular speed */
-    velocity /**< turn towards the velocity orientation. This is the only
+    idle,                 /**< keep the same orientation */
+    target_point,         /**< turn towards the target position (if any) */
+    target_angle,         /**< turn towards the target orientation (if any) */
+    target_angular_speed, /**< follow a target angular speed (if any) */
+    velocity /**< turn towards the velocity direction. This is the only
                 behavior available to constrained kinematics.*/
   };
 
@@ -146,8 +142,8 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
                                          : 0.0f),
         rotation_tau(default_rotation_tau),
         heading_behavior(Heading::idle),
-        target_pose(),
-        target_twist() {}
+        assume_cmd_is_actuated(true),
+        target() {}
 
   virtual ~Behavior() = default;
 
@@ -246,13 +242,46 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    * @param[in]  value A positive linear speed.
    */
   void set_optimal_speed(float value) {
-    if (kinematics) {
-      optimal_speed = std::clamp(value, 0.0f, get_max_speed());
-    } else {
-      optimal_speed = std::max(value, 0.0f);
-    }
+    optimal_speed = std::max(value, 0.0f);
     change(OPTIMAL_SPEED);
   }
+
+  /**
+   * @brief      Clamp a speed in the range of feasible values given by the
+   * kinematics.
+   *
+   * @param[in]  value  The desired value
+   *
+   * @return the nearest feasible value
+   */
+  float feasible_speed(float value) const {
+    return std::clamp(value, 0.0f, get_max_speed());
+  }
+
+  /**
+   * @brief      Clamp an angular speed in the range of feasible values given by
+   * the kinematics.
+   *
+   * @param[in]  value  The desired value
+   *
+   * @return the nearest feasible value
+   */
+  float feasible_angular_speed(float value) const {
+    return std::clamp(value, 0.0f, get_max_angular_speed());
+  }
+
+  /**
+   * @brief      Clamp an twist in the range of feasible values given by the
+   * kinematics.
+   *
+   * @param[in]  value  The desired value
+   * @param[in]  frame  The desired frame
+   *
+   * @return the nearest feasible value
+   */
+  Twist2 feasible_twist(const Twist2 &value,
+                        std::optional<Frame> frame = std::nullopt) const;
+
   /**
    * @brief      Gets the desired optimal angular speed.
    *
@@ -268,11 +297,7 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    * @param[in]  value  A positive angular speed in radians/time unit.
    */
   void set_optimal_angular_speed(Radians value) {
-    if (kinematics) {
-      optimal_angular_speed = std::clamp(value, 0.0f, get_max_angular_speed());
-    } else {
-      optimal_angular_speed = std::max(value, 0.0f);
-    }
+    optimal_angular_speed = std::max(value, 0.0f);
   }
   /**
    * @brief      Gets the relaxation time to rotate towards a desired
@@ -312,7 +337,7 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    * @brief      Gets the horizon: the size of the portion of environment
    *             around the agent considered when computing possible collisions.
    *             Larger values generally lead to a more computationally
-   * expensive \ref cmd_twist but fewer deadlocks and less jamming.
+   * expensive \ref compute_cmd but fewer deadlocks and less jamming.
    *
    * @return     The horizon.
    */
@@ -325,6 +350,35 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
   void set_horizon(float value) {
     horizon = std::max(0.0f, value);
     change(HORIZON);
+  }
+
+  // Sub-classes may not override this method but the specialized methods
+  // \ref cmd_twist_towards_target, \ref cmd_twist_towards_target_orientation,
+  // and \ref cmd_cmd_twist_towards_stopping.
+
+  /**
+   * @brief      Gets whether to assume that the compute command will be
+   * actuated as it is.
+   *
+   * If set, \ref Behavior will assume that the control command
+   * computed by \ref compute_cmd be actuated, therefore setting \ref
+   * set_actuated_twist to that value. If not set, the user should set \ref
+   * Behavior::set_actuated_twist before querying for a new control commands:
+   * some behavior use the old actuated control command to compute smoother
+   * controls.
+   *
+   * @return     True if it assumes that the command will be actuated as it is.
+   */
+  bool get_assume_cmd_is_actuated() const { return assume_cmd_is_actuated; }
+  /**
+   * @brief      Sets whether to assume that the compute command will be
+   * actuated as it is.
+   * @see \ref get_assume_cmd_is_actuated.
+   *
+   * @param[in]  value  The desired value.
+   */
+  void set_assume_cmd_is_actuated(bool value) {
+    assume_cmd_is_actuated = value;
   }
 
   //----------- AGENT STATE
@@ -381,13 +435,12 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
   /**
    * @brief      Gets the current twist.
    *
-   * @param[in]  relative  The frame of reference: true for the
-   * agent's own frame and false for the world-fixed frame.
+   * @param[in]  frame  The desired frame of reference.
    *
    * @return     The current twist.
    */
-  Twist2 get_twist(bool relative = false) const {
-    return to_frame(twist, relative);
+  Twist2 get_twist(Frame frame = Frame::absolute) const {
+    return to_frame(twist, frame);
   }
   /**
    * @brief      Sets the current twist.
@@ -402,25 +455,23 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    * @brief      Convenience method to get the current velocity. See \ref
    * get_twist
    *
-   * @param[in]  relative  The frame of reference: true for the
-   * agent's own frame and false for the world-fixed frame.
+   * @param[in]  frame  The desired frame of reference.
    *
    * @return     The velocity.
    */
-  Vector2 get_velocity(bool relative = false) const {
-    return to_frame(twist, relative).velocity;
+  Vector2 get_velocity(Frame frame = Frame::absolute) const {
+    return to_frame(twist, frame).velocity;
   }
   /**
    * @brief      Convenience method to set the current velocity. See \ref
    * set_twist
    *
-   * @param[in]  value     The velocity
-   * @param[in]  relative  The frame of reference: true for the
-   * agent's own frame and false for the world-fixed frame.
+   * @param[in]  value  The velocity
+   * @param[in]  frame  The desired frame of reference.
    */
-  void set_velocity(const Vector2 &value, bool relative = false) {
+  void set_velocity(const Vector2 &value, Frame frame = Frame::absolute) {
     twist.velocity = value;
-    twist.relative = relative;
+    twist.frame = frame;
     change(VELOCITY);
   }
   /**
@@ -456,20 +507,19 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    */
   void set_wheel_speeds(const WheelSpeeds &value) {
     if (kinematics && kinematics->is_wheeled()) {
-      Wheeled *wk = dynamic_cast<Wheeled *>(kinematics.get());
+      WheeledKinematics *wk = dynamic_cast<WheeledKinematics *>(kinematics.get());
       set_twist(wk->twist(value));
     }
   }
   /**
    * @brief      Gets the last actuated twist.
    *
-   * @param[in]  relative  The frame of reference: true for the
-   * agent's own frame and false for the world-fixed frame.
+   * @param[in]  frame  The desired frame of reference.
    *
    * @return     The actuated twist.
    */
-  Twist2 get_actuated_twist(bool relative = false) const {
-    return to_frame(actuated_twist, relative);
+  Twist2 get_actuated_twist(Frame frame = Frame::absolute) const {
+    return to_frame(actuated_twist, frame);
   }
   /**
    * @brief      Sets the last actuated twist.
@@ -498,7 +548,7 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    */
   void actuate(const Twist2 &twist_cmd, float time_step) {
     actuated_twist = twist_cmd;
-    if (twist_cmd.relative) {
+    if (twist_cmd.frame == Frame::relative) {
       twist = to_absolute(twist_cmd);
     } else {
       twist = actuated_twist;
@@ -527,8 +577,9 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
     set_rotation_tau(other.get_rotation_tau());
     set_safety_margin(other.get_safety_margin());
     set_horizon(other.get_horizon());
+    set_assume_cmd_is_actuated(other.get_assume_cmd_is_actuated());
     set_heading_behavior(other.get_heading_behavior());
-    set_target_pose(other.get_target_pose());
+    set_target(other.get_target());
     set_pose(other.get_pose());
     set_twist(other.get_twist());
     set_actuated_twist(other.get_actuated_twist());
@@ -557,175 +608,95 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    */
   void set_heading_behavior(Heading value) { heading_behavior = value; }
   /**
-   * @brief      Gets the target pose in the world-fixed frame.
+   * @brief      Gets the target.
    *
-   * @return     The target pose.
+   * @return     The target.
    */
-  Pose2 get_target_pose() const { return target_pose; }
+  Target get_target() const { return target; }
   /**
-   * @brief      Sets the target pose in the world-fixed frame.
+   * @brief      Sets the target.
    *
-   * @param[in]  value The desired value
+   * @param[in]  value  The desired value
    */
-  void set_target_pose(const Pose2 &value) {
-    target_pose = value;
-    change(TARGET_POSITION | TARGET_ORIENTATION);
+  void set_target(const Target &value) {
+    target = value;
+    change(TARGET);
   }
   /**
-   * @brief      Gets the target position in the world-fixed frame.
-   *
-   * @return     The target position.
-   */
-  Vector2 get_target_position() const { return target_pose.position; }
-  /**
-   * @brief      Sets the target position in the world-fixed frame.
-   *
-   * @param[in]  value The desired value
-   */
-  void set_target_position(const Vector2 &value) {
-    target_pose.position = value;
-    change(TARGET_POSITION);
-  }
-  /**
-   * @brief      Gets the target orientation.
-   *
-   * @return     The target orientation.
-   */
-  Radians get_target_orientation() const { return target_pose.orientation; }
-  /**
-   * @brief      Sets the target orientation.
-   *
-   * @param[in]  value The desired value
-   */
-  void set_target_orientation(Radians value) {
-    target_pose.orientation = value;
-    change(TARGET_ORIENTATION);
-  }
-  /**
-   * @brief      Gets the target velocity in the world-fixed frame.
-   *
-   * @return     The target velocity.
-   */
-  Vector2 get_target_velocity() const { return target_twist.velocity; }
-  /**
-   * @brief      Sets the target position in the world-fixed frame.
-   *
-   * @param[in]  value The desired value
-   */
-  void set_target_velocity(const Vector2 &value) {
-    target_twist.velocity = value;
-    change(TARGET_VELOCITY);
-  }
-  /**
-   * @brief      Gets the target angular speed.
-   *
-   * @return     The target angular speed.
-   */
-  Radians get_target_angular_speed() const {
-    return target_twist.angular_speed;
-  }
-  /**
-   * @brief      Sets the target angular speed.
-   *
-   * @param[in]  value The desired value
-   */
-  void set_target_angular_speed(Radians value) {
-    target_twist.angular_speed = value;
-    change(TARGET_ANGULAR_SPEED);
-  }
-  /**
-   * @brief      Query the behavior to get a twist control command
+   * @brief      Query the behavior to get a control command
    *
    * Before calling this method, update the state using methods such as
-   * \ref set_pose, \ref set_target_position.
+   * \ref set_pose, and \ref set_twist and set the target \ref set_target.
    *
    * Behaviors may use caching to speed up the next queries if the state does
    * not change.
    *
-   * @param[in]  time_step        The control time step. Not all behavior use it
+   * @param[in]  time_step   The control time step. Not all behavior use it
    * but some may use it, for example, to limit accelerations.
    *
-   * @param[in]  mode             Should the agent move towards the \ref
-   * Behavior::get_target_position (\ref Behavior::Mode::move), follow \ref
-   * Behavior::get_target_velocity (\ref Behavior::Mode::follow), turn-in-place
-   * towards \ref Behavior::get_target_orientation (\ref Behavior::Mode::turn),
-   * or stop moving
-   * (\ref Behavior::Mode::stop).
-   *
-   * @param[in]  relative         The desired frame of reference for the twist:
-   *                              true for the agent's own frame and
-   * to false for the world-fixed frame. Leave undefined to use the default
-   * frame depending on the kinematics (see \ref default_cmd_frame)
-   *
-   * @param[in]  set_as_actuated  If set, it assumes that the control command
-   * will be actuated, therefore setting \ref Behavior::set_actuated_twist to
-   * the returned value. If not set, the user should set \ref
-   * Behavior::set_actuated_twist before querying for a new control commands:
-   * some behavior use the old actuated control command to compute smoother
-   * controls.
+   * @param[in]  frame       The desired frame of reference for the twist.
+   * Leave undefined to use the default frame depending on the kinematics
+   * (see \ref default_cmd_frame)
    *
    * @return     The control command as a twist in the specified frame.
    */
 
-  Twist2 cmd_twist(float time_step, Mode mode = Mode::move,
-                   std::optional<bool> relative = std::nullopt,
-                   bool set_as_actuated = true) {
-    return cmd_twist(time_step, mode, relative.value_or(default_cmd_frame()),
-                     set_as_actuated);
-  }
+  virtual Twist2 compute_cmd(float time_step,
+                             std::optional<Frame> frame = std::nullopt);
 
   /**
-   * @brief      The most natural frame for the current kinematic:
-   * relative in case the agent is wheeled, else absolute
+   * @brief      The most natural frame for the current kinematics:
+   * \ref Frame::relative in case the agent is wheeled, else \ref
+   * Frame::absolute.
    *
-   * @return     True if the frame is relative to the agent.
+   * @return     The frame
    */
-  bool default_cmd_frame() {
+  Frame default_cmd_frame() {
     if (kinematics && kinematics->is_wheeled()) {
-      return true;
+      return Frame::relative;
     }
-    return false;
+    return Frame::absolute;
   }
 
   /**
    * @brief      Gets the last computed desired velocity.
    *
-   * @return     The desired velocity (only valid if computed) in relative
-   * frame.
+   * @return     The desired velocity (only valid if computed) in \ref
+   * Frame::absolute
    */
   Vector2 get_desired_velocity() const { return desired_velocity; }
 
   //----------- TRANSFORMATIONS
 
   /**
-   * @brief      Transform a twist to absolute frame
+   * @brief      Transform a twist to \ref Frame::absolute.
    *
    * @param[in]  value  The original twist
    *
-   * @return     The same twist in absolute frame
-   *             (unchanged if already in absolute frame)
+   * @return     The same twist in \ref Frame::absolute
+   *             (unchanged if already in \ref Frame::absolute)
    */
   Twist2 to_absolute(const Twist2 &value) const {
-    if (value.relative) {
+    if (value.frame == Frame::relative) {
       auto a_value = value.rotate(pose.orientation);
-      a_value.relative = false;
+      a_value.frame = Frame::absolute;
       return a_value;
     }
     return twist;
   }
 
   /**
-   * @brief      Transform a twist to relative frame
+   * @brief      Transform a twist to \ref Frame::relative.
    *
    * @param[in]  value  The original twist
    *
-   * @return     The same twist in relative frame
-   *             (unchanged if already in relative frame)
+   * @return     The same twist in \ref Frame::relative
+   *             (unchanged if already in \ref Frame::relative)
    */
   Twist2 to_relative(const Twist2 &value) const {
-    if (!value.relative) {
+    if (value.frame == Frame::absolute) {
       auto r_value = value.rotate(-pose.orientation);
-      r_value.relative = true;
+      r_value.frame = Frame::relative;
       return r_value;
     }
     return value;
@@ -733,28 +704,26 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
 
   /**
    * @brief      Transform a vector (e.g., a velocity)
-   *             from absolute to relative frame
+   *             from \ref Frame::absolute to \ref Frame::relative.
    *
-   * @param[in]  value  The absolute vector
+   * @param[in]  value  The vector in \ref Frame::absolute
    *
-   * @return     The relative vector
+   * @return     The vector in \ref Frame::relative
    */
   Vector2 to_relative(const Vector2 &value) const {
     return rotate(value, -pose.orientation);
   }
 
   /**
-   * @brief      Convert a twist between reference frames.
+   * @brief      Convert a twist to a reference frame.
    *
-   * @param[in]  value     The original frame.
-   * @param[in]  relative  The desired frame of reference:
-   *                       true for the agent's own frame and false
-   * for the world-fixed frame.
+   * @param[in]  value     The original twist.
+   * @param[in]  frame  The desired frame of reference
    *
-   * @return     The frame in the desired frame of reference.
+   * @return     The twist in the desired frame of reference.
    */
-  Twist2 to_frame(const Twist2 &value, bool relative) const {
-    return relative ? to_relative(value) : to_absolute(value);
+  Twist2 to_frame(const Twist2 &value, Frame frame) const {
+    return frame == Frame::relative ? to_relative(value) : to_absolute(value);
   }
 
   /**
@@ -769,8 +738,9 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    */
   WheelSpeeds wheel_speeds_from_twist(const Twist2 &value) const {
     if (kinematics && kinematics->is_wheeled()) {
-      Wheeled *wk = dynamic_cast<Wheeled *>(kinematics.get());
-      return wk->wheel_speeds(value.relative ? value : to_relative(value));
+      WheeledKinematics *wk = dynamic_cast<WheeledKinematics *>(kinematics.get());
+      return wk->wheel_speeds(
+          value.frame == Frame::relative ? value : to_relative(value));
     }
     return {};
   }
@@ -786,7 +756,7 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    */
   Twist2 twist_from_wheel_speeds(const WheelSpeeds &value) const {
     if (kinematics && kinematics->is_wheeled()) {
-      Wheeled *wk = dynamic_cast<Wheeled *>(kinematics.get());
+      WheeledKinematics *wk = dynamic_cast<WheeledKinematics *>(kinematics.get());
       return wk->twist(value);
     }
     return {};
@@ -804,20 +774,31 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
    */
   virtual EnvironmentState *get_environment_state() { return nullptr; }
 
+  /**
+   * @brief      Check if the current target has been satisfied
+   *
+   * @return     True if the current target has been satisfied.
+   */
+  bool check_if_target_satisfied() const;
+
+  /**
+   * @brief      Estimate how much time before the target is satisfied
+   *
+   * @return     A positive value if the target is not yet satisfied, else 0.
+   */
+  float estimate_time_until_target_satisfied() const;
+
  protected:
   enum {
     POSITION = 1 << 0,
     ORIENTATION = 1 << 1,
     VELOCITY = 1 << 2,
     ANGULAR_SPEED = 1 << 3,
-    TARGET_POSITION = 1 << 4,
-    TARGET_ORIENTATION = 1 << 5,
-    TARGET_VELOCITY = 1 << 6,
-    TARGET_ANGULAR_SPEED = 1 << 7,
-    HORIZON = 1 << 8,
-    OPTIMAL_SPEED = 1 << 9,
-    SAFETY_MARGIN = 1 << 10,
-    RADIUS = 1 << 11
+    HORIZON = 1 << 4,
+    OPTIMAL_SPEED = 1 << 5,
+    SAFETY_MARGIN = 1 << 6,
+    RADIUS = 1 << 7,
+    TARGET = 1 << 8,
   };
 
   std::shared_ptr<Kinematics> kinematics;
@@ -831,23 +812,27 @@ class HL_NAVIGATION_EXPORT Behavior : virtual public HasProperties,
   Radians optimal_angular_speed;
   float rotation_tau;
   Heading heading_behavior;
-  Pose2 target_pose;
-  Twist2 target_twist;
+  bool assume_cmd_is_actuated;
+  // Last computed desired velocity in \ref Frame::absolute
   Vector2 desired_velocity;
+  Target target;
 
-  virtual Vector2 compute_desired_velocity([[maybe_unused]] float time_step) {
-    return Vector2::Zero();
-  }
+  virtual Vector2 desired_velocity_towards_point(const Vector2 &point,
+                                                 float speed, float time_step);
+  virtual Vector2 desired_velocity_towards_velocity(const Vector2 &velocity,
+                                                    float time_step);
   virtual Twist2 twist_towards_velocity(const Vector2 &absolute_velocity,
-                                        bool relative);
-  //   * Sub-classes may not override this method but the specialized methods
-  // * \ref cmd_twist_towards_target, \ref cmd_twist_towards_target_orientation,
-  // * and \ref cmd_cmd_twist_towards_stopping.
-  virtual Twist2 cmd_twist(float time_step, Mode mode, bool relative,
-                           bool set_as_actuated);
-  virtual Twist2 cmd_twist_towards_target(float dt, bool relative);
-  virtual Twist2 cmd_twist_towards_target_orientation(float dt, bool relative);
-  virtual Twist2 cmd_twist_towards_stopping(float dt, bool relative);
+                                        Frame frame);
+  virtual Twist2 cmd_twist_towards_point(const Vector2 &point, float speed,
+                                         float dt, Frame frame);
+  virtual Twist2 cmd_twist_towards_velocity(const Vector2 &velocity, float dt,
+                                            Frame frame);
+  virtual Twist2 cmd_twist_towards_orientation(Radians orientation,
+                                               float angular_speed, float dt,
+                                               Frame frame);
+  virtual Twist2 cmd_twist_towards_angular_speed(float angular_speed, float dt,
+                                                 Frame frame);
+  virtual Twist2 cmd_twist_towards_stopping(float dt, Frame frame);
 };
 
 }  // namespace hl_navigation

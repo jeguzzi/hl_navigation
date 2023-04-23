@@ -23,7 +23,7 @@ Example
 
 .. code-block:: yaml
 
-  type: TwoWheeled
+  type: 2WDiff
   max_speed: 1.5
   wheel_axis: 0.25 
 
