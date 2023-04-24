@@ -6,17 +6,17 @@
 #include <iterator>
 #include <vector>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/target.h"
-#include "hl_navigation/states/geometric.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/target.h"
+#include "hl_navigation_core/states/geometric.h"
 
 // Should also add the wheels
 
-using hl_navigation::Behavior;
-using hl_navigation::OmnidirectionalKinematics;
-using hl_navigation::Disc;
-using hl_navigation::GeometricState;
-using hl_navigation::Target;
+using hl_navigation::core::Behavior;
+using hl_navigation::core::OmnidirectionalKinematics;
+using hl_navigation::core::Disc;
+using hl_navigation::core::GeometricState;
+using hl_navigation::core::Target;
 
 static void show_usage(std::string name) {
   std::vector<std::string> keys = Behavior::types();

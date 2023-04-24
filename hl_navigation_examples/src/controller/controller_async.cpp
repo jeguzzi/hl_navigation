@@ -4,17 +4,17 @@
 
 #include <vector>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/behaviors/dummy.h"
-#include "hl_navigation/common.h"
-#include "hl_navigation/controller.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/behaviors/dummy.h"
+#include "hl_navigation_core/common.h"
+#include "hl_navigation_core/controller.h"
 
-using hl_navigation::Action;
-using hl_navigation::DummyBehavior;
-using hl_navigation::Controller;
-using hl_navigation::OmnidirectionalKinematics;
-using hl_navigation::Twist2;
-using hl_navigation::Vector2;
+using hl_navigation::core::Action;
+using hl_navigation::core::DummyBehavior;
+using hl_navigation::core::Controller;
+using hl_navigation::core::OmnidirectionalKinematics;
+using hl_navigation::core::Twist2;
+using hl_navigation::core::Vector2;
 
 void move(Controller *controller, Vector2 target) {
   printf("Next target (%.2f, %.2f)\n", target.x(), target.y());

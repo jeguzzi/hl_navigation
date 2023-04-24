@@ -2,12 +2,12 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#ifndef HL_NAVIGATION_EXAMPLES_MY_BEHAVIOR_H_
-#define HL_NAVIGATION_EXAMPLES_MY_BEHAVIOR_H_
+#ifndef HL_NAVIGATION_CORE_EXAMPLES_MY_BEHAVIOR_H_
+#define HL_NAVIGATION_CORE_EXAMPLES_MY_BEHAVIOR_H_
 
-#include "hl_navigation/behavior.h"
+#include "hl_navigation_core/behavior.h"
 
-namespace hl_navigation {
+namespace hl_navigation::core {
 
 /**
  * @brief      Idle behavior that always stay still.
@@ -34,6 +34,6 @@ class IdleBehavior : public Behavior {
   static inline const std::string type = register_type<IdleBehavior>("Idle");
 };
 
-}  // namespace hl_navigation
+}  // namespace hl_navigation::core
 
-#endif  // HL_NAVIGATION_EXAMPLES_MY_BEHAVIOR_H_
+#endif  // HL_NAVIGATION_CORE_EXAMPLES_MY_BEHAVIOR_H_

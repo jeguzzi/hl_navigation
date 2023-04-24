@@ -11,8 +11,8 @@
 #include "hl_navigation_sim/yaml/scenario.h"
 #include "yaml-cpp/yaml.h"
 
-namespace sim = hl_navigation_sim;
-using hl_navigation::Vector2;
+namespace sim = hl_navigation::sim;
+using hl_navigation::core::Vector2;
 
 int main() {
   sim::Scenario scenario;

@@ -2,27 +2,27 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#ifndef HL_NAVIGATION_DEMO_SCENARIO_H
-#define HL_NAVIGATION_DEMO_SCENARIO_H
+#ifndef HL_NAVIGATION_CORE_DEMO_SCENARIO_H
+#define HL_NAVIGATION_CORE_DEMO_SCENARIO_H
 
 #include <memory>
 #include <vector>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/kinematics.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/kinematics.h"
 #include "hl_navigation_sim/experiment.h"
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim/state_estimations/geometric_bounded.h"
 #include "hl_navigation_sim/tasks/waypoints.h"
 #include "hl_navigation_sim/world.h"
 
-using hl_navigation::Behavior;
-using hl_navigation::make_property;
-using hl_navigation::Properties;
-using hl_navigation::Property;
-using hl_navigation::TwoWheelsDifferentialDriveKinematics;
-using hl_navigation::Vector2;
-namespace sim = hl_navigation_sim;
+using hl_navigation::core::Behavior;
+using hl_navigation::core::make_property;
+using hl_navigation::core::Properties;
+using hl_navigation::core::Property;
+using hl_navigation::core::TwoWheelsDifferentialDriveKinematics;
+using hl_navigation::core::Vector2;
+namespace sim = hl_navigation::sim;
 
 struct ThymioDemo : public sim::Scenario {
   explicit ThymioDemo(const std::string &behavior_type = "HL")
@@ -66,4 +66,4 @@ struct ThymioDemo : public sim::Scenario {
   std::string behavior_type;
 };
 
-#endif  // HL_NAVIGATION_DEMO_SCENARIO_H
+#endif  // HL_NAVIGATION_CORE_DEMO_SCENARIO_H

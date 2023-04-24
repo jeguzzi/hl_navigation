@@ -7,17 +7,17 @@
 
 #include <memory>
 
-#include "hl_navigation/behaviors/dummy.h"
-#include "hl_navigation/kinematics.h"
+#include "hl_navigation_core/behaviors/dummy.h"
+#include "hl_navigation_core/kinematics.h"
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim/tasks/waypoints.h"
 #include "hl_navigation_sim/world.h"
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::DummyBehavior;
-using hl_navigation::OmnidirectionalKinematics;
+using hl_navigation::core::DummyBehavior;
+using hl_navigation::core::OmnidirectionalKinematics;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * @brief      Simple scenario that serves as an example.
@@ -45,6 +45,6 @@ struct HL_NAVIGATION_SIM_EXPORT SimpleScenario : public Scenario {
       register_type<SimpleScenario>("Simple");
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_SCENARIOS_SIMPLE_H */

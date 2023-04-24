@@ -20,7 +20,7 @@ Registering a C++ sub-class ``MyClass`` in the parent class ``T``  register, req
          void set_my_property(bool value) { _my_field = value; }
 
    #. expose the properties, overriding at the same time 
-      :cpp:func:`hl_navigation::HasProperties::get_properties`
+      :cpp:func:`hl_navigation::core::HasProperties::get_properties`
 
       .. code-block:: c++
 
@@ -31,14 +31,14 @@ Registering a C++ sub-class ``MyClass`` in the parent class ``T``  register, req
                                  False, "my property description")}};
 
 
-#. override :cpp:func:`hl_navigation::HasRegister::get_type`
+#. override :cpp:func:`hl_navigation::core::HasRegister::get_type`
 
    .. code-block:: c++
         
       std::string get_type() const override { return type; }
     
 
-#. call :cpp:func:`hl_navigation::HasRegister::register_type` 
+#. call :cpp:func:`hl_navigation::core::HasRegister::register_type` 
 
    .. code-block:: c++
 
@@ -99,7 +99,7 @@ Complete example
 .. code-block:: python
     :linenos:
 
-    from hl_navigation import registered_property
+    from hl_navigation.core import registered_property
     
     
     class MyClass(T, name="MyClass"):
@@ -150,17 +150,17 @@ to your ``setup.cfg``. The name ``my_behavior`` is currently ignored.
 
 
 
-Then, when importing ``hl_navigation``, the behavior will be automatically discovered
+Then, when importing ``hl_navigation.core``, the behavior will be automatically discovered
 
 .. code-block:: python
 
-   >>> import hl_navigation 
+   >>> from hl_navigation import core
 
-   >>> print(hl_navigation.Behavior.types)
+   >>> print(core.Behavior.types)
 
    [..., 'MyBehavior']
 
-   >>> behavior = hl_navigation.Behavior.make_type("MyBehavior")
+   >>> behavior = core.Behavior.make_type("MyBehavior")
    <my_packages>.<my_module>.MyBehavior object ...>
 
 

@@ -10,9 +10,9 @@
 #include "hl_navigation_sim/yaml/world.h"
 #include "yaml-cpp/yaml.h"
 
-using hl_navigation_sim::AgentSampler;
-using hl_navigation_sim::Scenario;
-using hl_navigation_sim::World;
+using hl_navigation::sim::AgentSampler;
+using hl_navigation::sim::Scenario;
+using hl_navigation::sim::World;
 
 namespace YAML {
 

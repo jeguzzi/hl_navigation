@@ -28,7 +28,7 @@ RUN mkdir -p /ws/src && cd /ws/src \
 
 RUN cd /ws \
     && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select  \
-        hl_navigation \
+        hl_navigation_core \
         hl_navigation_py \
         hl_navigation_sim \
         hl_navigation_examples \

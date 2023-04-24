@@ -3,23 +3,23 @@
 
 #include <memory>
 
-#include "hl_navigation/yaml/core.h"
-#include "hl_navigation/yaml/property.h"
-#include "hl_navigation/yaml/register.h"
+#include "hl_navigation_core/yaml/core.h"
+#include "hl_navigation_core/yaml/property.h"
+#include "hl_navigation_core/yaml/register.h"
 #include "hl_navigation_sim/world.h"
 #include "yaml-cpp/yaml.h"
 
-using hl_navigation::Behavior;
-using hl_navigation::Disc;
-using hl_navigation::Kinematics;
-using hl_navigation::LineSegment;
-using hl_navigation::Vector2;
-using hl_navigation_sim::Agent;
-using hl_navigation_sim::StateEstimation;
-using hl_navigation_sim::Task;
-using hl_navigation_sim::World;
-using hl_navigation_sim::Obstacle;
-using hl_navigation_sim::Wall;
+using hl_navigation::core::Behavior;
+using hl_navigation::core::Disc;
+using hl_navigation::core::Kinematics;
+using hl_navigation::core::LineSegment;
+using hl_navigation::core::Vector2;
+using hl_navigation::sim::Agent;
+using hl_navigation::sim::StateEstimation;
+using hl_navigation::sim::Task;
+using hl_navigation::sim::World;
+using hl_navigation::sim::Obstacle;
+using hl_navigation::sim::Wall;
 
 namespace YAML {
 

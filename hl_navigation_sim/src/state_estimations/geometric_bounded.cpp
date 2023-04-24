@@ -7,7 +7,7 @@
 #include "hl_navigation_sim/agent.h"
 #include "hl_navigation_sim/world.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 void BoundedStateEstimation::update(Agent *agent, World *world) const {
   if (GeometricState *state = get_geometric_state(agent)) {
@@ -66,4 +66,4 @@ BoundingBox BoundedStateEstimation::bounding_box(const Agent *agent) const {
 
 #endif
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

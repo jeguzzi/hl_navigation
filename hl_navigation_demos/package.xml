@@ -13,7 +13,7 @@
   <test_depend>python3-pytest</test_depend>
 
 
-  <depend>hl_navigation</depend>
+  <depend>hl_navigation_core</depend>
   <depend>hl_navigation_sim</depend>
   <exec_depend>hl_navigation_py</exec_depend>
   <!-- <exec_depend>hl_navigation_msgs</exec_depend> -->

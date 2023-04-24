@@ -13,11 +13,11 @@
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::make_property;
-using hl_navigation::Properties;
-using hl_navigation::Property;
+using hl_navigation::core::make_property;
+using hl_navigation::core::Properties;
+using hl_navigation::core::Property;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 struct HL_NAVIGATION_SIM_EXPORT CorridorScenario : public Scenario {
  public:
@@ -108,6 +108,6 @@ struct HL_NAVIGATION_SIM_EXPORT CorridorScenario : public Scenario {
       register_type<CorridorScenario>("Corridor");
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_SCENARIOS_CORRIDOR_H */

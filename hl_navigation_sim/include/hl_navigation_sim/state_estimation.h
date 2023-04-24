@@ -5,24 +5,24 @@
 #ifndef HL_NAVIGATION_SIM_STATE_ESTIMATION_H_
 #define HL_NAVIGATION_SIM_STATE_ESTIMATION_H_
 
-#include "hl_navigation/property.h"
-#include "hl_navigation/register.h"
+#include "hl_navigation_core/property.h"
+#include "hl_navigation_core/register.h"
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::HasProperties;
-using hl_navigation::HasRegister;
+using hl_navigation::core::HasProperties;
+using hl_navigation::core::HasRegister;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 class Agent;
 class World;
 
 /**
  * @brief      This class describe a generic state estimation that should update
- * the environment state used by the agent \ref hl_navigation::Behavior.
+ * the environment state used by the agent \ref hl_navigation::core::Behavior.
  *
  * As the environment state is specialized by sub-classes of \ref
- * hl_navigation::Behavior like \ref hl_navigation::GeometricState, concrete
+ * hl_navigation::core::Behavior like \ref hl_navigation::core::GeometricState, concrete
  * sub-classes have to target one or more of them.
  *
  * In particular, the agent should use a state estimation compatible with it's
@@ -46,7 +46,7 @@ struct HL_NAVIGATION_SIM_EXPORT StateEstimation
 
  protected:
   /**
-   * @brief      Updates the state of a given agent \ref hl_navigation::Behavior
+   * @brief      Updates the state of a given agent \ref hl_navigation::core::Behavior
    * @param      agent  The agent owning the state estimation
    * @param[in]  world    The that the agent is part of
    */
@@ -61,6 +61,6 @@ struct HL_NAVIGATION_SIM_EXPORT StateEstimation
   virtual void prepare(Agent *agent, World *world) const {};
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_STATE_ESTIMATION_H_ */

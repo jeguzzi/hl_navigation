@@ -10,7 +10,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(hl_navigation REQUIRED)
+find_package(hl_navigation_core REQUIRED)
 find_package(hl_navigation_sim REQUIRED)
 
 add_subdirectory(src/behavior)

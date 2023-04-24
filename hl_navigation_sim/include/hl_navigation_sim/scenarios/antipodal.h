@@ -12,11 +12,11 @@
 #include "hl_navigation_sim/world.h"
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::make_property;
-using hl_navigation::Properties;
-using hl_navigation::Property;
+using hl_navigation::core::make_property;
+using hl_navigation::core::Properties;
+using hl_navigation::core::Property;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * @brief      A scenario that place the agents around a circle at regular
@@ -181,6 +181,6 @@ struct HL_NAVIGATION_SIM_EXPORT AntipodalScenario : public Scenario {
       register_type<AntipodalScenario>("Antipodal");
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_SCENARIOS_ANTIPODAL_H */

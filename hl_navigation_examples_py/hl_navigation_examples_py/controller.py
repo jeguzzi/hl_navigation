@@ -1,12 +1,11 @@
 import argparse
 import sys
 
-import hl_navigation as nav
-import hl_navigation.kinematics
+from hl_navigation import core
 
 
-def done_cb(state: nav.Action.State) -> None:
-    print('Arrived' if state == nav.Action.State.success else 'Failed')
+def done_cb(state: core.Action.State) -> None:
+    print('Arrived' if state == core.Action.State.success else 'Failed')
 
 
 def running_cb(t: float) -> None:
@@ -19,17 +18,17 @@ def main(behavior_name: str = "HL") -> None:
     Args:
         behavior_name (str, optional): behavior name
     """
-    behavior = nav.Behavior.make_type(behavior_name)
+    behavior = core.Behavior.make_type(behavior_name)
     if not behavior:
         print(f'No behavior with name {behavior_name}')
         sys.exit(1)
     print(f'Use behavior {behavior_name}')
-    behavior.kinematics = nav.kinematics.TwoWheelsDifferentialDriveKinematics(1.0, 0.1)
+    behavior.kinematics = core.kinematics.TwoWheelsDifferentialDriveKinematics(1.0, 0.1)
     behavior.radius = 0.1
     dt = 0.1
     behavior.horizon = 1.0
     behavior.position = (0.0, 0.00)
-    controller = nav.Controller(behavior)
+    controller = core.Controller(behavior)
     controller.speed_tolerance = 0.05
     controller.set_cmd_cb(lambda cmd: behavior.actuate(cmd, dt))
     action = controller.go_to_position((0.0, 1.0), 0.2)

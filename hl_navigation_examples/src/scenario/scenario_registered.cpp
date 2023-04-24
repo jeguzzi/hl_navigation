@@ -14,7 +14,7 @@
 #include "yaml-cpp/yaml.h"
 
 static std::string s_type = "Simple";
-namespace sim = hl_navigation_sim;
+namespace sim = hl_navigation::sim;
 
 int main() {
   std::cout << "Selecting " << s_type << " from the registered scenarios ";
@@ -22,7 +22,7 @@ int main() {
     std::cout << " "<< type;
   }
   std::cout << std::endl;
-  auto scenario = hl_navigation_sim::Scenario::make_type(s_type);
+  auto scenario = hl_navigation::sim::Scenario::make_type(s_type);
   if (!scenario) {
     std::cerr << "Could not load scenario" << std::endl;
     return 1;

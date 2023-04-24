@@ -9,25 +9,25 @@
 #include <set>
 #include <utility>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/common.h"
-#include "hl_navigation/controller.h"
-#include "hl_navigation/states/geometric.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/common.h"
+#include "hl_navigation_core/controller.h"
+#include "hl_navigation_core/states/geometric.h"
 #include "hl_navigation_sim/entity.h"
 #include "hl_navigation_sim/state_estimation.h"
 #include "hl_navigation_sim/task.h"
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::Behavior;
-using hl_navigation::Controller;
-using hl_navigation::GeometricState;
-using hl_navigation::Kinematics;
-using hl_navigation::Neighbor;
-using hl_navigation::Pose2;
-using hl_navigation::Twist2;
-using hl_navigation::Vector2;
+using hl_navigation::core::Behavior;
+using hl_navigation::core::Controller;
+using hl_navigation::core::GeometricState;
+using hl_navigation::core::Kinematics;
+using hl_navigation::core::Neighbor;
+using hl_navigation::core::Pose2;
+using hl_navigation::core::Twist2;
+using hl_navigation::core::Vector2;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * @brief      This class describes an agent.
@@ -37,14 +37,14 @@ namespace hl_navigation_sim {
  * and a controller.
  *
  * Agents have a circular shape which should match the shape of their navigation
- * \ref hl_navigation::Behavior.
+ * \ref hl_navigation::core::Behavior.
  *
  * The role of task and state estimation is to provide goals and
  * environment state (perception) to the behavior.
  *
  * Agents have a public identifies \ref id that is accessible by the
  * other agents' state estimation and may be passed to their behavior as \ref
- * hl_navigation::Neighbor::id. This identifier may not be unique (e.g., may be
+ * hl_navigation::core::Neighbor::id. This identifier may not be unique (e.g., may be
  * used to identifies *groups* of agents).
  *
  * Agents runs their update at the rate set by \ref control_period even if
@@ -245,7 +245,7 @@ class HL_NAVIGATION_SIM_EXPORT Agent : public Entity {
    * @brief A set of tags used to label the agent.
    *
    * Tags are mainly used to add meta-information about an agent, for instance
-   * by the \ref hl_navigation_sim::Scenario::Group that generated it (if any),
+   * by the \ref hl_navigation::sim::Scenario::Group that generated it (if any),
    * to simplify analysis.
    */
   std::set<std::string> tags;
@@ -276,6 +276,6 @@ class HL_NAVIGATION_SIM_EXPORT Agent : public Entity {
   void actuate(float dt);
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_AGENT_H_ */

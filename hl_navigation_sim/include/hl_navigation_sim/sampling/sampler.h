@@ -9,13 +9,13 @@
 #include <type_traits>
 #include <vector>
 
-#include "hl_navigation/common.h"
-#include "hl_navigation/property.h"
+#include "hl_navigation_core/common.h"
+#include "hl_navigation_core/property.h"
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::Vector2;
+using hl_navigation::core::Vector2;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * @brief      The random generator shared by all samplers
@@ -502,13 +502,13 @@ struct is_one_of<T, std::variant<Ts...>>
     : std::bool_constant<(std::is_same_v<T, Ts> || ...)> {};
 
 template <class T>
-using allowed = is_one_of<T, hl_navigation::Property::Field>;
+using allowed = is_one_of<T, hl_navigation::core::Property::Field>;
 
 /**
  * @brief      This class wraps generic \ref Sampler<T> to generate
- * values of type \ref hl_navigation::Property::Field.
+ * values of type \ref hl_navigation::core::Property::Field.
  */
-struct PropertySampler : Sampler<hl_navigation::Property::Field> {
+struct PropertySampler : Sampler<hl_navigation::core::Property::Field> {
   template <typename T>
   using US = std::unique_ptr<Sampler<T>>;
 
@@ -527,7 +527,7 @@ struct PropertySampler : Sampler<hl_navigation::Property::Field> {
    * @param[in]  value     A sampler
    *
    * @tparam     T     Needs to be one of the type of \ref
-   * hl_navigation::Property::Field
+   * hl_navigation::core::Property::Field
    *
    */
   template <typename T, typename = std::enable_if_t<allowed<T>::value>>
@@ -540,7 +540,7 @@ struct PropertySampler : Sampler<hl_navigation::Property::Field> {
    * @param      value     A sampler
    *
    * @tparam     S     Needs to be one a subclass of Sampler<T>,
-   * with T as one of the types of \ref hl_navigation::Property::Field
+   * with T as one of the types of \ref hl_navigation::core::Property::Field
    */
   template <typename S, typename = std::enable_if_t<allowed<ST<S>>::value>>
   PropertySampler(S&& value)
@@ -553,7 +553,7 @@ struct PropertySampler : Sampler<hl_navigation::Property::Field> {
    * @param[in]  args   The arguments of the constructor of ``S``
    *
    * @tparam     S      Needs to be one a subclass of Sampler<T>,
-   * with T as one of the types of \ref hl_navigation::Property::Field
+   * with T as one of the types of \ref hl_navigation::core::Property::Field
    * @tparam     Targs  The type of the arguments of the constructor of ``S``
    */
   template <typename S, typename... Targs,
@@ -592,15 +592,15 @@ struct PropertySampler : Sampler<hl_navigation::Property::Field> {
   }
 
  protected:
-  hl_navigation::Property::Field s() override {
+  hl_navigation::core::Property::Field s() override {
     return std::visit(
-        [](auto&& arg) -> hl_navigation::Property::Field {
+        [](auto&& arg) -> hl_navigation::core::Property::Field {
           return arg->sample();
         },
         sampler);
   }
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif  // HL_NAVIGATION_SIM_SAMPLING_SAMPLER_H

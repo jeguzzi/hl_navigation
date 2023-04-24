@@ -10,10 +10,10 @@
 #include <tuple>
 #include <vector>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/states/geometric.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/states/geometric.h"
 
-using namespace hl_navigation;
+using namespace hl_navigation::core;
 
 static void show_usage(const std::string &name) {
   std::vector<std::string> keys = Behavior::types();

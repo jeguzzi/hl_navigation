@@ -1,14 +1,14 @@
 add_executable(behavior behavior.cpp)
-ament_target_dependencies(behavior hl_navigation)
+ament_target_dependencies(behavior hl_navigation_core)
 
 add_executable(behavior_yaml echo_yaml.cpp)
-ament_target_dependencies(behavior_yaml hl_navigation)
+ament_target_dependencies(behavior_yaml hl_navigation_core)
 
 add_executable(behavior_benchmark benchmark.cpp)
-ament_target_dependencies(behavior_benchmark hl_navigation)
+ament_target_dependencies(behavior_benchmark hl_navigation_core)
 
 add_library(my_behavior SHARED my_behavior.h)
-ament_target_dependencies(my_behavior hl_navigation)
+ament_target_dependencies(my_behavior hl_navigation_core)
 ament_export_targets(my_behaviorTargets HAS_LIBRARY_TARGET)
 ament_export_dependencies(my_behavior)
 

@@ -5,10 +5,10 @@
 #include <iostream>
 #include <vector>
 
-#include "hl_navigation/plugins.h"
-#include "hl_navigation/property.h"
-#include "hl_navigation/utilities.h"
-#include "hl_navigation/behavior.h"
+#include "hl_navigation_core/plugins.h"
+#include "hl_navigation_core/property.h"
+#include "hl_navigation_core/utilities.h"
+#include "hl_navigation_core/behavior.h"
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim/scenarios/antipodal.h"
 #include "hl_navigation_sim/scenarios/simple.h"
@@ -83,19 +83,19 @@ int main(int argc, char* argv[]) {
       return 0;
     }
   }
-  // print_register<hl_navigation::Behavior>("Behaviors", "");
+  // print_register<hl_navigation::core::Behavior>("Behaviors", "");
 
   if (state_estimations) {
-    print_register<hl_navigation_sim::StateEstimation>("State Estimations",
+    print_register<hl_navigation::sim::StateEstimation>("State Estimations",
                                                        state_estimation_type);
     std::cout << std::endl;
   }
   if (tasks) {
-    print_register<hl_navigation_sim::Task>("Tasks", task_type);
+    print_register<hl_navigation::sim::Task>("Tasks", task_type);
     std::cout << std::endl;
   }
   if (scenarios) {
-    print_register<hl_navigation_sim::Scenario>("Scenarios", scenario_type);
+    print_register<hl_navigation::sim::Scenario>("Scenarios", scenario_type);
   }
   return 0;
 }

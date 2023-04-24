@@ -6,7 +6,7 @@
 
 #include "hl_navigation_sim/sampling/sampler.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 void World::set_seed(unsigned seed) { set_random_seed(seed); }
 
@@ -536,4 +536,4 @@ void World::wrap_agents_on_lattice() {
   }
 }
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

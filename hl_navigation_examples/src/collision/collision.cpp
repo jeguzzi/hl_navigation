@@ -6,11 +6,11 @@
 #include <iterator>
 #include <vector>
 
-#include "hl_navigation/collision_computation.h"
+#include "hl_navigation_core/collision_computation.h"
 
-using hl_navigation::CollisionComputation;
-using hl_navigation::Disc;
-using hl_navigation::LineSegment;
+using hl_navigation::core::CollisionComputation;
+using hl_navigation::core::Disc;
+using hl_navigation::core::LineSegment;
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
   CollisionComputation f;

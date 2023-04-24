@@ -20,13 +20,13 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "geometry_msgs/msg/vector3_stamped.hpp"
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/behaviors/HL.h"
-#include "hl_navigation/behaviors/HRVO.h"
-#include "hl_navigation/behaviors/ORCA.h"
-#include "hl_navigation/controller.h"
-#include "hl_navigation/controller_3d.h"
-#include "hl_navigation/property.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/behaviors/HL.h"
+#include "hl_navigation_core/behaviors/HRVO.h"
+#include "hl_navigation_core/behaviors/ORCA.h"
+#include "hl_navigation_core/controller.h"
+#include "hl_navigation_core/controller_3d.h"
+#include "hl_navigation_core/property.h"
 #include "hl_navigation_msgs/action/go_to_target.hpp"
 #include "hl_navigation_msgs/msg/neighbors.hpp"
 #include "hl_navigation_msgs/msg/obstacles.hpp"
@@ -46,7 +46,7 @@ using std::placeholders::_2;
 using GoToTarget = hl_navigation_msgs::action::GoToTarget;
 using GoalHandleGoToTarget = rclcpp_action::ServerGoalHandle<GoToTarget>;
 
-namespace hl_navigation {
+namespace hl_navigation::core {
 
 template <typename T>
 struct is_ros_param_type : std::false_type {};
@@ -768,11 +768,11 @@ class ROSControllerNode : public rclcpp::Node {
   }
 };
 
-}  // namespace hl_navigation
+}  // namespace hl_navigation_core
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<hl_navigation::ROSControllerNode>();
+  auto node = std::make_shared<hl_navigation::core::ROSControllerNode>();
   rclcpp::spin(node);
   RCLCPP_INFO(rclcpp::get_logger("hl_navigation"), "Shutting down");
   rclcpp::shutdown();

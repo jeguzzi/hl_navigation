@@ -15,7 +15,7 @@
 
 #include "hl_navigation_sim_export.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 struct Experiment;
 
@@ -270,6 +270,6 @@ struct HL_NAVIGATION_SIM_EXPORT Experiment {
   std::shared_ptr<HighFive::Group> run_group;
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_EXPERIMENT_H_ */

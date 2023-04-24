@@ -6,14 +6,14 @@
 #include <iterator>
 #include <vector>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/controller.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/controller.h"
 
-using hl_navigation::Action;
-using hl_navigation::Behavior;
-using hl_navigation::Controller;
-using hl_navigation::TwoWheelsDifferentialDriveKinematics;
-using hl_navigation::Twist2;
+using hl_navigation::core::Action;
+using hl_navigation::core::Behavior;
+using hl_navigation::core::Controller;
+using hl_navigation::core::TwoWheelsDifferentialDriveKinematics;
+using hl_navigation::core::Twist2;
 
 static void show_usage(const std::string & name) {
   std::vector<std::string> keys = Behavior::types();

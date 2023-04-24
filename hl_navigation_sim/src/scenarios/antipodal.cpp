@@ -6,7 +6,7 @@
 #include "hl_navigation_sim/sampling/sampler.h"
 
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 void AntipodalScenario::init_world(World *world) {
   Scenario::init_world(world);
@@ -35,4 +35,4 @@ void AntipodalScenario::init_world(World *world) {
   }
 }
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

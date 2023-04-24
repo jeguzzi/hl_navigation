@@ -4,10 +4,10 @@
 
 #include "hl_navigation_sim/tasks/waypoints.h"
 
-#include "hl_navigation/states/geometric.h"
+#include "hl_navigation_core/states/geometric.h"
 #include "hl_navigation_sim/agent.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 void WaypointsTask::update(Agent *agent, [[maybe_unused]] World * world, float time) {
   auto c = agent->get_controller();
@@ -33,4 +33,4 @@ void WaypointsTask::update(Agent *agent, [[maybe_unused]] World * world, float t
 
 bool WaypointsTask::done() const { return waypoint == waypoints.end(); }
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

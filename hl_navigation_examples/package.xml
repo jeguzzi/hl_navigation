@@ -12,7 +12,7 @@
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
-  <depend>hl_navigation</depend>
+  <depend>hl_navigation_core</depend>
   <depend>hl_navigation_sim</depend>
 
   <export>

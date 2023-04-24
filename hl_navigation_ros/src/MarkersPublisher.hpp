@@ -11,18 +11,18 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include "hl_navigation/common.h"
-#include "hl_navigation/controller_3d.h"
+#include "hl_navigation_core/common.h"
+#include "hl_navigation_core/controller_3d.h"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
-using hl_navigation::Cylinder;
-using hl_navigation::Neighbor3;
-using hl_navigation::orientation_of;
-using hl_navigation::Pose3;
-using hl_navigation::unit3;
-using hl_navigation::Vector2;
-using hl_navigation::Vector3;
+using hl_navigation::core::Cylinder;
+using hl_navigation::core::Neighbor3;
+using hl_navigation::core::orientation_of;
+using hl_navigation::core::Pose3;
+using hl_navigation::core::unit3;
+using hl_navigation::core::Vector2;
+using hl_navigation::core::Vector3;
 
 inline geometry_msgs::msg::Point to_msg(const Vector3 &point) {
   geometry_msgs::msg::Point p;

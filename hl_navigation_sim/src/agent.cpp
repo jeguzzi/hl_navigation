@@ -4,7 +4,7 @@
 
 #include "hl_navigation_sim/agent.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 void Agent::update(float dt, float time, World * world) {
   control_deadline -= dt;
@@ -44,4 +44,4 @@ bool Agent::idle() const {
   return (!task || task->done()) && controller.idle();
 }
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

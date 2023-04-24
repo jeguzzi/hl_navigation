@@ -6,16 +6,16 @@
 
 #include <iostream>
 
-#include "hl_navigation/behaviors/dummy.h"
-#include "hl_navigation/kinematics.h"
-#include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_core/behaviors/dummy.h"
+#include "hl_navigation_core/kinematics.h"
+#include "hl_navigation_core/yaml/yaml.h"
 #include "hl_navigation_sim/yaml/world.h"
 #include "hl_navigation_sim/tasks/waypoints.h"
 
-using hl_navigation::DummyBehavior;
-using hl_navigation::OmnidirectionalKinematics;
-using hl_navigation::Vector2;
-namespace sim = hl_navigation_sim;
+using hl_navigation::core::DummyBehavior;
+using hl_navigation::core::OmnidirectionalKinematics;
+using hl_navigation::core::Vector2;
+namespace sim = hl_navigation::sim;
 
 int main() {
   sim::World world;

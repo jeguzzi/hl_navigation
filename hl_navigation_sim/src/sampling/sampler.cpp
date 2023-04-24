@@ -1,6 +1,6 @@
 #include "hl_navigation_sim/sampling/sampler.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 static unsigned _seed = 0;
 static std::default_random_engine _generator(_seed);
@@ -20,4 +20,4 @@ unsigned get_random_seed() {
   return _seed;
 }
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

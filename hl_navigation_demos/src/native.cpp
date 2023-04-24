@@ -9,20 +9,20 @@
 #include <tuple>
 #include <vector>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/controller.h"
-#include "hl_navigation/states/geometric.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/controller.h"
+#include "hl_navigation_core/states/geometric.h"
 
-using hl_navigation::Action;
-using hl_navigation::Behavior;
-using hl_navigation::Controller;
-using hl_navigation::Disc;
-using hl_navigation::GeometricState;
-using hl_navigation::Neighbor;
-using hl_navigation::Twist2;
-using hl_navigation::TwoWheelsDifferentialDriveKinematics;
-using hl_navigation::Vector2;
-using hl_navigation::Frame;
+using hl_navigation::core::Action;
+using hl_navigation::core::Behavior;
+using hl_navigation::core::Controller;
+using hl_navigation::core::Disc;
+using hl_navigation::core::GeometricState;
+using hl_navigation::core::Neighbor;
+using hl_navigation::core::Twist2;
+using hl_navigation::core::TwoWheelsDifferentialDriveKinematics;
+using hl_navigation::core::Vector2;
+using hl_navigation::core::Frame;
 
 
 static void show_usage(std::string name) {

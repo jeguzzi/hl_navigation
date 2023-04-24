@@ -4,8 +4,8 @@
 
 #include <iostream>
 
-#include "hl_navigation/plugins.h"
-#include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_core/plugins.h"
+#include "hl_navigation_core/yaml/yaml.h"
 #include "hl_navigation_sim/experiment.h"
 #include "hl_navigation_sim/scenarios/simple.h"
 #include "hl_navigation_sim/scenarios/antipodal.h"
@@ -19,8 +19,8 @@ static void show_usage(std::string name) {
             << "  <YAML>\t\t\tInline YAML string" << std::endl;
 }
 
-using namespace hl_navigation;
-using namespace hl_navigation_sim;
+using namespace hl_navigation::core;
+using namespace hl_navigation::sim;
 
 int main(int argc, char *argv[]) {
   load_plugins();

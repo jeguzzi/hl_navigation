@@ -7,7 +7,7 @@
 
 #include "hl_navigation_sim_export.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * @brief      Super-class that adds a unique ID to world entities.
@@ -38,6 +38,6 @@ struct HL_NAVIGATION_SIM_EXPORT Entity {
   static inline unsigned _uid = 0;
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_ENTITY_H_ */

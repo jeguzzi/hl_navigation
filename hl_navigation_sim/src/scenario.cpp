@@ -4,7 +4,7 @@
 
 #include "hl_navigation_sim/scenario.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 void Scenario::init_world(World* world) {
   for (auto& group : groups) {
@@ -20,4 +20,4 @@ void Scenario::init_world(World* world) {
   }
 }
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

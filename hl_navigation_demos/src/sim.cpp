@@ -9,8 +9,8 @@
 #include "hl_navigation_sim/world.h"
 #include "scenario.h"
 
-using hl_navigation_sim::Experiment;
-using hl_navigation_sim::World;
+using hl_navigation::sim::Experiment;
+using hl_navigation::sim::World;
 
 static void show_usage(std::string name) {
   std::cout << "Usage: " << name << " <option(s)>" << std::endl

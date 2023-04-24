@@ -16,7 +16,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(hl_navigation REQUIRED)
+find_package(hl_navigation_core REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
@@ -42,7 +42,7 @@ endif()
 add_executable(controller src/ROSControllerNode.cpp)
 ament_target_dependencies(controller
   rclcpp tf2 tf2_ros tf2_geometry_msgs std_msgs visualization_msgs
-  nav_msgs geometry_msgs hl_navigation_msgs hl_navigation)
+  nav_msgs geometry_msgs hl_navigation_msgs hl_navigation_core)
 
 install(TARGETS
   controller

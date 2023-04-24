@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_core/yaml/yaml.h"
 #include "hl_navigation_sim/yaml/world.h"
 #include "yaml-cpp/yaml.h"
 
@@ -28,7 +28,7 @@ agents:
     control_period: 0.1
 )YAML";
 
-namespace sim = hl_navigation_sim;
+namespace sim = hl_navigation::sim;
 
 int main() {
   YAML::Node node;

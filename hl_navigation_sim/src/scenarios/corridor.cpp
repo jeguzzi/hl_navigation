@@ -9,13 +9,13 @@
 #include <tuple>
 #include <vector>
 
-#include "hl_navigation/common.h"
-#include "hl_navigation/property.h"
+#include "hl_navigation_core/common.h"
+#include "hl_navigation_core/property.h"
 #include "hl_navigation_sim/sampling/sampler.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
-using namespace hl_navigation;
+using namespace hl_navigation::core;
 
 void CorridorScenario::init_world(World *world) {
   Scenario::init_world(world);
@@ -67,4 +67,4 @@ const std::map<std::string, Property> CorridorScenario::properties = Properties{
 const std::string CorridorScenario::type =
     register_type<CorridorScenario>("Corridor");
 #endif
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

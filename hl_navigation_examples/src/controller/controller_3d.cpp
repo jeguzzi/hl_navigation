@@ -6,16 +6,16 @@
 #include <iterator>
 #include <vector>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/controller_3d.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/controller_3d.h"
 
-using hl_navigation::Action;
-using hl_navigation::Behavior;
-using hl_navigation::Controller3;
-using hl_navigation::OmnidirectionalKinematics;
-using hl_navigation::Pose3;
-using hl_navigation::Twist3;
-using hl_navigation::Vector3;
+using hl_navigation::core::Action;
+using hl_navigation::core::Behavior;
+using hl_navigation::core::Controller3;
+using hl_navigation::core::OmnidirectionalKinematics;
+using hl_navigation::core::Pose3;
+using hl_navigation::core::Twist3;
+using hl_navigation::core::Vector3;
 
 static void show_usage(std::string name) {
   std::vector<std::string> keys = Behavior::types();

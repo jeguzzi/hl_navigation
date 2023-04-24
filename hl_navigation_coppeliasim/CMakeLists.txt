@@ -28,7 +28,7 @@ list(APPEND CMAKE_MODULE_PATH
 )
 
 find_package(CoppeliaSim 4 REQUIRED)
-find_package(hl_navigation REQUIRED)
+find_package(hl_navigation_core REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/generated)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external)
@@ -39,4 +39,4 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINAR
 
 coppeliasim_add_plugin(simExtHLNavigation SOURCES src/plugin.cpp)
 
-target_link_libraries(simExtHLNavigation hl_navigation::hl_navigation)
+target_link_libraries(simExtHLNavigation hl_navigation_core::hl_navigation_core)

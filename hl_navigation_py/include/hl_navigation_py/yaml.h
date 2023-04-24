@@ -1,5 +1,5 @@
-#ifndef HL_NAVIGATION_PY_YAML_H
-#define HL_NAVIGATION_PY_YAML_H
+#ifndef HL_NAVIGATION_CORE_PY_YAML_H
+#define HL_NAVIGATION_CORE_PY_YAML_H
 
 #include <pybind11/pybind11.h>
 
@@ -40,4 +40,4 @@ py::object load_string_py(const std::string &value) {
 
 }  // namespace YAML
 
-#endif  // HL_NAVIGATION_PY_YAML_H
+#endif  // HL_NAVIGATION_CORE_PY_YAML_H

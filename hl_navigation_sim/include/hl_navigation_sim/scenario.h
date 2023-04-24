@@ -8,19 +8,19 @@
 #include <functional>
 #include <vector>
 
-#include "hl_navigation/property.h"
-#include "hl_navigation/register.h"
-#include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_core/property.h"
+#include "hl_navigation_core/register.h"
+#include "hl_navigation_core/yaml/yaml.h"
 #include "hl_navigation_sim/world.h"
 
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::Disc;
-using hl_navigation::HasProperties;
-using hl_navigation::HasRegister;
-using hl_navigation::LineSegment;
+using hl_navigation::core::Disc;
+using hl_navigation::core::HasProperties;
+using hl_navigation::core::HasRegister;
+using hl_navigation::core::LineSegment;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * @brief      A scenario describes a distribution of \ref World
@@ -107,6 +107,6 @@ struct HL_NAVIGATION_SIM_EXPORT Scenario : virtual public HasProperties,
   Inits initializers;
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif  // HL_NAVIGATION_SIM_SCENARIO_H

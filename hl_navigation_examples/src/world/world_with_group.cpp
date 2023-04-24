@@ -5,13 +5,13 @@
 #include <iostream>
 
 #include "../groups.h"
-#include "hl_navigation/behaviors/dummy.h"
+#include "hl_navigation_core/behaviors/dummy.h"
 #include "hl_navigation_sim/world.h"
 #include "hl_navigation_sim/yaml/world.h"
 
-using hl_navigation::Vector2;
+using hl_navigation::core::Vector2;
 
-namespace sim = hl_navigation_sim;
+namespace sim = hl_navigation::sim;
 
 int main() {
   sim::World world;

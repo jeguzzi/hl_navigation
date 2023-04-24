@@ -12,7 +12,7 @@
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim/world.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * @brief      Implement an agent sample.
@@ -115,6 +115,6 @@ struct AgentSampler : public Sampler<typename W::A::C>,
   }
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif  // HL_NAVIGATION_SIM_SAMPLER_H

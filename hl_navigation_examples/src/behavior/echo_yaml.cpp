@@ -6,11 +6,11 @@
 #include <memory>
 #include <iomanip>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/yaml/yaml.h"
-#include "hl_navigation/yaml/core.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/yaml/yaml.h"
+#include "hl_navigation_core/yaml/core.h"
 
-using hl_navigation::Behavior;
+using hl_navigation::core::Behavior;
 
 static void show_usage(const std::string &name) {
   std::cout << "Usage: " << name << " yaml_string" << std::endl;

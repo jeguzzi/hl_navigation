@@ -1,15 +1,15 @@
 import argparse
 import time
 
-import hl_navigation
+from hl_navigation import core
 import numpy as np
 
 
-def go_to(controller: hl_navigation.Controller, target: np.ndarray) -> None:
+def go_to(controller: core.Controller, target: np.ndarray) -> None:
     action = controller.go_to_position(target, 0.2)
 
     def done_cb(state):
-        if state == hl_navigation.Action.State.success:
+        if state == core.Action.State.success:
             go_to(controller, -target)
     action.done_cb = done_cb
 
@@ -19,10 +19,10 @@ def run(behavior_name: str = "HL") -> None:
     controllers = []
     agents = []
     target = np.array((1.0, 0.0))
-    obstacles = [hl_navigation.Disc((0.0, 0.0), 0.1)]
+    obstacles = [core.Disc((0.0, 0.0), 0.1)]
     for p in ((0.5, 0.0), (-0.5, 0.5)):
-        behavior = hl_navigation.Behavior.make_type(behavior_name)
-        behavior.kinematics = hl_navigation.kinematics.TwoWheelsDifferentialDriveKinematics(0.166, 0.094)
+        behavior = core.Behavior.make_type(behavior_name)
+        behavior.kinematics = core.kinematics.TwoWheelsDifferentialDriveKinematics(0.166, 0.094)
         behavior.radius = 0.08
         behavior.horizon = 1.0
         behavior.safety_margin = 0.02
@@ -31,7 +31,7 @@ def run(behavior_name: str = "HL") -> None:
             behavior.environment_state.static_obstacles = obstacles
         except AttributeError:
             pass
-        controller = hl_navigation.Controller(behavior)
+        controller = core.Controller(behavior)
         controller.speed_tolerance = 0.01
         behavior.position = p
         controllers.append(controller)
@@ -44,7 +44,7 @@ def run(behavior_name: str = "HL") -> None:
             this = controller.behavior
             try:
                 controller.behavior.environment_state.neighbors = [
-                    hl_navigation.Neighbor(
+                    core.Neighbor(
                             agent.position, agent.radius, agent.velocity, 0)
                     for agent in agents if agent != this]
             except AttributeError:

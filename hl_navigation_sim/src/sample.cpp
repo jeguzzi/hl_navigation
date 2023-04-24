@@ -4,8 +4,8 @@
 
 #include <iostream>
 
-#include "hl_navigation/plugins.h"
-#include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_core/plugins.h"
+#include "hl_navigation_core/yaml/yaml.h"
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim/scenarios/antipodal.h"
 #include "hl_navigation_sim/scenarios/simple.h"
@@ -50,14 +50,14 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  auto scenario = YAML::load_node<hl_navigation_sim::Scenario>(node);
-  std::cout << YAML::dump<hl_navigation_sim::Scenario>(scenario.get());
+  auto scenario = YAML::load_node<hl_navigation::sim::Scenario>(node);
+  std::cout << YAML::dump<hl_navigation::sim::Scenario>(scenario.get());
   std::cout << std::endl;
   std::cout << "====================" << std::endl;
   if (!scenario) return 1;
   World world;
   scenario->init_world(&world);
-  std::cout << YAML::dump<hl_navigation_sim::World>(&world);
+  std::cout << YAML::dump<hl_navigation::sim::World>(&world);
   std::cout << std::endl;
   return 0;
 }

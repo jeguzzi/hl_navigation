@@ -4,14 +4,14 @@
 #include <iostream>
 #include <memory>
 
-#include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_core/yaml/yaml.h"
 #include "hl_navigation_sim/experiment.h"
 #include "hl_navigation_sim/scenario.h"
 #include "hl_navigation_sim/yaml/scenario.h"
 #include "yaml-cpp/yaml.h"
 
-using hl_navigation_sim::Experiment;
-using hl_navigation_sim::Scenario;
+using hl_navigation::sim::Experiment;
+using hl_navigation::sim::Scenario;
 
 namespace YAML {
 

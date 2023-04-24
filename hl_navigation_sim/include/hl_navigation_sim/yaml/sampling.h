@@ -4,36 +4,36 @@
 #include <iostream>
 #include <memory>
 
-#include "hl_navigation/yaml/property.h"
+#include "hl_navigation_core/yaml/property.h"
 #include "hl_navigation_sim/sampling/agent.h"
 #include "hl_navigation_sim/sampling/register.h"
 #include "hl_navigation_sim/sampling/sampler.h"
 #include "hl_navigation_sim/yaml/world.h"
 #include "yaml-cpp/yaml.h"
 
-using hl_navigation::Property;
-using hl_navigation_sim::AgentSampler;
-using hl_navigation_sim::BehaviorSampler;
-using hl_navigation_sim::ChoiceSampler;
-using hl_navigation_sim::ConstantSampler;
-using hl_navigation_sim::GridSampler;
-using hl_navigation_sim::is_algebra;
-using hl_navigation_sim::is_number;
-using hl_navigation_sim::KinematicsSampler;
-using hl_navigation_sim::NormalSampler;
-using hl_navigation_sim::PropertySampler;
-using hl_navigation_sim::RegularSampler;
-using hl_navigation_sim::Sampler;
-using hl_navigation_sim::SamplerFromRegister;
-using hl_navigation_sim::SequenceSampler;
-using hl_navigation_sim::StateEstimationSampler;
-using hl_navigation_sim::TaskSampler;
-using hl_navigation_sim::uniform_distribution;
-using hl_navigation_sim::UniformSampler;
-using hl_navigation_sim::World;
-using hl_navigation_sim::Wrap;
-using hl_navigation_sim::wrap_from_string;
-using hl_navigation_sim::wrap_to_string;
+using hl_navigation::core::Property;
+using hl_navigation::sim::AgentSampler;
+using hl_navigation::sim::BehaviorSampler;
+using hl_navigation::sim::ChoiceSampler;
+using hl_navigation::sim::ConstantSampler;
+using hl_navigation::sim::GridSampler;
+using hl_navigation::sim::is_algebra;
+using hl_navigation::sim::is_number;
+using hl_navigation::sim::KinematicsSampler;
+using hl_navigation::sim::NormalSampler;
+using hl_navigation::sim::PropertySampler;
+using hl_navigation::sim::RegularSampler;
+using hl_navigation::sim::Sampler;
+using hl_navigation::sim::SamplerFromRegister;
+using hl_navigation::sim::SequenceSampler;
+using hl_navigation::sim::StateEstimationSampler;
+using hl_navigation::sim::TaskSampler;
+using hl_navigation::sim::uniform_distribution;
+using hl_navigation::sim::UniformSampler;
+using hl_navigation::sim::World;
+using hl_navigation::sim::Wrap;
+using hl_navigation::sim::wrap_from_string;
+using hl_navigation::sim::wrap_to_string;
 
 namespace YAML {
 

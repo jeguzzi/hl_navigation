@@ -7,30 +7,30 @@
 
 #include <vector>
 
-#include "hl_navigation/common.h"
+#include "hl_navigation_core/common.h"
 #include "hl_navigation_sim/task.h"
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::Properties;
-using hl_navigation::Property;
-using hl_navigation::make_property;
-using hl_navigation::Vector2;
+using hl_navigation::core::Properties;
+using hl_navigation::core::Property;
+using hl_navigation::core::make_property;
+using hl_navigation::core::Vector2;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * A sequence of points to reach.
  */
-using Waypoints = std::vector<hl_navigation::Vector2>;
+using Waypoints = std::vector<hl_navigation::core::Vector2>;
 
 /**
  * @brief      This class implement a task that makes the agent reach a sequence
- * of waypoints, calling \ref hl_navigation::Controller::go_to_position for the
+ * of waypoints, calling \ref hl_navigation::core::Controller::go_to_position for the
  * next waypoint after the current has been reached within a tolerance.
  * 
  * The task notifies when a new waypoint is set by calling a callback.
  * 
- * *Properties*: waypoints (list of \ref hl_navigation::Vector2), loop (bool), tolerance (float)
+ * *Properties*: waypoints (list of \ref hl_navigation::core::Vector2), loop (bool), tolerance (float)
  */
 struct HL_NAVIGATION_SIM_EXPORT WaypointsTask : Task {
   /**
@@ -159,6 +159,6 @@ struct HL_NAVIGATION_SIM_EXPORT WaypointsTask : Task {
       register_type<WaypointsTask>("Waypoints");
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_TASKS_WAYPOINTS_H_ */

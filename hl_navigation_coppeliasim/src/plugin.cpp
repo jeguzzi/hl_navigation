@@ -5,19 +5,19 @@
 #include <vector>
 
 #include "config.h"
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/common.h"
-#include "hl_navigation/controller_3d.h"
-#include "hl_navigation/kinematics.h"
-#include "hl_navigation/property.h"
-#include "hl_navigation/states/geometric.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/common.h"
+#include "hl_navigation_core/controller_3d.h"
+#include "hl_navigation_core/kinematics.h"
+#include "hl_navigation_core/property.h"
+#include "hl_navigation_core/states/geometric.h"
 #include "simPlusPlus/Handle.h"
 #include "simPlusPlus/Plugin.h"
 #include "stubs.h"
 
-using namespace hl_navigation;
+using namespace hl_navigation::core;
 
-static std::shared_ptr<hl_navigation::Kinematics> make_kinematics(
+static std::shared_ptr<hl_navigation::core::Kinematics> make_kinematics(
     const kinematics_t &k) {
   auto kinematics = Kinematics::make_type(k.type);
   if (!kinematics) {

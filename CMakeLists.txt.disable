@@ -1,0 +1,29 @@
+cmake_minimum_required(VERSION 3.5)
+project(hl_navigation_all)
+
+# Default to C99
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
+endif()
+
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# set(CMAKE_BUILD_TYPE Release)
+# set(CMAKE_CXX_FLAGS_RELEASE "-Os")
+# set(CMAKE_C_FLAGS_RELEASE "-Os")
+
+# set(CMAKE_CXX_cmCLANG_TIDY "/usr/local/opt/llvm/bin/clang-tidy;-checks=*")
+
+add_subdirectory(hl_navigation)
+add_subdirectory(hl_navigation_py)
+add_subdirectory(hl_navigation_sim)
+add_subdirectory(hl_navigation_ros)
+add_subdirectory(hl_navigation_coppeliasim)
+add_subdirectory(hl_navigation_demos)

@@ -9,16 +9,16 @@
 #include <memory>
 #include <random>
 
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/kinematics.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/kinematics.h"
 #include "hl_navigation_sim/sampling/sampler.h"
 #include "hl_navigation_sim/world.h"
-#include "hl_navigation/behaviors/HL.h"
+#include "hl_navigation_core/behaviors/HL.h"
 
-using hl_navigation::Behavior;
-using hl_navigation::Kinematics;
+using hl_navigation::core::Behavior;
+using hl_navigation::core::Kinematics;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 template <typename T, typename C>
 struct get {
@@ -98,12 +98,12 @@ struct SamplerFromRegister : public Sampler<typename T::C> {
 
 
 /**
- * @brief      Samples \ref hl_navigation::Behavior
+ * @brief      Samples \ref hl_navigation::core::Behavior
  *
  * @tparam     T     The type of the behavior root class.
  * Used to generalize from C++ to Python.
  *
- * Defines the same fields as \ref hl_navigation::Behavior
+ * Defines the same fields as \ref hl_navigation::core::Behavior
  * but as sampler of the respective type.
  */
 template <typename T = Behavior>
@@ -171,12 +171,12 @@ struct BehaviorSampler : public SamplerFromRegister<T> {
 };
 
 /**
- * @brief      Samples \ref hl_navigation::Kinematics
+ * @brief      Samples \ref hl_navigation::core::Kinematics
  *
  * @tparam     T     The type of the behavior root class.
  * Used to generalize from C++ to Python.
  *
- * Defines the same fields as \ref hl_navigation::Kinematics
+ * Defines the same fields as \ref hl_navigation::core::Kinematics
  * but as sampler of the respective type.
  */
 template <typename T = Kinematics>
@@ -238,6 +238,6 @@ using TaskSampler = SamplerFromRegister<T>;
 template <typename T = StateEstimation>
 using StateEstimationSampler = SamplerFromRegister<T>;
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif  // HL_NAVIGATION_SIM_REGISTER_H

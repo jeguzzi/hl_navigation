@@ -4,7 +4,7 @@ import sys
 import time
 from typing import Iterable, Iterator, List, Set, Tuple
 
-import hl_navigation
+from hl_navigation import core
 import pyenki
 
 
@@ -25,21 +25,21 @@ class Thymio(pyenki.Thymio2):
                  behavior_name: str = "HL",
                  obstacles: List[pyenki.CircularObject] = []):
         super().__init__(use_aseba_units=False)
-        self.behavior = hl_navigation.Behavior.make_type(behavior_name)
+        self.behavior = core.Behavior.make_type(behavior_name)
         if not self.behavior:
             print(f"No behavior with name {behavior_name}")
             sys.exit(1)
-        self.behavior.kinematics = hl_navigation.kinematics.TwoWheelsDifferentialDriveKinematics(
+        self.behavior.kinematics = core.kinematics.TwoWheelsDifferentialDriveKinematics(
             0.01 * self.max_wheel_speed, 0.01 * self.wheel_axis)
         self.behavior.radius = 0.08
         self.behavior.safety_margin = 0.02
         self.behavior.optimal_speed = 0.12
         self.behavior.horizon = 1.0
-        self.controller = hl_navigation.Controller(self.behavior)
+        self.controller = core.Controller(self.behavior)
         self.controller.speed_tolerance = 0.01
         try:
             self.behavior.environment_state.static_obstacles = [
-                hl_navigation.Disc(position=enki2world(obstacle.position),
+                core.Disc(position=enki2world(obstacle.position),
                                    radius=0.01 * obstacle.radius)
                 for obstacle in obstacles
             ]
@@ -52,7 +52,7 @@ class Thymio(pyenki.Thymio2):
         self.behavior.velocity = enki2world(self.velocity)
         try:
             self.behavior.environment_state.neighbors = [
-                hl_navigation.Neighbor(position=enki2world(thymio.position),
+                core.Neighbor(position=enki2world(thymio.position),
                                        radius=0.08,
                                        velocity=enki2world(thymio.velocity),
                                        id=0) for thymio in self.thymios

@@ -1,8 +1,7 @@
 import argparse  # noqa: D100
 import sys
 
-import hl_navigation as nav
-import hl_navigation.kinematics
+from hl_navigation import core
 
 
 def main(behavior_name: str = 'HL') -> None:
@@ -11,18 +10,18 @@ def main(behavior_name: str = 'HL') -> None:
     Args:
         behavior_name (str, optional): The name of the behavior
     """
-    behavior = nav.Behavior.make_type(behavior_name)
+    behavior = core.Behavior.make_type(behavior_name)
     if not behavior:
         print(f'No behavior with name {behavior_name}')
         sys.exit(1)
     print(f'Use behavior {behavior_name}')
-    behavior.kinematics = nav.kinematics.OmnidirectionalKinematics(1.0, 1.0)
+    behavior.kinematics = core.kinematics.OmnidirectionalKinematics(1.0, 1.0)
     behavior.radius = 0.1
     dt = 0.1
     behavior.horizon = 5.0
     behavior.position = (0.0, 0.05)
-    behavior.target = nav.Target(position=(10.0, 0.0))
-    behavior.environment_state.static_obstacles = [nav.Disc(position=(1.5, 0.0), radius=0.5)]
+    behavior.target = core.Target(position=(10.0, 0.0))
+    behavior.environment_state.static_obstacles = [core.Disc(position=(1.5, 0.0), radius=0.5)]
     for _ in range(30):
         cmd = behavior.compute_cmd(dt)
         behavior.actuate(cmd, dt)

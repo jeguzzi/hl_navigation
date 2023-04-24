@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(hl_navigation_sim)
 
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/ament_python_install_namespace_package.cmake)
+
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
@@ -25,7 +27,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
-find_package(hl_navigation REQUIRED)
+find_package(hl_navigation_core REQUIRED)
 find_package(hl_navigation_py REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(GEOS REQUIRED)
@@ -44,10 +46,10 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(include ${PROJECT_BINARY_DIR})
 
 add_executable(test_samplers src/test_samplers.cpp src/sampling/sampler.cpp)
-target_link_libraries(test_samplers hl_navigation::hl_navigation )
+target_link_libraries(test_samplers hl_navigation_core::hl_navigation_core )
 
 add_executable(test_samplers_yaml src/test_samplers_yaml.cpp src/sampling/sampler.cpp)
-target_link_libraries(test_samplers_yaml hl_navigation::hl_navigation)
+target_link_libraries(test_samplers_yaml hl_navigation_core::hl_navigation_core)
 
 add_library(hl_navigation_sim SHARED
   src/agent.cpp
@@ -71,12 +73,12 @@ target_link_libraries(
   GEOS::geos 
   # yaml-cpp::yaml-cpp 
   HighFive
-  hl_navigation::hl_navigation 
+  hl_navigation_core::hl_navigation_core 
 )
 target_link_libraries(hl_navigation_sim PRIVATE )
 target_include_directories(hl_navigation_sim INTERFACE $<TARGET_PROPERTY:HighFive,INTERFACE_INCLUDE_DIRECTORIES>)
 
-ament_export_dependencies(geos hl_navigation HighFive)
+ament_export_dependencies(geos hl_navigation_core HighFive)
 ament_export_targets(hl_navigation_simTargets HAS_LIBRARY_TARGET)
 
 add_executable(run src/run.cpp)
@@ -91,8 +93,10 @@ add_dependencies(sample hl_navigation_sim)
 # target_link_libraries(list hl_navigation_sim)
 # add_dependencies(list hl_navigation_sim)
 # 
-ament_python_install_package(hl_navigation_sim
+ament_python_install_namespace_package(sim
   SCRIPTS_DESTINATION lib/${PROJECT_NAME}
+  PACKAGE_DIR hl_navigation/sim
+  NAMESPACE hl_navigation
 )
 pybind11_add_module(_hl_navigation_sim src/python.cpp)
 # target_compile_options(_hl_navigation_sim PRIVATE -fvisibility=hidden)
@@ -107,7 +111,7 @@ add_dependencies(_hl_navigation_sim hl_navigation_sim)
 # target_link_libraries(_hl_navigation_sim PRIVATE -Wl,-force_load hl_navigation_sim)
 
 
-install(TARGETS _hl_navigation_sim DESTINATION "${PYTHON_INSTALL_DIR}/hl_navigation_sim")
+install(TARGETS _hl_navigation_sim DESTINATION "${PYTHON_INSTALL_DIR}/hl_navigation/sim")
 
 install(TARGETS
   test_samplers

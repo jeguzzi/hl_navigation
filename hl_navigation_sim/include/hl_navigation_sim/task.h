@@ -5,15 +5,15 @@
 #ifndef HL_NAVIGATION_SIM_TASK_H_
 #define HL_NAVIGATION_SIM_TASK_H_
 
-#include "hl_navigation/property.h"
-#include "hl_navigation/register.h"
+#include "hl_navigation_core/property.h"
+#include "hl_navigation_core/register.h"
 
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::HasProperties;
-using hl_navigation::HasRegister;
+using hl_navigation::core::HasProperties;
+using hl_navigation::core::HasRegister;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 class Agent;
 class World;
@@ -68,6 +68,6 @@ struct HL_NAVIGATION_SIM_EXPORT Task : public virtual HasProperties, public virt
 
   std::vector<Callback> callbacks;
 };
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_TASK_H_ */

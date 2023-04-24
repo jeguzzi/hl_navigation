@@ -11,12 +11,12 @@
 
 #include "hl_navigation_sim/scenario.h"
 
-using hl_navigation::Properties;
-using hl_navigation::Property;
-using hl_navigation::make_property;
+using hl_navigation::core::Properties;
+using hl_navigation::core::Property;
+using hl_navigation::core::make_property;
 
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 struct CollisionsScenario : public Scenario {
   CollisionsScenario(const char *behavior_name = "HL",
@@ -39,6 +39,6 @@ struct CollisionsScenario : public Scenario {
   float control_period;
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_SCENARIOS_COLLISIONS_H */

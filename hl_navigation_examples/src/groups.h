@@ -2,15 +2,14 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#ifndef HL_NAVIGATION_EXAMPLES_GROUP_H
-#define HL_NAVIGATION_EXAMPLES_GROUP_H
+#ifndef HL_NAVIGATION_CORE_EXAMPLES_GROUP_H
+#define HL_NAVIGATION_CORE_EXAMPLES_GROUP_H
 
 #include "hl_navigation_sim/sampling/agent.h"
 #include "hl_navigation_sim/sampling/sampler.h"
 #include "hl_navigation_sim/tasks/waypoints.h"
 
-namespace sim = hl_navigation_sim;
-namespace nav = hl_navigation;
+namespace sim = hl_navigation::sim;
 
 template <typename T>
 std::unique_ptr<sim::PropertySampler> make_const_property(const T& value) {
@@ -110,4 +109,4 @@ inline sim::AgentSampler<sim::World> robots() {
   return group;
 }
 
-#endif  // HL_NAVIGATION_EXAMPLES_GROUP_H
+#endif  // HL_NAVIGATION_CORE_EXAMPLES_GROUP_H

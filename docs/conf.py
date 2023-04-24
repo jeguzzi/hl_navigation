@@ -63,8 +63,8 @@ autodoc_type_aliases = {
 }
 
 _replace = {
-    "hl_navigation._hl_navigation.": "",
-    "hl_navigation_sim._hl_navigation_sim.": "",
+    "_hl_navigation.": "",
+    "_hl_navigation_sim.": "",
     "numpy.ndarray[numpy.float32[2, 1]]": "Vector2",
     "Union[bool, int, float, str, Vector2, List[bool], List[int], List[float], List[str], List[Vector2]]": "PropertyField",
 }
@@ -113,12 +113,61 @@ def l(app, domain, objtype, contentnode):
     if objtype == 'property':
         print(app, domain, objtype, contentnode)
 
-reftarget_aliases = {
-    'hl_navigation._hl_navigation.Behavior': 'hl_navigation.Behavior',
-    'hl_navigation._hl_navigation.Kinematics': 'hl_navigation.Kinematics',
-    'PropertyField': 'hl_navigation.PropertyField',
-    'NativeAgent': 'Agent'
+reftarget_aliases = {}
+reftarget_aliases['py'] = {
+    # 'hl_navigation.core._hl_navigation.Behavior': 'hl_navigation.core.Behavior',
+    # 'hl_navigation.core._hl_navigation.Kinematics': 'hl_navigation.core.Kinematics',
+    # 'PropertyField': 'hl_navigation.core.PropertyField',
+    # 'hl_navigation.sim.NativeAgent': 'hl_navigation.sim.Agent',
+    # 'Behavior': 'hl_navigation.core.Behavior',
+    # 'Kinematics': 'hl_navigation.core.Kinematics',
+    # 'Neighbor.id': 'hl_navigation.core.Neighbor.id',
+    # 'hl_navigation.core.Property': 'hl_navigation.core._hl_navigation.Property',
+    # 'Controller.go_to_position': 'hl_navigation.core.Controller.go_to_position',
+    # 'Agent': 'hl_navigation::sim::Agent',
+    # 'Experiment': 'hl_navigation::sim::Experiment',
+    # 'World': 'hl_navigation::sim::World',
+    # 'hl_navigation.registered_property': 'hl_navigation.core.registered_property',
     # 'Vector2': 'hl_navigation.Vector2',
+    'hl_navigation.core._hl_navigation.Behavior': 'hl_navigation.core.Behavior',
+    'hl_navigation.core._hl_navigation.Kinematics': 'hl_navigation.core.Kinematics',
+    'Behavior': 'hl_navigation.core.Behavior',
+    'Neighbor.id': 'hl_navigation.core.Neighbor.id',
+    'hl_navigation.sim.NativeAgent': 'hl_navigation.sim.Agent',
+    'hl_navigation.sim.NativeWorld': 'hl_navigation.sim.World',
+    'hl_navigation.core.Property': 'hl_navigation.core._hl_navigation.Property',
+    'Controller.go_to_position': 'hl_navigation.core.Controller.go_to_position',
+    'hl_navigation.registered_property': 'hl_navigation.core.registered_property',
+    'Vector2': 'hl_navigation.Vector2',
+    'hl_navigation::sim::Scenario': 'hl_navigation.sim.Scenario',
+    'hl_navigation.core.SocialMarginModulation': 'hl_navigation.core.SocialMargin.Modulation',
+    'hl_navigation.Kinematics': 'hl_navigation.core.Kinematics',
+    'Kinematics': 'hl_navigation.core.Kinematics',
+    'hl_navigation.Behavior': 'hl_navigation.core.Behavior',
+    'PropertyField': 'hl_navigation.core.PropertyField',
+    'hl_navigation::core::EnvironmentState': 'hl_navigation.core.EnvironmentState',
+    'Frame.absolute': 'hl_navigation.core.Frame.absolute',
+    'Frame.relative': 'hl_navigation.core.Frame.relative',
+    'behavior.actuated_twist': 'hl_navigation.core.Behavior.actuated_twist',
+    'behavior': 'hl_navigation.core.Behavior',
+    'GeometricState': 'hl_navigation.core.GeometricState',
+    # 'Disc': 'hl_navigation.core.Disc',
+    # 'LineSegment': 'hl_navigation.core.LineSegment',
+    # 'Neighbor': 'hl_navigation.core.Neighbor',
+    #
+}
+
+reftarget_aliases['cpp'] = {
+    'Node': 'YAML::Node',
+    'Behavior': 'hl_navigation::core::Behavior',
+    'Neighbor': 'hl_navigation::core::Neighbor',
+    'Kinematics': 'hl_navigation::core::Kinematics',
+    'Controller': 'hl_navigation::core::Controller',
+    'Pose2': 'hl_navigation::core::Pose2',
+    'Twist2': 'hl_navigation::core::Twist2',
+    'Vector2': 'hl_navigation::core::Vector2',
+    'Disc': 'hl_navigation::core::Disc',
+    'LineSegment': 'hl_navigation::core::LineSegment',
 }
 
 from docutils.nodes import Text, reference
@@ -129,12 +178,13 @@ def resolve_internal_aliases(app, doctree):
     pending_xrefs = doctree.traverse(condition=pending_xref)
     for node in pending_xrefs:
         alias = node.get('reftarget', None)
-        if alias is not None and alias in reftarget_aliases:
-            node['reftarget'] = reftarget_aliases[alias]
+        d = node.get('refdomain', '')
+        rs = reftarget_aliases.get(d, {})
+        if alias is not None and alias in rs:
+            node['reftarget'] = rs[alias]
 
 
 def setup(app):
-    pass
     app.connect('autodoc-process-docstring', f);
     app.connect('autodoc-process-signature', g);
     app.connect('doctree-read', resolve_internal_aliases)

@@ -11,11 +11,11 @@
 #include "hl_navigation_sim/world.h"
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::make_property;
-using hl_navigation::Properties;
-using hl_navigation::Property;
+using hl_navigation::core::make_property;
+using hl_navigation::core::Properties;
+using hl_navigation::core::Property;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * @brief      Perfect state estimation within a range from the agent.
@@ -124,7 +124,7 @@ struct HL_NAVIGATION_SIM_EXPORT BoundedStateEstimation
    *
    * @return     The geometric state or ``nullptr`` if the agent behavior does
    * not have a environment state that is a subclass of \ref
-   * hl_navigation::GeometricState
+   * hl_navigation::core::GeometricState
    */
   GeometricState *get_geometric_state(Agent *agent) const {
     if (agent) {
@@ -143,7 +143,7 @@ struct HL_NAVIGATION_SIM_EXPORT BoundedStateEstimation
       register_type<BoundedStateEstimation>("Bounded");
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: \
           HL_NAVIGATION_SIM_STATE_ESTIMATIONS_GEOMETRIC_BOUNDED_H_ */

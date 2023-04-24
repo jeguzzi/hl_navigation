@@ -45,7 +45,7 @@ groups:
     orientation: 0
 )YAML";
 
-namespace sim = hl_navigation_sim;
+namespace sim = hl_navigation::sim;
 
 int main() {
   YAML::Node node;

@@ -8,14 +8,14 @@
 #include <utility>
 #include <vector>
 
-#include "hl_navigation/common.h"
-#include "hl_navigation/property.h"
+#include "hl_navigation_core/common.h"
+#include "hl_navigation_core/property.h"
 #include "hl_navigation_sim/sampling/sampler.h"
 #include "hl_navigation_sim/tasks/waypoints.h"
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
-using namespace hl_navigation;
+using namespace hl_navigation::core;
 
 void CrossScenario::init_world(World *world) {
   Scenario::init_world(world);
@@ -67,4 +67,4 @@ const std::string CrossScenario::type = register_type<CrossScenario>("Cross");
 
 #endif
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim

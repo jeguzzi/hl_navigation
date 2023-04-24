@@ -1,8 +1,8 @@
 import argparse
 import time
 
-import hl_navigation as nav
-import hl_navigation_sim as sim
+from hl_navigation import core
+from hl_navigation import sim
 
 
 class ThymioDemo(sim.Scenario, name="PyThymioDemo"):  # type: ignore[call-arg]
@@ -16,17 +16,17 @@ class ThymioDemo(sim.Scenario, name="PyThymioDemo"):  # type: ignore[call-arg]
         for i in range(2):
             task = sim.WaypointsTask(targets, True, 0.2)
             se = sim.BoundedStateEstimation(world, 1.0, 1.0)
-            kinematics = nav.kinematics.TwoWheelsDifferentialDriveKinematics(0.166, 0.094)
-            behavior = nav.Behavior.make_type(self.behavior_type)
+            kinematics = core.kinematics.TwoWheelsDifferentialDriveKinematics(0.166, 0.094)
+            behavior = core.Behavior.make_type(self.behavior_type)
             agent = sim.Agent(0.08, behavior, kinematics, task, se, 0.02)
             agent.behavior.optimal_speed = 0.12
             agent.behavior.horizon = 1.0
             agent.behavior.safety_margin = 0.02
             agent.controller.speed_tolerance = 0.01
-            agent.pose = nav.Pose2((-0.5 if i else 0.5, 0.5), 0.0)
+            agent.pose = core.Pose2((-0.5 if i else 0.5, 0.5), 0.0)
             agent.type = "thymio"
             world.add_agent(agent)
-        world.add_obstacle(nav.Disc((0.0, 0.0), 0.1))
+        world.add_obstacle(core.Disc((0.0, 0.0), 0.1))
 
     @sim.registered_property("HL", "Behavior name")
     def behavior_type(self) -> str:

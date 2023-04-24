@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "docstrings.h"
-#include "hl_navigation/behavior.h"
-#include "hl_navigation/kinematics.h"
-#include "hl_navigation/yaml/yaml.h"
+#include "hl_navigation_core/behavior.h"
+#include "hl_navigation_core/kinematics.h"
+#include "hl_navigation_core/yaml/yaml.h"
 #include "hl_navigation_py/register.h"
 #include "hl_navigation_py/yaml.h"
 #include "hl_navigation_sim/experiment.h"
@@ -29,8 +29,8 @@
 #include "hl_navigation_sim/yaml/scenario.h"
 #include "hl_navigation_sim/yaml/world.h"
 
-using namespace hl_navigation;
-using namespace hl_navigation_sim;
+using namespace hl_navigation::core;
+using namespace hl_navigation::sim;
 namespace py = pybind11;
 
 template <typename T>
@@ -377,12 +377,10 @@ struct convert<PyExperiment> {
 
 }  // namespace YAML
 
-
 static py::memoryview empty_unsigned_view() {
   static unsigned empty_unsigned_buffer;
   return py::memoryview::from_memory(&empty_unsigned_buffer, 0, true);
 }
-
 
 static py::memoryview empty_float_view() {
   static float empty_float_buffer;
@@ -407,25 +405,25 @@ PYBIND11_MODULE(_hl_navigation_sim, m) {
   //  declare_register<PScenario>(m, "Scenario");
 
   py::class_<Entity, std::shared_ptr<Entity>>(m, "Entity",
-                                              DOC(hl_navigation_sim_Entity))
-      .def_readonly("_uid", &Entity::uid, DOC(hl_navigation_sim_Entity, uid));
+                                              DOC(hl_navigation, sim, Entity))
+      .def_readonly("_uid", &Entity::uid, DOC(hl_navigation, sim, Entity, uid));
 
   py::class_<Wall, Entity, std::shared_ptr<Wall>>(m, "Wall",
-                                                  DOC(hl_navigation_sim_Wall))
+                                                  DOC(hl_navigation, sim, Wall))
       .def(py::init<Vector2, Vector2>(), py::arg("p1"), py::arg("p2"),
-           DOC(hl_navigation_sim_Wall, Wall))
+           DOC(hl_navigation, sim, Wall, Wall))
       .def(py::init<LineSegment>(), py::arg("line"),
-           DOC(hl_navigation_sim_Wall, Wall, 3))
-      .def_readwrite("line", &Wall::line, DOC(hl_navigation_sim_Wall, line));
+           DOC(hl_navigation, sim, Wall, Wall, 3))
+      .def_readwrite("line", &Wall::line, DOC(hl_navigation, sim, Wall, line));
 
   py::class_<Obstacle, Entity, std::shared_ptr<Obstacle>>(
-      m, "Obstacle", DOC(hl_navigation_sim_Obstacle))
+      m, "Obstacle", DOC(hl_navigation, sim, Obstacle))
       .def(py::init<Vector2, float>(), py::arg("position"), py::arg("radius"),
-           DOC(hl_navigation_sim_Obstacle, Obstacle))
+           DOC(hl_navigation, sim, Obstacle, Obstacle))
       .def(py::init<Disc>(), py::arg("disc"),
-           DOC(hl_navigation_sim_Obstacle, Obstacle, 3))
+           DOC(hl_navigation, sim, Obstacle, Obstacle, 3))
       .def_readwrite("disc", &Obstacle::disc,
-                     DOC(hl_navigation_sim_Obstacle, disc));
+                     DOC(hl_navigation, sim, Obstacle, disc));
 
   py::class_<BoundingBox>(m, "BoundingBox", "A rectangular region")
       .def(py::init<float, float, float, float>(), py::arg("min_x"),
@@ -444,19 +442,19 @@ Creates a rectangular region
            )doc");
 
   py::class_<Agent, Entity, std::shared_ptr<Agent>>(
-      m, "NativeAgent", DOC(hl_navigation_sim_Agent))
-      .def_readwrite("id", &Agent::id, DOC(hl_navigation_sim_Agent, id))
-      .def_readwrite("type", &Agent::type, DOC(hl_navigation_sim_Agent, type))
+      m, "NativeAgent", DOC(hl_navigation, sim, Agent))
+      .def_readwrite("id", &Agent::id, DOC(hl_navigation, sim, Agent, id))
+      .def_readwrite("type", &Agent::type, DOC(hl_navigation, sim, Agent, type))
       .def_readwrite("radius", &Agent::radius,
-                     DOC(hl_navigation_sim_Agent, radius))
+                     DOC(hl_navigation, sim, Agent, radius))
       .def_readwrite("control_period", &Agent::control_period,
-                     DOC(hl_navigation_sim_Agent, control_period))
-      .def_readwrite("pose", &Agent::pose, DOC(hl_navigation_sim_Agent, pose))
+                     DOC(hl_navigation, sim, Agent, control_period))
+      .def_readwrite("pose", &Agent::pose, DOC(hl_navigation, sim, Agent, pose))
       .def_readwrite("twist", &Agent::twist,
-                     DOC(hl_navigation_sim_Agent, twist))
+                     DOC(hl_navigation, sim, Agent, twist))
       .def_readwrite("last_cmd", &Agent::last_cmd,
-                     DOC(hl_navigation_sim_Agent, last_cmd))
-      .def_readonly("tags", &Agent::tags, DOC(hl_navigation_sim_Agent, tags))
+                     DOC(hl_navigation, sim, Agent, last_cmd))
+      .def_readonly("tags", &Agent::tags, DOC(hl_navigation, sim, Agent, tags))
       .def_property(
           "position", [](const Agent *agent) { return agent->pose.position; },
           [](Agent *agent, const Vector2 &value) {
@@ -485,46 +483,46 @@ Creates a rectangular region
           "Angular speed")
       .def_property("controller", &Agent::get_controller, nullptr,
                     py::return_value_policy::reference,
-                    DOC(hl_navigation_sim_Agent, property_controller))
+                    DOC(hl_navigation, sim, Agent, property_controller))
       // .def_readwrite("task", &Agent::task)
       .def_property("task",
                     py::cpp_function(&Agent::get_task,
                                      py::return_value_policy::reference),
                     py::cpp_function(&Agent::set_task, py::keep_alive<1, 2>()),
-                    DOC(hl_navigation_sim_Agent, property_task))
+                    DOC(hl_navigation, sim, Agent, property_task))
       // .def_readwrite("state_estimation", &Agent::state_estimation)
       .def_property("state_estimation",
                     py::cpp_function(&Agent::get_state_estimation,
                                      py::return_value_policy::reference),
                     py::cpp_function(&Agent::set_state_estimation,
                                      py::keep_alive<1, 2>()),
-                    DOC(hl_navigation_sim_Agent, property_state_estimation))
+                    DOC(hl_navigation, sim, Agent, property_state_estimation))
       // .def_readwrite("behavior", &Agent::behavior)
       .def_property(
           "behavior",
           py::cpp_function(&Agent::get_behavior,
                            py::return_value_policy::reference),
           py::cpp_function(&Agent::set_behavior, py::keep_alive<1, 2>()),
-          DOC(hl_navigation_sim_Agent, property_behavior))
+          DOC(hl_navigation, sim, Agent, property_behavior))
       // .def_readwrite("kinematics", &Agent::kinematics)
       .def_property(
           "kinematics",
           py::cpp_function(&Agent::get_kinematics,
                            py::return_value_policy::reference),
           py::cpp_function(&Agent::set_kinematics, py::keep_alive<1, 2>()),
-          DOC(hl_navigation_sim_Agent, property_kinematics))
+          DOC(hl_navigation, sim, Agent, property_kinematics))
       .def_property("idle", &Agent::idle, nullptr,
-                    DOC(hl_navigation_sim_Agent, idle));
+                    DOC(hl_navigation, sim, Agent, idle));
 
   py::class_<PyAgent, Agent, Entity, std::shared_ptr<PyAgent>>(
-      m, "Agent", py::dynamic_attr(), DOC(hl_navigation_sim_Agent))
+      m, "Agent", py::dynamic_attr(), DOC(hl_navigation, sim, Agent))
       .def(py::init<float, const py::object &, const py::object &,
                     const py::object &, const py::object &, float, unsigned>(),
            py::arg("radius") = 0.0f, py::arg("behavior") = py::none(),
            py::arg("kinematics") = py::none(), py::arg("task") = py::none(),
            py::arg("state_estimation") = py::none(),
            py::arg("control_period") = 0.0f, py::arg("id") = 0,
-           DOC(hl_navigation_sim_Agent, Agent))
+           DOC(hl_navigation, sim, Agent, Agent))
 #if 0
       .def(py::init<float, std::shared_ptr<Behavior>,
                     std::shared_ptr<Kinematics>, std::shared_ptr<Task>,
@@ -544,83 +542,83 @@ Creates a rectangular region
                     py::return_value_policy::reference);
 
   py::class_<World, std::shared_ptr<World>>(m, "NativeWorld",
-                                            DOC(hl_navigation_sim_World, 2))
-      .def(py::init<>(), DOC(hl_navigation_sim_World, World))
+                                            DOC(hl_navigation, sim, World, 2))
+      .def(py::init<>(), DOC(hl_navigation, sim, World, World))
       .def("update", &World::update, py::arg("time_step"),
-           DOC(hl_navigation_sim_World, update))
+           DOC(hl_navigation, sim, World, update))
       .def("run", &World::run, py::arg("steps"), py::arg("time_step"),
-           DOC(hl_navigation_sim_World, run))
+           DOC(hl_navigation, sim, World, run))
       .def_property("time", &World::get_time, nullptr,
-                    DOC(hl_navigation_sim_World, property_time))
+                    DOC(hl_navigation, sim, World, property_time))
       .def_property("step", &World::get_step, nullptr,
-                    DOC(hl_navigation_sim_World, property_step))
+                    DOC(hl_navigation, sim, World, property_step))
       .def("add_agent", &World::add_agent, py::keep_alive<1, 2>(),
-           py::arg("agent"), DOC(hl_navigation_sim_World, add_agent))
+           py::arg("agent"), DOC(hl_navigation, sim, World, add_agent))
       .def("add_obstacle",
            py::overload_cast<const Disc &>(&World::add_obstacle),
-           py::arg("disc"), DOC(hl_navigation_sim_World, add_obstacle))
+           py::arg("disc"), DOC(hl_navigation, sim, World, add_obstacle))
       .def("add_obstacle",
            py::overload_cast<const Obstacle &>(&World::add_obstacle),
-           py::arg("obstacle"), DOC(hl_navigation_sim_World, add_obstacle, 2))
+           py::arg("obstacle"), DOC(hl_navigation, sim, World, add_obstacle, 2))
       .def("add_wall", py::overload_cast<const LineSegment &>(&World::add_wall),
-           py::arg("line"), DOC(hl_navigation_sim_World, add_wall))
+           py::arg("line"), DOC(hl_navigation, sim, World, add_wall))
       .def("add_wall", py::overload_cast<const Wall &>(&World::add_wall),
-           py::arg("wall"), DOC(hl_navigation_sim_World, add_wall, 2))
+           py::arg("wall"), DOC(hl_navigation, sim, World, add_wall, 2))
       .def_property("agents", &World::get_agents, nullptr,
-                    DOC(hl_navigation_sim_World, property_agents))
+                    DOC(hl_navigation, sim, World, property_agents))
       .def_property("walls", &World::get_walls, nullptr,
-                    DOC(hl_navigation_sim_World, property_walls))
+                    DOC(hl_navigation, sim, World, property_walls))
       .def_property("obstacles", &World::get_obstacles, nullptr,
-                    DOC(hl_navigation_sim_World, property_obstacles))
+                    DOC(hl_navigation, sim, World, property_obstacles))
       .def_property("discs", &World::get_discs, nullptr,
-                    DOC(hl_navigation_sim_World, property_discs))
+                    DOC(hl_navigation, sim, World, property_discs))
       .def_property("line_obstacles", &World::get_line_obstacles, nullptr,
-                    DOC(hl_navigation_sim_World, property_line_obstacles))
+                    DOC(hl_navigation, sim, World, property_line_obstacles))
       .def("get_agents_in_region", &World::get_agents_in_region,
            py::arg("bounding_box"),
-           DOC(hl_navigation_sim_World, get_agents_in_region))
+           DOC(hl_navigation, sim, World, get_agents_in_region))
       .def("get_static_obstacles_in_region",
            &World::get_static_obstacles_in_region, py::arg("bounding_box"),
-           DOC(hl_navigation_sim_World, get_static_obstacles_in_region))
+           DOC(hl_navigation, sim, World, get_static_obstacles_in_region))
       .def("get_line_obstacles_in_region", &World::get_line_obstacles_in_region,
            py::arg("bounding_box"),
-           DOC(hl_navigation_sim_World, get_line_obstacles_in_region))
+           DOC(hl_navigation, sim, World, get_line_obstacles_in_region))
       .def("get_neighbors", &World::get_neighbors, py::arg("agent"),
-           py::arg("distance"), DOC(hl_navigation_sim_World, get_neighbors))
+           py::arg("distance"), DOC(hl_navigation, sim, World, get_neighbors))
       .def_property("collisions", &World::get_collisions, nullptr,
-                    DOC(hl_navigation_sim_World, property_collisions))
+                    DOC(hl_navigation, sim, World, property_collisions))
       .def("compute_safety_violation", &World::compute_safety_violation,
            py::arg("agent"),
-           DOC(hl_navigation_sim_World, compute_safety_violation))
+           DOC(hl_navigation, sim, World, compute_safety_violation))
       .def("agents_are_idle", &World::agents_are_idle,
-           DOC(hl_navigation_sim_World, agents_are_idle))
+           DOC(hl_navigation, sim, World, agents_are_idle))
       .def("space_agents_apart", &World::space_agents_apart,
            py::arg("minimal_distance") = 0.0f,
            py::arg("with_safety_margin") = false,
            py::arg("max_iterations") = 10,
-           DOC(hl_navigation_sim_World, space_agents_apart))
+           DOC(hl_navigation, sim, World, space_agents_apart))
       .def_static("set_seed", &World::set_seed, py::arg("seed"),
-                  DOC(hl_navigation_sim_World, set_seed))
+                  DOC(hl_navigation, sim, World, set_seed))
       .def("get_entity", &World::get_entity, py::arg("uid"),
            py::return_value_policy::reference,
-           DOC(hl_navigation_sim_World, get_entity))
+           DOC(hl_navigation, sim, World, get_entity))
       .def("in_collision", &World::in_collision, py::arg("e1"), py::arg("e2"),
-           DOC(hl_navigation_sim_World, in_collision));
+           DOC(hl_navigation, sim, World, in_collision));
 
   py::class_<PyWorld, World, std::shared_ptr<PyWorld>>(
-      m, "World", DOC(hl_navigation_sim_World))
-      .def(py::init<>(), DOC(hl_navigation_sim_World, World))
+      m, "World", DOC(hl_navigation, sim, World))
+      .def(py::init<>(), DOC(hl_navigation, sim, World, World))
       .def("add_agent", &PyWorld::add_agent,
-           DOC(hl_navigation_sim_World, add_agent));
+           DOC(hl_navigation, sim, World, add_agent));
 
   py::class_<StateEstimation, PyStateEstimation, HasRegister<StateEstimation>,
              HasProperties, std::shared_ptr<StateEstimation>>(
-      m, "StateEstimation", DOC(hl_navigation_sim_StateEstimation))
+      m, "StateEstimation", DOC(hl_navigation, sim, StateEstimation))
       .def(py::init<>(),
-           DOC(hl_navigation_sim_StateEstimation, StateEstimation))
+           DOC(hl_navigation, sim, StateEstimation, StateEstimation))
       // .def_readwrite("world", &StateEstimation::world,
       //                py::return_value_policy::reference,
-      //                DOC(hl_navigation_sim_StateEstimation, world))
+      //                DOC(hl_navigation, sim, StateEstimation, world))
       // .def("_update", &StateEstimation::update)
       // .def("_prepare", &StateEstimation::prepare);
       .def_property(
@@ -630,53 +628,53 @@ Creates a rectangular region
   py::class_<BoundedStateEstimation, StateEstimation,
              std::shared_ptr<BoundedStateEstimation>>(
       m, "BoundedStateEstimation",
-      DOC(hl_navigation_sim_BoundedStateEstimation))
-      .def(
-          py::init<float>(),
-          // py::arg("field_of_view") = 0.0,
-          py::arg("range_of_view") = 0.0,
-          DOC(hl_navigation_sim_BoundedStateEstimation, BoundedStateEstimation))
+      DOC(hl_navigation, sim, BoundedStateEstimation))
+      .def(py::init<float>(),
+           // py::arg("field_of_view") = 0.0,
+           py::arg("range_of_view") = 0.0,
+           DOC(hl_navigation, sim, BoundedStateEstimation,
+               BoundedStateEstimation))
       // .def_property("field_of_view",
       // &BoundedStateEstimation::get_field_of_view,
       //               &BoundedStateEstimation::set_field_of_view)
-      .def_property(
-          "range_of_view", &BoundedStateEstimation::get_range_of_view,
-          &BoundedStateEstimation::set_range_of_view,
-          DOC(hl_navigation_sim_BoundedStateEstimation, property_range_of_view))
+      .def_property("range_of_view", &BoundedStateEstimation::get_range_of_view,
+                    &BoundedStateEstimation::set_range_of_view,
+                    DOC(hl_navigation, sim, BoundedStateEstimation,
+                        property_range_of_view))
       .def("_neighbors_of_agent", &BoundedStateEstimation::neighbors_of_agent,
            py::arg("agent"), py::arg("world"),
-           DOC(hl_navigation_sim_BoundedStateEstimation, neighbors_of_agent));
+           DOC(hl_navigation, sim, BoundedStateEstimation, neighbors_of_agent));
 
   py::class_<Task, PyTask, HasRegister<Task>, HasProperties,
-             std::shared_ptr<Task>>(m, "Task", DOC(hl_navigation_sim_Task))
+             std::shared_ptr<Task>>(m, "Task", DOC(hl_navigation, sim, Task))
       .def(py::init<>())
       // .def("update", &Task::update)
       .def_property(
           "type", [](Task *obj) { return obj->get_type(); }, nullptr,
           "The name associated to the type of an object")
-      .def("done", &Task::done, DOC(hl_navigation_sim_Task, done))
+      .def("done", &Task::done, DOC(hl_navigation, sim, Task, done))
       .def("add_callback", &WaypointsTask::add_callback,
-           DOC(hl_navigation_sim_Task, add_callback));
+           DOC(hl_navigation, sim, Task, add_callback));
 
   py::class_<WaypointsTask, Task, std::shared_ptr<WaypointsTask>>(
-      m, "WaypointsTask", DOC(hl_navigation_sim_WaypointsTask))
+      m, "WaypointsTask", DOC(hl_navigation, sim, WaypointsTask))
       .def(py::init<Waypoints, bool, float>(),
            py::arg("waypoints") = Waypoints{},
            py::arg("loop") = WaypointsTask::default_loop,
            py::arg("tolerance") = WaypointsTask::default_tolerance,
-           DOC(hl_navigation_sim_WaypointsTask, WaypointsTask))
+           DOC(hl_navigation, sim, WaypointsTask, WaypointsTask))
       .def_property("waypoints", &WaypointsTask::get_waypoints,
                     &WaypointsTask::set_waypoints,
-                    DOC(hl_navigation_sim_WaypointsTask, property_waypoints))
+                    DOC(hl_navigation, sim, WaypointsTask, property_waypoints))
       .def_property("tolerance", &WaypointsTask::get_tolerance,
                     &WaypointsTask::set_tolerance,
-                    DOC(hl_navigation_sim_WaypointsTask, property_tolerance))
+                    DOC(hl_navigation, sim, WaypointsTask, property_tolerance))
       .def_property("loop", &WaypointsTask::get_loop, &WaypointsTask::set_loop,
-                    DOC(hl_navigation_sim_WaypointsTask, property_loop));
+                    DOC(hl_navigation, sim, WaypointsTask, property_loop));
 
-  py::class_<Trace>(m, "Trace", DOC(hl_navigation_sim_Trace))
+  py::class_<Trace>(m, "Trace", DOC(hl_navigation, sim, Trace))
       .def("index_of_agent", &Trace::index_of_agent, py::arg("agent"),
-           DOC(hl_navigation_sim_Trace, index_of_agent))
+           DOC(hl_navigation, sim, Trace, index_of_agent))
       .def_property(
           "poses",
           [](const Trace *trace) {
@@ -851,67 +849,67 @@ The view is empty if the agent's task has not been recorded in the trace.
 :return: The events logged by the agent task
 )doc")
       .def_readwrite("record_pose", &Trace::record_pose,
-                     DOC(hl_navigation_sim_Trace, record_pose))
+                     DOC(hl_navigation, sim, Trace, record_pose))
       .def_readwrite("record_twist", &Trace::record_twist,
-                     DOC(hl_navigation_sim_Trace, record_twist))
+                     DOC(hl_navigation, sim, Trace, record_twist))
       .def_readwrite("record_cmd", &Trace::record_cmd,
-                     DOC(hl_navigation_sim_Trace, record_cmd))
+                     DOC(hl_navigation, sim, Trace, record_cmd))
       .def_readwrite("record_target", &Trace::record_target,
-                     DOC(hl_navigation_sim_Trace, record_target))
+                     DOC(hl_navigation, sim, Trace, record_target))
       .def_readwrite("record_safety_violation", &Trace::record_safety_violation,
-                     DOC(hl_navigation_sim_Trace, record_safety_violation))
+                     DOC(hl_navigation, sim, Trace, record_safety_violation))
       .def_readwrite("record_collisions", &Trace::record_collisions,
-                     DOC(hl_navigation_sim_Trace, record_collisions))
+                     DOC(hl_navigation, sim, Trace, record_collisions))
       .def_readwrite("record_task_events", &Trace::record_task_events,
-                     DOC(hl_navigation_sim_Trace, record_task_events))
+                     DOC(hl_navigation, sim, Trace, record_task_events))
       .def_readonly("number", &Trace::number,
-                    DOC(hl_navigation_sim_Trace, number))
+                    DOC(hl_navigation, sim, Trace, number))
       .def_readonly("steps", &Trace::steps,
-                    DOC(hl_navigation_sim_Trace, steps));
+                    DOC(hl_navigation, sim, Trace, steps));
 
-  py::class_<PyExperiment>(m, "Experiment", DOC(hl_navigation_sim_Experiment))
+  py::class_<PyExperiment>(m, "Experiment", DOC(hl_navigation, sim, Experiment))
       .def(py::init<float, int>(), py::arg("time_step") = 0.1,
            py::arg("steps") = 1000,
-           DOC(hl_navigation_sim_Experiment, Experiment))
+           DOC(hl_navigation, sim, Experiment, Experiment))
       .def_readwrite("time_step", &Experiment::time_step,
-                     DOC(hl_navigation_sim_Experiment, time_step))
+                     DOC(hl_navigation, sim, Experiment, time_step))
       .def_readwrite("steps", &Experiment::steps,
-                     DOC(hl_navigation_sim_Experiment, steps))
+                     DOC(hl_navigation, sim, Experiment, steps))
       .def_readonly("trace", &Experiment::trace,
-                    DOC(hl_navigation_sim_Experiment, trace))
+                    DOC(hl_navigation, sim, Experiment, trace))
       .def_property(
           "scenario", [](const PyExperiment *exp) { return exp->scenario; },
           [](PyExperiment *exp, const std::shared_ptr<Scenario> &value) {
             exp->scenario = value;
           },
-          DOC(hl_navigation_sim_Experiment, scenario))
+          DOC(hl_navigation, sim, Experiment, scenario))
       .def_property("world", &Experiment::get_world, nullptr,
-                    DOC(hl_navigation_sim_Experiment, world))
+                    DOC(hl_navigation, sim, Experiment, world))
       .def_readwrite("runs", &Experiment::runs,
-                     DOC(hl_navigation_sim_Experiment, runs))
+                     DOC(hl_navigation, sim, Experiment, runs))
       .def_readwrite("save_directory", &Experiment::save_directory,
-                     DOC(hl_navigation_sim_Experiment, save_directory))
+                     DOC(hl_navigation, sim, Experiment, save_directory))
       .def_readwrite("name", &Experiment::name,
-                     DOC(hl_navigation_sim_Experiment, name))
+                     DOC(hl_navigation, sim, Experiment, name))
       .def_property("path", &Experiment::get_path, nullptr,
-                    DOC(hl_navigation_sim_Experiment, property_path))
+                    DOC(hl_navigation, sim, Experiment, property_path))
       .def("add_callback", &Experiment::add_callback, py::arg("callback"),
-           DOC(hl_navigation_sim_Experiment, add_callback))
+           DOC(hl_navigation, sim, Experiment, add_callback))
       .def("run_once", &Experiment::run_once, py::arg("seed"),
-           DOC(hl_navigation_sim_Experiment, run_once))
-      .def("run", &Experiment::run, DOC(hl_navigation_sim_Experiment, run));
+           DOC(hl_navigation, sim, Experiment, run_once))
+      .def("run", &Experiment::run, DOC(hl_navigation, sim, Experiment, run));
 
   auto scenario = py::class_<Scenario, PyScenario, HasRegister<Scenario>,
                              HasProperties, std::shared_ptr<Scenario>>(
-      m, "Scenario", DOC(hl_navigation_sim_Scenario));
+      m, "Scenario", DOC(hl_navigation, sim, Scenario));
 
   py::class_<Scenario::Group, PyGroup>(scenario, "Group",
-                                       DOC(hl_navigation_sim_Scenario_Group))
+                                       DOC(hl_navigation, sim, Scenario_Group))
       .def(py::init<>(), "");
 
   scenario.def(py::init<>())
       .def("init_world", &Scenario::init_world,
-           DOC(hl_navigation_sim_Scenario, init_world))
+           DOC(hl_navigation, sim, Scenario, init_world))
 // .def("sample", &Scenario::sample)
 // .def("reset", &Scenario::reset)
 #if 0
@@ -923,7 +921,7 @@ The view is empty if the agent's task has not been recorded in the trace.
                                      [](const auto &g) { return g.get(); });
                       return gs;
                     }),
-                    nullptr, DOC(hl_navigation_sim_Scenario, obstacles))
+                    nullptr, DOC(hl_navigation, sim, Scenario, obstacles))
       .def(
           "add_group",
           [](Scenario *scenario, py::object &group) {
@@ -934,21 +932,22 @@ The view is empty if the agent's task has not been recorded in the trace.
           "Add a group.")
 #endif
       .def_readwrite("obstacles", &Scenario::obstacles,
-                     DOC(hl_navigation_sim_Scenario, obstacles))
+                     DOC(hl_navigation, sim, Scenario, obstacles))
       .def_readwrite("walls", &Scenario::walls,
-                     DOC(hl_navigation_sim_Scenario, walls))
+                     DOC(hl_navigation, sim, Scenario, walls))
       // .def_readwrite("groups", &Scenario::groups,
       // py::return_value_policy::reference) .def_property("initializers",
       // &Scenario::get_initializers, nullptr)
       .def("add_init", &Scenario::add_init,
-           DOC(hl_navigation_sim_Scenario, add_init));
+           DOC(hl_navigation, sim, Scenario, add_init));
 
   py::class_<SimpleScenario, Scenario, std::shared_ptr<SimpleScenario>>(
-      m, "SimpleScenario", DOC(hl_navigation_sim_SimpleScenario))
-      .def(py::init<>(), DOC(hl_navigation_sim_SimpleScenario, SimpleScenario));
+      m, "SimpleScenario", DOC(hl_navigation, sim, SimpleScenario))
+      .def(py::init<>(),
+           DOC(hl_navigation, sim, SimpleScenario, SimpleScenario));
 
   py::class_<AntipodalScenario, Scenario, std::shared_ptr<AntipodalScenario>>(
-      m, "AntipodalScenario", DOC(hl_navigation_sim_AntipodalScenario))
+      m, "AntipodalScenario", DOC(hl_navigation, sim, AntipodalScenario))
       .def(
           py::init<float, float, float, float, bool>(),
           py::arg("radius") = AntipodalScenario::default_radius,
@@ -957,25 +956,26 @@ The view is empty if the agent's task has not been recorded in the trace.
           py::arg("orientation_noise") =
               AntipodalScenario::default_orientation_noise,
           py::arg("shuffle") = AntipodalScenario::default_shuffle,
-          DOC(hl_navigation_sim_AntipodalScenario, AntipodalScenario))
+          DOC(hl_navigation, sim, AntipodalScenario, AntipodalScenario))
       .def_property("radius", &AntipodalScenario::get_radius,
                     &AntipodalScenario::set_radius,
-                    DOC(hl_navigation_sim_AntipodalScenario, property_radius))
+                    DOC(hl_navigation, sim, AntipodalScenario, property_radius))
       .def_property(
           "tolerance", &AntipodalScenario::get_tolerance,
           &AntipodalScenario::set_tolerance,
-          DOC(hl_navigation_sim_AntipodalScenario, property_tolerance))
+          DOC(hl_navigation, sim, AntipodalScenario, property_tolerance))
       .def_property(
           "position_noise", &AntipodalScenario::get_position_noise,
           &AntipodalScenario::set_position_noise,
-          DOC(hl_navigation_sim_AntipodalScenario, property_position_noise))
-      .def_property(
-          "orientation_noise", &AntipodalScenario::get_orientation_noise,
-          &AntipodalScenario::set_orientation_noise,
-          DOC(hl_navigation_sim_AntipodalScenario, property_orientation_noise));
+          DOC(hl_navigation, sim, AntipodalScenario, property_position_noise))
+      .def_property("orientation_noise",
+                    &AntipodalScenario::get_orientation_noise,
+                    &AntipodalScenario::set_orientation_noise,
+                    DOC(hl_navigation, sim, AntipodalScenario,
+                        property_orientation_noise));
 
   py::class_<CrossScenario, Scenario, std::shared_ptr<CrossScenario>>(
-      m, "CrossScenario", DOC(hl_navigation_sim_CrossScenario, CrossScenario))
+      m, "CrossScenario", DOC(hl_navigation, sim, CrossScenario, CrossScenario))
       .def(py::init<float, float, float, bool, float>(),
            py::arg("side") = CrossScenario::default_side,
            py::arg("tolerance") = CrossScenario::default_tolerance,
@@ -983,69 +983,70 @@ The view is empty if the agent's task has not been recorded in the trace.
            py::arg("add_safety_to_agent_margin") =
                CrossScenario::default_add_safety_to_agent_margin,
            py::arg("target_margin") = CrossScenario::default_target_margin,
-           DOC(hl_navigation_sim_CrossScenario))
+           DOC(hl_navigation, sim, CrossScenario))
       .def_property("side", &CrossScenario::get_side, &CrossScenario::set_side,
-                    DOC(hl_navigation_sim_CrossScenario, property_side))
+                    DOC(hl_navigation, sim, CrossScenario, property_side))
       .def_property("tolerance", &CrossScenario::get_tolerance,
                     &CrossScenario::set_tolerance,
-                    DOC(hl_navigation_sim_CrossScenario, property_tolerance))
-      .def_property("agent_margin", &CrossScenario::get_agent_margin,
-                    &CrossScenario::set_agent_margin,
-                    DOC(hl_navigation_sim_CrossScenario, property_agent_margin))
+                    DOC(hl_navigation, sim, CrossScenario, property_tolerance))
+      .def_property(
+          "agent_margin", &CrossScenario::get_agent_margin,
+          &CrossScenario::set_agent_margin,
+          DOC(hl_navigation, sim, CrossScenario, property_agent_margin))
       .def_property("add_safety_to_agent_margin",
                     &CrossScenario::get_add_safety_to_agent_margin,
                     &CrossScenario::set_add_safety_to_agent_margin,
-                    DOC(hl_navigation_sim_CrossScenario,
+                    DOC(hl_navigation, sim, CrossScenario,
                         property_add_safety_to_agent_margin))
       .def_property(
           "target_margin", &CrossScenario::get_target_margin,
           &CrossScenario::set_target_margin,
-          DOC(hl_navigation_sim_CrossScenario, property_target_margin));
+          DOC(hl_navigation, sim, CrossScenario, property_target_margin));
 
   py::class_<CorridorScenario, Scenario, std::shared_ptr<CorridorScenario>>(
-      m, "CorridorScenario", DOC(hl_navigation_sim_CorridorScenario))
+      m, "CorridorScenario", DOC(hl_navigation, sim, CorridorScenario))
       .def(py::init<float, float, float, bool>(),
            py::arg("width") = CorridorScenario::default_width,
            py::arg("length") = CorridorScenario::default_length,
            py::arg("agent_margin") = CorridorScenario::default_agent_margin,
            py::arg("add_safety_to_agent_margin") =
                CorridorScenario::default_add_safety_to_agent_margin,
-           DOC(hl_navigation_sim_CorridorScenario, CorridorScenario))
+           DOC(hl_navigation, sim, CorridorScenario, CorridorScenario))
       .def_property("width", &CorridorScenario::get_width,
                     &CorridorScenario::set_width,
-                    DOC(hl_navigation_sim_CorridorScenario, property_width))
+                    DOC(hl_navigation, sim, CorridorScenario, property_width))
       .def_property("length", &CorridorScenario::get_length,
                     &CorridorScenario::set_length,
-                    DOC(hl_navigation_sim_CorridorScenario, property_length))
+                    DOC(hl_navigation, sim, CorridorScenario, property_length))
       .def_property(
           "agent_margin", &CorridorScenario::get_agent_margin,
           &CorridorScenario::set_agent_margin,
-          DOC(hl_navigation_sim_CorridorScenario, property_agent_margin))
+          DOC(hl_navigation, sim, CorridorScenario, property_agent_margin))
       .def_property("add_safety_to_agent_margin",
                     &CorridorScenario::get_add_safety_to_agent_margin,
                     &CorridorScenario::set_add_safety_to_agent_margin,
-                    DOC(hl_navigation_sim_CorridorScenario,
+                    DOC(hl_navigation, sim, CorridorScenario,
                         property_add_safety_to_agent_margin));
 
   py::class_<CrossTorusScenario, Scenario, std::shared_ptr<CrossTorusScenario>>(
-      m, "CrossTorusScenario", DOC(hl_navigation_sim_CrossTorusScenario))
+      m, "CrossTorusScenario", DOC(hl_navigation, sim, CrossTorusScenario))
       .def(py::init<float, float, bool>(),
            py::arg("side") = CrossTorusScenario::default_side,
            py::arg("agent_margin") = CrossTorusScenario::default_agent_margin,
            py::arg("add_safety_to_agent_margin") =
                CrossTorusScenario::default_add_safety_to_agent_margin,
-           DOC(hl_navigation_sim_CrossTorusScenario, CrossTorusScenario))
+           DOC(hl_navigation, sim, CrossTorusScenario, CrossTorusScenario))
       .def_property("side", &CrossTorusScenario::get_side,
                     &CrossTorusScenario::set_side,
-                    DOC(hl_navigation_sim_CrossTorusScenario, property_side))
+                    DOC(hl_navigation, sim, CrossTorusScenario, property_side))
       .def_property(
           "agent_margin", &CrossTorusScenario::get_agent_margin,
           &CrossTorusScenario::set_agent_margin,
-          DOC(hl_navigation_sim_CrossTorusScenario, property_agent_margin))
+          DOC(hl_navigation, sim, CrossTorusScenario, property_agent_margin))
       .def_property("add_safety_to_agent_margin",
                     &CrossTorusScenario::get_add_safety_to_agent_margin,
                     &CrossTorusScenario::set_add_safety_to_agent_margin,
-                    DOC(hl_navigation_sim_CrossTorusScenario,
+                    DOC(hl_navigation, sim, CrossTorusScenario,
                         property_add_safety_to_agent_margin));
 
   m.def("load_task", &YAML::load_string_py<PyTask>, py::arg("value"),

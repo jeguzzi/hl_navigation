@@ -13,18 +13,18 @@
 #include <utility>
 #include <vector>
 
-#include "hl_navigation/states/geometric.h"
+#include "hl_navigation_core/states/geometric.h"
 #include "hl_navigation_sim/agent.h"
 #include "hl_navigation_sim/entity.h"
 
 #include "hl_navigation_sim_export.h"
 
-using hl_navigation::Disc;
-using hl_navigation::LineSegment;
-using hl_navigation::Neighbor;
-using hl_navigation::Vector2;
+using hl_navigation::core::Disc;
+using hl_navigation::core::LineSegment;
+using hl_navigation::core::Neighbor;
+using hl_navigation::core::Vector2;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 /**
  * A rectangulare region
@@ -451,6 +451,6 @@ class HL_NAVIGATION_SIM_EXPORT World {
   std::array<Lattice, 2> lattice;
 };
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
 
 #endif /* end of include guard: HL_NAVIGATION_SIM_WORLD_H_ */

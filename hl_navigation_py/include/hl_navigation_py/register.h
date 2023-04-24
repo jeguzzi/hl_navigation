@@ -1,25 +1,25 @@
-#ifndef HL_NAVIGATION_PY_REGISTER_H
-#define HL_NAVIGATION_PY_REGISTER_H
+#ifndef HL_NAVIGATION_CORE_PY_REGISTER_H
+#define HL_NAVIGATION_CORE_PY_REGISTER_H
 
 #include <pybind11/pybind11.h>
 
-#include "hl_navigation/property.h"
-#include "hl_navigation/register.h"
+#include "hl_navigation_core/property.h"
+#include "hl_navigation_core/register.h"
 
 namespace py = pybind11;
 
-using hl_navigation::HasProperties;
-using hl_navigation::HasRegister;
-using hl_navigation::Properties;
-using hl_navigation::Property;
+using hl_navigation::core::HasProperties;
+using hl_navigation::core::HasRegister;
+using hl_navigation::core::Properties;
+using hl_navigation::core::Property;
 
 template <typename T>
-struct PyHasRegister : public virtual hl_navigation::HasRegister<T> {
+struct PyHasRegister : public virtual hl_navigation::core::HasRegister<T> {
   /* Inherit the constructors */
-  using hl_navigation::HasRegister<T>::HasRegister;
+  using hl_navigation::core::HasRegister<T>::HasRegister;
   using Factory = py::object;
-  using hl_navigation::HasRegister<T>::get_type;
-  using hl_navigation::HasRegister<T>::type_properties;
+  using hl_navigation::core::HasRegister<T>::get_type;
+  using hl_navigation::core::HasRegister<T>::type_properties;
   using C = py::object;
 
   inline static std::map<std::string, Factory> factory = {};
@@ -120,4 +120,4 @@ Create an object of a sub-class selected by name.
       .def_static("_register_type", &PyRegister::register_type_py);
 }
 
-#endif  // HL_NAVIGATION_PY_REGISTER_H
+#endif  // HL_NAVIGATION_CORE_PY_REGISTER_H

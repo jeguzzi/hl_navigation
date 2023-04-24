@@ -8,16 +8,16 @@
 #include <utility>
 #include <vector>
 
-#include "hl_navigation/kinematics.h"
-#include "hl_navigation/property.h"
+#include "hl_navigation_core/kinematics.h"
+#include "hl_navigation_core/property.h"
 #include "hl_navigation_sim/state_estimations/geometric_bounded.h"
 #include "hl_navigation_sim/tasks/waypoints.h"
 
-using hl_navigation::Holonomic;
-using hl_navigation::Properties;
-using hl_navigation::Property;
+using hl_navigation::core::OmnidirectionalKinematics;
+using hl_navigation::core::Properties;
+using hl_navigation::core::Property;
 
-namespace hl_navigation_sim {
+namespace hl_navigation::sim {
 
 void CollisionsScenario::init_world(World *world) {
   Scenario::init_world(world);
@@ -26,7 +26,7 @@ void CollisionsScenario::init_world(World *world) {
   auto task =
       std::make_shared<WaypointsTask>(Waypoints{target, -target}, true, 0.1);
   auto se = std::make_shared<BoundedStateEstimation>(nullptr, 10.0);
-  auto kinematics = std::make_shared<Holonomic>(1.0, 1.0);
+  auto kinematics = std::make_shared<OmnidirectionalKinematics>(1.0, 1.0);
   auto agent =
       std::make_shared<Agent>(agent_radius, Behavior::make_type(behavior_name),
                               kinematics, task, se, control_period);
@@ -66,6 +66,6 @@ const std::map<std::string, Property> CollisionsScenario::properties =
                                0.1f, "Control period")}};
 
 const std::string CollisionsScenario::type =
-    register_type<CollisionsScenario>("CollisionsScenario");
+    register_type<CollisionsScenario>("Collisions");
 
-}  // namespace hl_navigation_sim
+}  // namespace hl_navigation::sim
