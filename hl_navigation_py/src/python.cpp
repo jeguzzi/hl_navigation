@@ -802,6 +802,10 @@ PYBIND11_MODULE(_hl_navigation, m) {
           "speed_tolerance", &Controller::get_speed_tolerance,
           &Controller::set_speed_tolerance,
           DOC(hl_navigation, core, Controller, property_speed_tolerance))
+      .def_property(
+          "cmd_frame", &Controller::get_cmd_frame,
+          &Controller::set_cmd_frame,
+          DOC(hl_navigation, core, Controller, property_cmd_frame))
       .def("go_to_position", &Controller::go_to_position,
            DOC(hl_navigation, core, Controller, go_to_position))
       .def("go_to_pose", &Controller::go_to_pose,

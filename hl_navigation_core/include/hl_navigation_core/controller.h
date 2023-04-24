@@ -150,7 +150,7 @@ class HL_NAVIGATION_CORE_EXPORT Controller {
    * @param[in]  behavior                  The navigation behavior
    */
   Controller(std::shared_ptr<Behavior> behavior = nullptr)
-      : behavior(behavior), speed_tolerance(1e-2) {}
+      : behavior(behavior), speed_tolerance(1e-2), cmd_frame(std::nullopt) {}
 
   virtual ~Controller() = default;
 
@@ -214,6 +214,26 @@ class HL_NAVIGATION_CORE_EXPORT Controller {
   void set_speed_tolerance(float value) {
     speed_tolerance = std::max(0.0f, value);
   }
+
+  
+  /**
+   * @brief      Gets the frame of reference for the command. 
+   * 
+   * @return     The frame of reference.
+   */
+  std::optional<Frame> get_cmd_frame() const {
+    return cmd_frame;
+  }
+
+  /**
+   * @brief      Sets the frame of reference for the command. 
+   * 
+   * Leave empty to use the default frame of the kinematics, see \ref Behavior::default_cmd_frame.
+   *
+   * @param[in]  frame  The desired value
+   */
+  void set_cmd_frame(const std::optional<Frame> & frame) { cmd_frame = frame; }
+
   /**
    * @brief      Starts an action to go to a point.
    *
@@ -342,6 +362,7 @@ class HL_NAVIGATION_CORE_EXPORT Controller {
    * Speed tolerance to transition to idle
    */
   float speed_tolerance;
+  std::optional<Frame> cmd_frame;
 
  private:
   std::optional<std::function<void(const Twist2 &)>> cmd_cb;

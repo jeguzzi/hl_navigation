@@ -625,6 +625,7 @@ class ROSControllerNode : public rclcpp::Node {
     const float radius = declare_parameter("radius", 0.0, param_desc);
     should_publish_cmd_stamped =
         declare_parameter("publish_cmd_stamped", false, param_desc);
+    controller.set_cmd_frame(should_publish_cmd_stamped ? Frame::absolute : Frame::relative);
     fixed_frame = declare_parameter("frame_id", "world", param_desc);
     declare_parameter("altitude.tau", 1.0);
     declare_parameter("altitude.optimal_speed", 0.1);

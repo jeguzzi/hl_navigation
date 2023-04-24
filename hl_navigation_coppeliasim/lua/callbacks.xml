@@ -260,6 +260,48 @@
         <return>
         </return>
     </command>
+    <command name="set_speed_tolerance">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="value" type="float">
+            <description>The value</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="should_be_limited_to_2d">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="value" type="bool">
+            <description>The value</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
+    <command name="set_cmd_frame">
+        <description>TODO
+        </description>
+        <params>
+          <param name="handle" type="int">
+            <description>The controller handle</description>
+          </param>
+          <param name="value" type="int">
+            <description>The value (0 for relative, 1 for absolute)</description>
+          </param>
+        </params>
+        <return>
+        </return>
+    </command>
     <command name="update">
         <description>TODO
         </description>
@@ -484,6 +526,10 @@
       <item name="target_angle" />
       <item name="target_angular_speed" />
       <item name="velocity" />
+    </enum>
+    <enum name="Frame" item-prefix="" base="0">
+      <item name="relative" />
+      <item name="absolute" />
     </enum>
 
 </plugin>

@@ -301,11 +301,33 @@ class Plugin : public sim::Plugin {
     }
   }
 
+  void set_speed_tolerance(set_speed_tolerance_in *in, set_speed_tolerance_out *out) {
+    auto controller = controller_at_index(in->handle);
+    if (controller) {
+      controller->set_speed_tolerance(in->value);
+    }
+  }
+
   void set_heading_behavior(set_heading_behavior_in *in,
                             set_heading_behavior_out *out) {
     auto behavior = behavior_at_index(in->handle);
     if (behavior) {
       behavior->set_heading_behavior(static_cast<Behavior::Heading>(in->value));
+    }
+  }
+
+  void should_be_limited_to_2d(should_be_limited_to_2d_in *in,
+                               should_be_limited_to_2d_out *out) {
+    auto controller = controller_at_index(in->handle);
+    if (controller) {
+      controller->should_be_limited_to_2d(in->value);
+    }
+  }
+
+  void set_cmd_frame(set_cmd_frame_in *in, set_cmd_frame_out *out) {
+    auto controller = controller_at_index(in->handle);
+    if (controller) {
+      controller->set_cmd_frame(static_cast<hl_navigation::core::Frame>(in->value));
     }
   }
 

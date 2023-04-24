@@ -149,7 +149,7 @@ Twist2 Controller::update(float time_step) {
     }
   }
   if (action && behavior) {
-    Twist2 cmd = behavior->compute_cmd(time_step);
+    Twist2 cmd = behavior->compute_cmd(time_step, cmd_frame);
     if (cmd_cb) {
       (*cmd_cb)(cmd);
     }

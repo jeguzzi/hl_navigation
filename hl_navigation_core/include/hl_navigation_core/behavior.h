@@ -652,7 +652,7 @@ class HL_NAVIGATION_CORE_EXPORT Behavior : virtual public HasProperties,
    * @return     The frame
    */
   Frame default_cmd_frame() {
-    if (kinematics && kinematics->is_wheeled()) {
+    if (kinematics && (kinematics->is_wheeled() || kinematics->dof() < 3)) {
       return Frame::relative;
     }
     return Frame::absolute;
