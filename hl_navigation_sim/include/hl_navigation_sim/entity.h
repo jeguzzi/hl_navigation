@@ -22,6 +22,8 @@ struct HL_NAVIGATION_SIM_EXPORT Entity {
    */
   Entity() : uid(_uid++) {}
 
+  virtual ~Entity() = default;
+
   /**
    * @brief      Constructs a new instance.
    *
