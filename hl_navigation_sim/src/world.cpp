@@ -6,6 +6,8 @@
 
 #include "hl_navigation_sim/sampling/sampler.h"
 
+using hl_navigation::core::Frame;
+
 namespace hl_navigation::sim {
 
 void World::set_seed(unsigned seed) { set_random_seed(seed); }
@@ -84,15 +86,17 @@ void World::update(float time_step) {
   step++;
 }
 
-void World::add_entity(Entity * entity) {
-  entities[entity->uid] = entity;
-}
+void World::add_entity(Entity *entity) { entities[entity->uid] = entity; }
 
 void World::add_agent(const std::shared_ptr<Agent> &agent) {
   if (agent) {
-    agents.push_back(agent);
-    ready = false;
-    add_entity(agent.get());
+    if (entities.count(agent->uid) == 0) {
+      agents.push_back(agent);
+      ready = false;
+      add_entity(agent.get());
+    } else {
+      std::cerr << "This agent was already added!" << std::endl;
+    }
   }
 }
 
@@ -102,25 +106,35 @@ void World::add_wall(const LineSegment &wall) {
   ready = false;
 }
 
+void World::add_wall(const Wall &wall) {
+  if (entities.count(wall.uid) == 0) {
+    walls.push_back(wall);
+    add_entity(&walls.back());
+    ready = false;
+  } else {
+    std::cerr << "This wall was already added!" << std::endl;
+  }
+}
+
 void World::add_obstacle(const Disc &obstacle) {
   obstacles.push_back(obstacle);
   add_entity(&obstacles.back());
   ready = false;
 }
 
-void World::add_wall(const Wall &wall) {
-  walls.push_back(wall);
-  add_entity(&walls.back());
-  ready = false;
-}
 void World::add_obstacle(const Obstacle &obstacle) {
-  obstacles.push_back(obstacle);
-  add_entity(&obstacles.back());
-  ready = false;
+  if (entities.count(obstacle.uid) == 0) {
+    obstacles.push_back(obstacle);
+    add_entity(&obstacles.back());
+    ready = false;
+  } else {
+    std::cerr << "This obstacle was already added!" << std::endl;
+  }
 }
 
-// TODO(jerome) (clear)
+
 void World::set_obstacles(const std::vector<Disc> &values) {
+  obstacles.clear();
   for (const auto &value : values) {
     add_obstacle(value);
   }
@@ -128,6 +142,7 @@ void World::set_obstacles(const std::vector<Disc> &values) {
 
 // TODO(jerome) (clear)
 void World::set_walls(const std::vector<LineSegment> &values) {
+  walls.clear();
   for (const auto &value : values) {
     add_wall(value);
   }
@@ -148,8 +163,10 @@ void World::prepare() {
       a->behavior->set_kinematics(a->kinematics);
       a->behavior->set_radius(a->radius);
       a->controller.set_behavior(a->behavior);
+      a->controller.set_cmd_frame(Frame::absolute);
     }
   }
+  ready = true;
 }
 
 void World::run(unsigned steps, float time_step) {
@@ -170,6 +187,7 @@ std::vector<Agent *> World::get_agents_in_region(const BoundingBox &bb) const {
   return rs;
 }
 
+// TODO(Jerome): add agent/obstacle radius to narrow phase
 std::vector<Neighbor> World::get_neighbors(const Agent *agent,
                                            float distance) const {
   std::vector<Neighbor> rs;
@@ -180,13 +198,13 @@ std::vector<Neighbor> World::get_neighbors(const Agent *agent,
   const auto uid = agent->uid;
   if (has_lattice) {
     ghost_index->query(bb, [&rs, &uid, &p, &distance](Ghost *g) {
-      if (g->uid != uid && (g->position - p).norm() < distance) {
+      if (g->uid != uid && (g->position - p).norm() < distance + g->radius) {
         rs.push_back(*g);
       }
     });
   }
   agent_index->query(bb, [&rs, &agent, &p, &distance](Agent *a) {
-    if (a != agent && (a->pose.position - p).norm() < distance) {
+    if (a != agent && (a->pose.position - p).norm() < distance + a->radius) {
       rs.push_back(a->as_neighbor());
     }
   });
@@ -202,9 +220,7 @@ std::vector<Disc> World::get_discs() const {
 }
 
 // TODO(Jerome) Should cache .. this needs to be fast
-const std::vector<Obstacle> & World::get_obstacles() const {
-  return obstacles;
-}
+const std::vector<Obstacle> &World::get_obstacles() const { return obstacles; }
 
 // TODO(J): complete
 std::vector<Disc *> World::get_static_obstacles_in_region(
@@ -213,9 +229,7 @@ std::vector<Disc *> World::get_static_obstacles_in_region(
 }
 
 // TODO(Jerome) Should cache .. this needs to be fast
-const std::vector<Wall> & World::get_walls() const {
-  return walls;
-}
+const std::vector<Wall> &World::get_walls() const { return walls; }
 
 // TODO(Jerome) Should cache .. this needs to be fast
 std::vector<LineSegment> World::get_line_obstacles() const {
@@ -296,7 +310,7 @@ bool World::in_collision(const Entity *e1, const Entity *e2) const {
   return collisions.count({e1, e2}) > 0 || collisions.count({e2, e1}) > 0;
 }
 
-//TODO(J): spare recomputing the envelops?
+// TODO(J): spare recomputing the envelops?
 void World::udpate_agent_collisions(Agent *a1) {
   // const BoundingBox &bb = agent_envelops[i];
   const BoundingBox bb = envelop(a1->pose.position, a1->radius);

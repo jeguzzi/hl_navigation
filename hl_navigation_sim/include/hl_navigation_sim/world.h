@@ -370,7 +370,7 @@ class HL_NAVIGATION_SIM_EXPORT World {
                           unsigned max_iterations = 10);
 
   // TODO(Jerome): should be private but it is needed by corridor to ensure
-  // that the controller is correcly set.
+  // that the controller is correctly set.
   void prepare();
 
   Lattice get_lattice(unsigned index) const;
