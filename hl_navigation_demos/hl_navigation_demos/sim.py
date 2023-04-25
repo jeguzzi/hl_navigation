@@ -14,8 +14,8 @@ class ThymioDemo(sim.Scenario, name="PyThymioDemo"):  # type: ignore[call-arg]
     def init_world(self, world: sim.World) -> None:
         targets = [(1.0, 0.0), (-1.0, 0.0)]
         for i in range(2):
-            task = sim.WaypointsTask(targets, True, 0.2)
-            se = sim.BoundedStateEstimation(world, 1.0, 1.0)
+            task = sim.tasks.WaypointsTask(targets, True, 0.2)
+            se = sim.state_estimations.BoundedStateEstimation(1.0)
             kinematics = core.kinematics.TwoWheelsDifferentialDriveKinematics(0.166, 0.094)
             behavior = core.Behavior.make_type(self.behavior_type)
             agent = sim.Agent(0.08, behavior, kinematics, task, se, 0.02)
