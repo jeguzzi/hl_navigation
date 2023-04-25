@@ -55,8 +55,8 @@ std::string to_string(const Pose2 &value) {
 template <>
 std::string to_string(const Twist2 &value) {
   return "Twist2(" + to_string(value.velocity) + ", " +
-         std::to_string(value.angular_speed) + ", " + to_string(value.frame) +
-         ")";
+         std::to_string(value.angular_speed) +
+         ", frame=" + to_string(value.frame) + ")";
 }
 
 template <>
@@ -389,7 +389,7 @@ PYBIND11_MODULE(_hl_navigation, m) {
            DOC(hl_navigation, core, LineSegment, distance, 2))
       .def("__repr__", &to_string<LineSegment>);
 
-  py::class_<Kinematics, PyKinematics, HasRegister<Kinematics>,
+  py::class_<Kinematics, PyKinematics, HasRegister<Kinematics>, HasProperties,
              std::shared_ptr<Kinematics>>(m, "Kinematics",
                                           DOC(hl_navigation, core, Kinematics))
       .def(py::init<float, float>(), py::arg("max_speed"),
@@ -429,7 +429,8 @@ PYBIND11_MODULE(_hl_navigation, m) {
 
   py::class_<WheeledKinematics, Kinematics, std::shared_ptr<WheeledKinematics>>(
       m, "WheeledKinematics", DOC(hl_navigation, core, WheeledKinematics))
-      .def_property("axis", &WheeledKinematics::get_axis, nullptr,
+      .def_property("axis", &WheeledKinematics::get_axis,
+                    &WheeledKinematics::set_axis,
                     DOC(hl_navigation, core, WheeledKinematics, property_axis))
       .def("twist", &WheeledKinematics::twist,
            DOC(hl_navigation, core, WheeledKinematics, twist))
@@ -802,27 +803,29 @@ PYBIND11_MODULE(_hl_navigation, m) {
           "speed_tolerance", &Controller::get_speed_tolerance,
           &Controller::set_speed_tolerance,
           DOC(hl_navigation, core, Controller, property_speed_tolerance))
-      .def_property(
-          "cmd_frame", &Controller::get_cmd_frame,
-          &Controller::set_cmd_frame,
-          DOC(hl_navigation, core, Controller, property_cmd_frame))
-      .def("go_to_position", &Controller::go_to_position,
+      .def_property("cmd_frame", &Controller::get_cmd_frame,
+                    &Controller::set_cmd_frame,
+                    DOC(hl_navigation, core, Controller, property_cmd_frame))
+      .def("go_to_position", &Controller::go_to_position, py::arg("position"),
+           py::arg("tolerance"),
            DOC(hl_navigation, core, Controller, go_to_position))
-      .def("go_to_pose", &Controller::go_to_pose,
+      .def("go_to_pose", &Controller::go_to_pose, py::arg("pose"),
+           py::arg("position_tolerance"), py::arg("orientation_tolerance"),
            DOC(hl_navigation, core, Controller, go_to_pose))
-      .def("follow_point", &Controller::follow_point,
+      .def("follow_point", &Controller::follow_point, py::arg("point"),
            DOC(hl_navigation, core, Controller, follow_point))
-      .def("follow_pose", &Controller::follow_pose,
+      .def("follow_pose", &Controller::follow_pose, py::arg("pose"),
            DOC(hl_navigation, core, Controller, follow_pose))
       .def("follow_direction", &Controller::follow_direction,
+           py::arg("direction"),
            DOC(hl_navigation, core, Controller, follow_direction))
-      .def("follow_velocity", &Controller::follow_velocity,
+      .def("follow_velocity", &Controller::follow_velocity, py::arg("velocity"),
            DOC(hl_navigation, core, Controller, follow_velocity))
-      .def("follow_twist", &Controller::follow_twist,
+      .def("follow_twist", &Controller::follow_twist, py::arg("twist"),
            DOC(hl_navigation, core, Controller, follow_twist))
-      .def("update", &Controller::update,
+      .def("update", &Controller::update, py::arg("time_step"),
            DOC(hl_navigation, core, Controller, update))
-      .def("set_cmd_cb", &Controller::set_cmd_cb,
+      .def("set_cmd_cb", &Controller::set_cmd_cb, py::arg("callback"),
            DOC(hl_navigation, core, Controller, set_cmd_cb))
       .def("stop", &Controller::stop,
            DOC(hl_navigation, core, Controller, stop));
