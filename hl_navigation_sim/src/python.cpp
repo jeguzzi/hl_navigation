@@ -43,13 +43,13 @@ struct PyBehavior : public Behavior {
   using Native = Behavior;
 
   static py::object make_type(const std::string &type) {
-    py::module_ nav = py::module_::import("hl_navigation");
+    py::module_ nav = py::module_::import("hl_navigation.core");
     return nav.attr("Behavior").attr("make_type")(type);
   }
 
   // Should cache
   static std::map<std::string, Properties> type_properties() {
-    py::module_ nav = py::module_::import("hl_navigation");
+    py::module_ nav = py::module_::import("hl_navigation.core");
     auto value = nav.attr("Behavior").attr("type_properties");
     return value.cast<std::map<std::string, Properties>>();
   }
@@ -60,13 +60,13 @@ struct PyKinematics : public Kinematics {
   using Native = Kinematics;
 
   static py::object make_type(const std::string &type) {
-    py::module_ nav = py::module_::import("hl_navigation");
+    py::module_ nav = py::module_::import("hl_navigation.core");
     return nav.attr("Kinematics").attr("make_type")(type);
   }
 
   // Should cache
   static std::map<std::string, Properties> type_properties() {
-    py::module_ nav = py::module_::import("hl_navigation");
+    py::module_ nav = py::module_::import("hl_navigation.core");
     auto value = nav.attr("Kinematics").attr("type_properties");
     return value.cast<std::map<std::string, Properties>>();
   }
@@ -602,6 +602,7 @@ Creates a rectangular region
       .def("get_entity", &World::get_entity, py::arg("uid"),
            py::return_value_policy::reference,
            DOC(hl_navigation, sim, World, get_entity))
+      .def("_prepare", &World::prepare)
       .def("in_collision", &World::in_collision, py::arg("e1"), py::arg("e2"),
            DOC(hl_navigation, sim, World, in_collision));
 
@@ -879,9 +880,7 @@ The view is empty if the agent's task has not been recorded in the trace.
                     DOC(hl_navigation, sim, Experiment, trace))
       .def_property(
           "scenario", [](const PyExperiment *exp) { return exp->scenario; },
-          [](PyExperiment *exp, const std::shared_ptr<Scenario> &value) {
-            exp->scenario = value;
-          },
+          &PyExperiment::set_scenario,
           DOC(hl_navigation, sim, Experiment, scenario))
       .def_property("world", &Experiment::get_world, nullptr,
                     DOC(hl_navigation, sim, Experiment, world))
