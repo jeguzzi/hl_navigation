@@ -3,6 +3,7 @@ import json
 import logging
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
+import sys
 
 import websockets
 import websockets.server
@@ -88,10 +89,22 @@ class WebUI:
         else:
             self.min_period = 0
         self.last_update_stamp: Optional[float] = None
+        self._prepared = False
 
-    async def prepare(self):
-        self.server = await websockets.server.serve(self.handle_ws, self.host,
-                                                    self.port)
+    @property
+    def is_ready(self) -> bool:
+        return self._prepared
+
+    async def prepare(self) -> bool:
+        if not self._prepared:
+            try:
+                self.server = await websockets.server.serve(self.handle_ws, self.host,
+                                                            self.port)
+            except OSError as e:
+                print(e, file=sys.stderr)
+                return False
+            self._prepared = True
+        return True
 
     @property
     def number_of_client(self) -> int:
@@ -147,6 +160,8 @@ class WebUI:
                 await queue.put(data)
 
     async def update_poses(self, world: World) -> None:
+       if not self.queues:
+            return
         stamp = time.time()
         if self.last_update_stamp and (
                 stamp - self.last_update_stamp) < self.min_period:
