@@ -41,10 +41,14 @@ RUN cd /ws \
 RUN cd /ws \
     && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DHIGHFIVE_UNIT_TESTS=OFF -DHIGHFIVE_BUILD_DOCS=OFF --packages-select HighFive
 
+
+RUN apt-get update && apt-get install -y \
+    clang \
+   && rm -rf /var/lib/apt/lists/*
+
 RUN pip3 install clang==14 git+https://github.com/jeguzzi/pybind11_mkdoc@rst
 
-RUN mkdir -p /ws/src && cd /ws/src \
-    && git clone https://github.com/jeguzzi/hl_navigation.git --branch ros2
+RUN cd /ws/src && git clone https://github.com/jeguzzi/hl_navigation.git --branch ros2
 
 RUN cd /ws \
     && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select  \
