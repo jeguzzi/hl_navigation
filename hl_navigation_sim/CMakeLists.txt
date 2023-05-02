@@ -106,7 +106,7 @@ generate_docstrings(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/python.cpp 
   hl_navigation/sim
   ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_INSTALL_PREFIX}/include ${EIGEN3_INCLUDE_DIR}
+  "${CMAKE_INSTALL_PREFIX}/include ${EIGEN3_INCLUDE_DIR}"
 )
 
 # target_compile_options(_hl_navigation_sim PRIVATE -fvisibility=hidden)
