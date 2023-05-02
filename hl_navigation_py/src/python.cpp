@@ -228,7 +228,12 @@ class PyKinematics : public Kinematics,
 PYBIND11_MODULE(_hl_navigation, m) {
   py::options options;
   // options.disable_function_signatures();
+
+#if PYBIND11_VERSION_MAJOR >= 2 && PYBIND11_VERSION_MINOR >= 10
+
   options.disable_enum_members_docstring();
+
+#endif
 
   declare_register<Behavior>(m, "Behavior");
   declare_register<Kinematics>(m, "Kinematics");
