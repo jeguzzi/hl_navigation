@@ -9,7 +9,7 @@ if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
 
-# Default to C++14
+# Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
@@ -58,7 +58,7 @@ pybind11_add_module(_hl_navigation src/python.cpp)
 generate_docstrings(
   _hl_navigation 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/python.cpp 
-  hl_navigation/core
+  ${CMAKE_INSTALL_PREFIX}/include/hl_navigation/core
   ${CMAKE_INSTALL_PREFIX}/include
   ${EIGEN3_INCLUDE_DIR}
 )

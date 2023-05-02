@@ -104,9 +104,9 @@ pybind11_add_module(_hl_navigation_sim src/python.cpp)
 generate_docstrings(
   _hl_navigation_sim 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/python.cpp 
-  hl_navigation/sim
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/hl_navigation/sim
   ${CMAKE_INSTALL_PREFIX}/include 
+  ${PROJECT_BINARY_DIR} 
   ${EIGEN3_INCLUDE_DIR}
 )
 

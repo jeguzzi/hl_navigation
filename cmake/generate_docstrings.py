@@ -32,19 +32,18 @@ def ref(_renamed_classes, _methods):
 
 def main():
 
-    include = sys.argv[3]
     python_src = sys.argv[1]
     library = sys.argv[2]
-    deps = sys.argv[4:]
+    deps = sys.argv[3:]
 
     headers = []
 
-    for path, subdirs, files in os.walk(os.path.join(include, library)):
+    for path, subdirs, files in os.walk(library):
         for name in files:
             if name.endswith(".h"):
                 headers.append(os.path.join(path, name))
 
-    includes = sum([["-I", path] for path in [include] + deps], [])
+    includes = sum([["-I", path] for path in deps], [])
 
     args = ["python3", "-m", "pybind11_mkdoc"
             ] + headers + includes + ["--std=c++17"]
