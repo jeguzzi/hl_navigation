@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(hl_navigation_sim)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/ament_python_install_namespace_package.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/generate_docstrings.cmake)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -99,6 +100,15 @@ ament_python_install_namespace_package(sim
   NAMESPACE hl_navigation
 )
 pybind11_add_module(_hl_navigation_sim src/python.cpp)
+
+generate_docstrings(
+  _hl_navigation_sim 
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/python.cpp 
+  hl_navigation/sim
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${EIGEN3_INCLUDE_DIR}
+)
+
 # target_compile_options(_hl_navigation_sim PRIVATE -fvisibility=hidden)
 target_link_libraries(_hl_navigation_sim 
   PRIVATE 

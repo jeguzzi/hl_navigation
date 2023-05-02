@@ -5,6 +5,7 @@
 #ifndef HL_NAVIGATION_SIM_SAMPLING_SAMPLER_H
 #define HL_NAVIGATION_SIM_SAMPLING_SAMPLER_H
 
+#include <memory>
 #include <random>
 #include <type_traits>
 #include <vector>

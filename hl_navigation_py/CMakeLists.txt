@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(hl_navigation_py)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/ament_python_install_namespace_package.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/generate_docstrings.cmake)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -30,11 +31,16 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(pybind11 REQUIRED)
 # add_subdirectory(../external/pybind11 pybind11 EXCLUDE_FROM_ALL)
 
-include_directories(include)
 
+# message("${CMAKE_CURRENT_SOURCE_DIR}/src/python.cpp ${CMAKE_INSTALL_DIR}/include/hl_navigation/core ${EIGEN3_INCLUDE_DIR}")
+
+
+include_directories(include ${PROJECT_BINARY_DIR})
 
 add_library(hl_navigation_py INTERFACE )
 target_include_directories(hl_navigation_py INTERFACE include)
+
+
 
 
 # ament_python_install_package seems to not support namespace packages
@@ -48,10 +54,19 @@ ament_python_install_namespace_package(core
 )
 
 pybind11_add_module(_hl_navigation src/python.cpp)
+
+generate_docstrings(
+  _hl_navigation 
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/python.cpp 
+  hl_navigation/core
+  ${CMAKE_INSTALL_PREFIX}/include
+  ${EIGEN3_INCLUDE_DIR}
+)
+
 # target_compile_options(_hl_navigation PRIVATE -fvisibility=hidden)
 target_compile_definitions(_hl_navigation PRIVATE PYBIND11_DETAILED_ERROR_MESSAGES=1)
 target_link_libraries(_hl_navigation PRIVATE hl_navigation_core::hl_navigation_core)
-add_dependencies(_hl_navigation hl_navigation_core::hl_navigation_core)
+add_dependencies(_hl_navigation hl_navigation_core::hl_navigation_core docstrings)
 
 install(TARGETS _hl_navigation DESTINATION "${PYTHON_INSTALL_DIR}/hl_navigation/core")
 

@@ -24,7 +24,27 @@ SHELL ["/bin/bash", "-c"]
 RUN pip3 install -U colcon-common-extensions
 
 RUN mkdir -p /ws/src && cd /ws/src \
-    && git clone https://github.com/jeguzzi/hl_navigation.git --recursive --branch ros2
+    && git clone https://github.com/libgeos/geos.git \
+    && git clone https://github.com/pybind/pybind11.git \
+    && git clone https://github.com/BlueBrain/HighFive.git \
+    && git clone https://github.com/jbeder/yaml-cpp.git
+
+RUN cd /ws \
+    && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DPYBIND11_TEST=OFF  --packages-select pybind11
+
+RUN cd /ws \
+    && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DYAML_CPP_INSTALL=ON --packages-select YAML_CPP
+
+RUN cd /ws \
+    && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DGEOS_BUILD_DEVELOPER=OFF --packages-select GEOS
+
+RUN cd /ws \
+    && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DHIGHFIVE_UNIT_TESTS=OFF -DHIGHFIVE_BUILD_DOCS=OFF --packages-select HighFive
+
+RUN pip3 install clang==14 git+https://github.com/jeguzzi/pybind11_mkdoc@rst
+
+RUN mkdir -p /ws/src && cd /ws/src \
+    && git clone https://github.com/jeguzzi/hl_navigation.git --branch ros2
 
 RUN cd /ws \
     && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select  \

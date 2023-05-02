@@ -1,6 +1,10 @@
 #ifndef HL_NAVIGATION_CORE_REGISTER_H
 #define HL_NAVIGATION_CORE_REGISTER_H
 
+#include <functional>
+#include <memory>
+#include <vector>
+
 #include "./property.h"
 #include "./utilities.h"
 #include "hl_navigation_core_export.h"
