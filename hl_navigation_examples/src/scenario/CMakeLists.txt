@@ -11,6 +11,7 @@ add_library(my_scenario SHARED my_scenario.h)
 ament_target_dependencies(my_scenario hl_navigation_sim)
 ament_export_targets(my_scenarioTargets HAS_LIBRARY_TARGET)
 ament_export_dependencies(my_scenario)
+set_target_properties(my_scenario PROPERTIES LINKER_LANGUAGE CXX)
 
 
 install(TARGETS
