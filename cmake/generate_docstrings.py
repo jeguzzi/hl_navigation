@@ -56,7 +56,7 @@ def main():
     if result.returncode or len(header) == 0:
         print("Failed running pybind11_mkdoc", file=sys.stderr)
         with open(destination, 'w') as f:
-            f.write("#define DOC(...) ")
+            f.write('#define DOC(...) ""')
         return
 
     header = result.stdout.decode("utf-8")
