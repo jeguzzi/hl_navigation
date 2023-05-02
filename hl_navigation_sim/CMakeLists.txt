@@ -46,11 +46,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(include ${PROJECT_BINARY_DIR})
 
-add_executable(test_samplers src/test_samplers.cpp src/sampling/sampler.cpp)
-target_link_libraries(test_samplers hl_navigation_core::hl_navigation_core )
+# add_executable(test_samplers src/test_samplers.cpp src/sampling/sampler.cpp)
+# target_link_libraries(test_samplers hl_navigation_core::hl_navigation_core )
 
-add_executable(test_samplers_yaml src/test_samplers_yaml.cpp src/sampling/sampler.cpp)
-target_link_libraries(test_samplers_yaml hl_navigation_core::hl_navigation_core)
+# add_executable(test_samplers_yaml src/test_samplers_yaml.cpp src/sampling/sampler.cpp)
+# target_link_libraries(test_samplers_yaml hl_navigation_core::hl_navigation_core)
 
 add_library(hl_navigation_sim SHARED
   src/agent.cpp
@@ -123,8 +123,6 @@ add_dependencies(_hl_navigation_sim hl_navigation_sim)
 install(TARGETS _hl_navigation_sim DESTINATION "${PYTHON_INSTALL_DIR}/hl_navigation/sim")
 
 install(TARGETS
-  test_samplers
-  test_samplers_yaml
   list
   run
   sample
