@@ -7,7 +7,7 @@ Samplers
 
 .. code-block:: cpp
    
-   #include "hl_navigation_sim/sampling/sampler.h"
+   #include "hl_navigation/sim/sampling/sampler.h"
 
 .. doxygenfunction:: hl_navigation::sim::set_random_seed
 

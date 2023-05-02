@@ -6,7 +6,7 @@
 #include <iterator>
 #include <vector>
 
-#include "hl_navigation_core/collision_computation.h"
+#include "hl_navigation/core/collision_computation.h"
 
 using hl_navigation::core::CollisionComputation;
 using hl_navigation::core::Disc;

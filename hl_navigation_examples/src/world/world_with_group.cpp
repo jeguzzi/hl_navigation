@@ -5,9 +5,9 @@
 #include <iostream>
 
 #include "../groups.h"
-#include "hl_navigation_core/behaviors/dummy.h"
-#include "hl_navigation_sim/world.h"
-#include "hl_navigation_sim/yaml/world.h"
+#include "hl_navigation/core/behaviors/dummy.h"
+#include "hl_navigation/sim/world.h"
+#include "hl_navigation/sim/yaml/world.h"
 
 using hl_navigation::core::Vector2;
 

@@ -1,4 +1,4 @@
-#include "hl_navigation_core/kinematics.h"
+#include "hl_navigation/core/kinematics.h"
 
 namespace hl_navigation::core {
 

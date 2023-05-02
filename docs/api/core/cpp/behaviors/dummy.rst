@@ -3,7 +3,7 @@ Dummy
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/behaviors/dummy.h"
+   #include "hl_navigation/core/behaviors/dummy.h"
 
 A behavior that ignores collisions
 

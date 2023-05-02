@@ -5,8 +5,8 @@
 #include <chrono>
 #include <memory>
 
-#include "hl_navigation_sim/experiment.h"
-#include "hl_navigation_sim/world.h"
+#include "hl_navigation/sim/experiment.h"
+#include "hl_navigation/sim/world.h"
 #include "scenario.h"
 
 using hl_navigation::sim::Experiment;

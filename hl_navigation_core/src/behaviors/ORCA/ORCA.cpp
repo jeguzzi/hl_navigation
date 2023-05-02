@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_core/behaviors/ORCA.h"
+#include "hl_navigation/core/behaviors/ORCA.h"
 
 #include "RVO/Agent.h"
 #include "RVO/Definitions.h"

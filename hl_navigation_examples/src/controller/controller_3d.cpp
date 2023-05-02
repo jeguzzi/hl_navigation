@@ -6,8 +6,8 @@
 #include <iterator>
 #include <vector>
 
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_core/controller_3d.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/core/controller_3d.h"
 
 using hl_navigation::core::Action;
 using hl_navigation::core::Behavior;

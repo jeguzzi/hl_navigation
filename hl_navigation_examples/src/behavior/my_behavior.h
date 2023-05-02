@@ -5,7 +5,7 @@
 #ifndef HL_NAVIGATION_CORE_EXAMPLES_MY_BEHAVIOR_H_
 #define HL_NAVIGATION_CORE_EXAMPLES_MY_BEHAVIOR_H_
 
-#include "hl_navigation_core/behavior.h"
+#include "hl_navigation/core/behavior.h"
 
 namespace hl_navigation::core {
 

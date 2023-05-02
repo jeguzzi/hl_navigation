@@ -5,7 +5,7 @@
 #ifndef HL_NAVIGATION_CORE_EXAMPLES_MY_SCENARIO_H_
 #define HL_NAVIGATION_CORE_EXAMPLES_MY_SCENARIO_H_
 
-#include "hl_navigation_sim/scenario.h"
+#include "hl_navigation/sim/scenario.h"
 
 namespace hl_navigation::sim {
 

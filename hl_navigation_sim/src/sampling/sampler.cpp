@@ -1,4 +1,4 @@
-#include "hl_navigation_sim/sampling/sampler.h"
+#include "hl_navigation/sim/sampling/sampler.h"
 
 namespace hl_navigation::sim {
 

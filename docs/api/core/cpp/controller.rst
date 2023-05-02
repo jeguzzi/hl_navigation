@@ -7,7 +7,7 @@ Two-dimensional
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/controller.h"
+   #include "hl_navigation/core/controller.h"
 
 .. doxygenstruct:: hl_navigation::core::Action
     :members:
@@ -20,7 +20,7 @@ Three-dimensional
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/controller_3d.h"
+   #include "hl_navigation/core/controller_3d.h"
 
 .. doxygenstruct:: hl_navigation::core::Cylinder
     :members:

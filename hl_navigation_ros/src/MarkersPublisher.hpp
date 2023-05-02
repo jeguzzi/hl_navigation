@@ -11,8 +11,8 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include "hl_navigation_core/common.h"
-#include "hl_navigation_core/controller_3d.h"
+#include "hl_navigation/core/common.h"
+#include "hl_navigation/core/controller_3d.h"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 

@@ -2,9 +2,9 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_sim/world.h"
+#include "hl_navigation/sim/world.h"
 
-#include "hl_navigation_sim/sampling/sampler.h"
+#include "hl_navigation/sim/sampling/sampler.h"
 
 using hl_navigation::core::Frame;
 

@@ -2,13 +2,13 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_core/behaviors/HL.h"
+#include "hl_navigation/core/behaviors/HL.h"
 
 #include <assert.h>
 
 #include <algorithm>
 
-#include "hl_navigation_core/collision_computation.h"
+#include "hl_navigation/core/collision_computation.h"
 
 static float relax(float x0, float x1, float tau, float dt) {
   if (tau == 0) return x1;

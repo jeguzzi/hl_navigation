@@ -7,7 +7,7 @@ Two dimensional
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/common.h"
+   #include "hl_navigation/core/common.h"
 
 
 .. doxygentypedef:: hl_navigation::core::Radians
@@ -38,7 +38,7 @@ Three dimensional
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/controller_3d.h"
+   #include "hl_navigation/core/controller_3d.h"
 
 .. doxygentypedef:: hl_navigation::core::Vector3
 

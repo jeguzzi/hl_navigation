@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_core/cached_collision_computation.h"
+#include "hl_navigation/core/cached_collision_computation.h"
 
 namespace hl_navigation::core {
 

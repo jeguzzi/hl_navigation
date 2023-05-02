@@ -4,7 +4,7 @@ Properties
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/property.h"
+   #include "hl_navigation/core/property.h"
 
 .. doxygentypedef:: hl_navigation::core::TypedGetter
 

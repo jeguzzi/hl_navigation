@@ -4,10 +4,10 @@
 
 #include <iostream>
 
-#include "hl_navigation_sim/scenario.h"
-#include "hl_navigation_sim/world.h"
-#include "hl_navigation_sim/yaml/scenario.h"
-#include "hl_navigation_sim/yaml/world.h"
+#include "hl_navigation/sim/scenario.h"
+#include "hl_navigation/sim/world.h"
+#include "hl_navigation/sim/yaml/scenario.h"
+#include "hl_navigation/sim/yaml/world.h"
 #include "yaml-cpp/yaml.h"
 
 static const char scenario_yaml[] = R"YAML(

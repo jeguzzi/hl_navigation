@@ -4,7 +4,7 @@ World
 
 .. code-block:: cpp
    
-   #include "hl_navigation_sim/world.h"
+   #include "hl_navigation/sim/world.h"
 
 .. doxygentypedef:: hl_navigation::sim::BoundingBox
 

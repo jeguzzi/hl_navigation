@@ -77,8 +77,8 @@ install(TARGETS
 )
 
 install(
-  DIRECTORY include/${PROJECT_NAME}
-  DESTINATION include
+  DIRECTORY include/hl_navigation/core
+  DESTINATION include/hl_navigation
 )
 
 install(FILES

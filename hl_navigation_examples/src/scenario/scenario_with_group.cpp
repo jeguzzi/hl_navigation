@@ -5,10 +5,10 @@
 #include <iostream>
 
 #include "../groups.h"
-#include "hl_navigation_sim/sampling/agent.h"
-#include "hl_navigation_sim/scenario.h"
-#include "hl_navigation_sim/yaml/world.h"
-#include "hl_navigation_sim/yaml/scenario.h"
+#include "hl_navigation/sim/sampling/agent.h"
+#include "hl_navigation/sim/scenario.h"
+#include "hl_navigation/sim/yaml/world.h"
+#include "hl_navigation/sim/yaml/scenario.h"
 #include "yaml-cpp/yaml.h"
 
 namespace sim = hl_navigation::sim;

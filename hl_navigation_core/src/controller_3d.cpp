@@ -1,7 +1,7 @@
 /**
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
-#include "hl_navigation_core/controller_3d.h"
+#include "hl_navigation/core/controller_3d.h"
 
 namespace hl_navigation::core {
 

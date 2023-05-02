@@ -89,10 +89,10 @@ add_executable(sample src/sample.cpp)
 target_link_libraries(sample hl_navigation_sim)
 add_dependencies(sample hl_navigation_sim)
 
-# add_executable(list src/list.cpp)
-# target_link_libraries(list hl_navigation_sim)
-# add_dependencies(list hl_navigation_sim)
-# 
+add_executable(list src/list.cpp)
+target_link_libraries(list hl_navigation_sim)
+add_dependencies(list hl_navigation_sim)
+
 ament_python_install_namespace_package(sim
   SCRIPTS_DESTINATION lib/${PROJECT_NAME}
   PACKAGE_DIR hl_navigation/sim
@@ -110,13 +110,12 @@ add_dependencies(_hl_navigation_sim hl_navigation_sim)
 
 # target_link_libraries(_hl_navigation_sim PRIVATE -Wl,-force_load hl_navigation_sim)
 
-
 install(TARGETS _hl_navigation_sim DESTINATION "${PYTHON_INSTALL_DIR}/hl_navigation/sim")
 
 install(TARGETS
   test_samplers
   test_samplers_yaml
-  # list
+  list
   run
   sample
   DESTINATION
@@ -124,8 +123,8 @@ install(TARGETS
 )
 
 install(
-  DIRECTORY include/${PROJECT_NAME}
-  DESTINATION include
+  DIRECTORY include/hl_navigation/sim
+  DESTINATION include/hl_navigation
 )
 
 install(FILES

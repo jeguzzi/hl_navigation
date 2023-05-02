@@ -3,8 +3,8 @@
 
 #include <pybind11/pybind11.h>
 
-#include "hl_navigation_core/property.h"
-#include "hl_navigation_core/register.h"
+#include "hl_navigation/core/property.h"
+#include "hl_navigation/core/register.h"
 
 namespace py = pybind11;
 

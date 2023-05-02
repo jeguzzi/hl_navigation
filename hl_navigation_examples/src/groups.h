@@ -5,9 +5,9 @@
 #ifndef HL_NAVIGATION_CORE_EXAMPLES_GROUP_H
 #define HL_NAVIGATION_CORE_EXAMPLES_GROUP_H
 
-#include "hl_navigation_sim/sampling/agent.h"
-#include "hl_navigation_sim/sampling/sampler.h"
-#include "hl_navigation_sim/tasks/waypoints.h"
+#include "hl_navigation/sim/sampling/agent.h"
+#include "hl_navigation/sim/sampling/sampler.h"
+#include "hl_navigation/sim/tasks/waypoints.h"
 
 namespace sim = hl_navigation::sim;
 

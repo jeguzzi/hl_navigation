@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_core/behaviors/dummy.h"
+#include "hl_navigation/core/behaviors/dummy.h"
 
 namespace hl_navigation::core {
 

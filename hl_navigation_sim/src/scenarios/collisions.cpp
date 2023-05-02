@@ -2,16 +2,16 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_sim/scenarios/collisions.h"
+#include "hl_navigation/sim/scenarios/collisions.h"
 
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "hl_navigation_core/kinematics.h"
-#include "hl_navigation_core/property.h"
-#include "hl_navigation_sim/state_estimations/geometric_bounded.h"
-#include "hl_navigation_sim/tasks/waypoints.h"
+#include "hl_navigation/core/kinematics.h"
+#include "hl_navigation/core/property.h"
+#include "hl_navigation/sim/state_estimations/geometric_bounded.h"
+#include "hl_navigation/sim/tasks/waypoints.h"
 
 using hl_navigation::core::OmnidirectionalKinematics;
 using hl_navigation::core::Properties;

@@ -6,9 +6,9 @@
 #include <iterator>
 #include <vector>
 
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_core/target.h"
-#include "hl_navigation_core/states/geometric.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/core/target.h"
+#include "hl_navigation/core/states/geometric.h"
 
 // Should also add the wheels
 

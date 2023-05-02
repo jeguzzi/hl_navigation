@@ -81,7 +81,7 @@ Public API
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/yaml/yaml.h"
+   #include "hl_navigation/core/yaml/yaml.h"
 
 .. cpp:namespace:: YAML
 

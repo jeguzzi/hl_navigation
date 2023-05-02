@@ -8,13 +8,13 @@
 #include <memory>
 #include <vector>
 
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_core/kinematics.h"
-#include "hl_navigation_sim/experiment.h"
-#include "hl_navigation_sim/scenario.h"
-#include "hl_navigation_sim/state_estimations/geometric_bounded.h"
-#include "hl_navigation_sim/tasks/waypoints.h"
-#include "hl_navigation_sim/world.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/core/kinematics.h"
+#include "hl_navigation/sim/experiment.h"
+#include "hl_navigation/sim/scenario.h"
+#include "hl_navigation/sim/state_estimations/geometric_bounded.h"
+#include "hl_navigation/sim/tasks/waypoints.h"
+#include "hl_navigation/sim/world.h"
 
 using hl_navigation::core::Behavior;
 using hl_navigation::core::make_property;

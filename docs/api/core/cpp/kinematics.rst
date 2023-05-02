@@ -4,7 +4,7 @@ Kinematics
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/kinematics.h"
+   #include "hl_navigation/core/kinematics.h"
 
 Abstract classes
 ================

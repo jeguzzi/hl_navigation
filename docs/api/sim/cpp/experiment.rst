@@ -4,7 +4,7 @@ Experiment
 
 .. code-block:: cpp
    
-   #include "hl_navigation_sim/experiment.h"
+   #include "hl_navigation/sim/experiment.h"
 
 .. doxygenstruct:: hl_navigation::sim::Trace
     :members:

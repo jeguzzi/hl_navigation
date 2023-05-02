@@ -4,10 +4,10 @@
 
 #include <vector>
 
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_core/behaviors/dummy.h"
-#include "hl_navigation_core/common.h"
-#include "hl_navigation_core/controller.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/core/behaviors/dummy.h"
+#include "hl_navigation/core/common.h"
+#include "hl_navigation/core/controller.h"
 
 using hl_navigation::core::Action;
 using hl_navigation::core::DummyBehavior;

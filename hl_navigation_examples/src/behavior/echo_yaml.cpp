@@ -6,9 +6,9 @@
 #include <memory>
 #include <iomanip>
 
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_core/yaml/yaml.h"
-#include "hl_navigation_core/yaml/core.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/core/yaml/yaml.h"
+#include "hl_navigation/core/yaml/core.h"
 
 using hl_navigation::core::Behavior;
 

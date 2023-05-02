@@ -2,10 +2,10 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_sim/state_estimations/geometric_bounded.h"
+#include "hl_navigation/sim/state_estimations/geometric_bounded.h"
 
-#include "hl_navigation_sim/agent.h"
-#include "hl_navigation_sim/world.h"
+#include "hl_navigation/sim/agent.h"
+#include "hl_navigation/sim/world.h"
 
 namespace hl_navigation::sim {
 

@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_core/behaviors/HRVO.h"
+#include "hl_navigation/core/behaviors/HRVO.h"
 
 #include "HRVO/Agent.h"
 #include "HRVO/HRVO.h"

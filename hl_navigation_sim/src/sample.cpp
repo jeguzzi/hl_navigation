@@ -4,12 +4,12 @@
 
 #include <iostream>
 
-#include "hl_navigation_core/plugins.h"
-#include "hl_navigation_core/yaml/yaml.h"
-#include "hl_navigation_sim/scenario.h"
-#include "hl_navigation_sim/scenarios/antipodal.h"
-#include "hl_navigation_sim/scenarios/simple.h"
-#include "hl_navigation_sim/yaml/scenario.h"
+#include "hl_navigation/core/plugins.h"
+#include "hl_navigation/core/yaml/yaml.h"
+#include "hl_navigation/sim/scenario.h"
+#include "hl_navigation/sim/scenarios/antipodal.h"
+#include "hl_navigation/sim/scenarios/simple.h"
+#include "hl_navigation/sim/yaml/scenario.h"
 #include "yaml-cpp/yaml.h"
 
 static void show_usage(std::string name) {

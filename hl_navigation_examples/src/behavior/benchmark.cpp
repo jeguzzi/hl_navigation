@@ -10,8 +10,8 @@
 #include <tuple>
 #include <vector>
 
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_core/states/geometric.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/core/states/geometric.h"
 
 using namespace hl_navigation::core;
 

@@ -4,7 +4,7 @@ Waypoints
 
 .. code-block:: cpp
    
-   #include "hl_navigation_sim/tasks/waypoints.h"
+   #include "hl_navigation/sim/tasks/waypoints.h"
 
 
 .. doxygentypedef:: hl_navigation::sim::Waypoints

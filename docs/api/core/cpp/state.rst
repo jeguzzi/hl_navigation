@@ -7,7 +7,7 @@ Base class
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/state.h"
+   #include "hl_navigation/core/state.h"
 
 .. doxygenstruct:: hl_navigation::core::EnvironmentState
     :members:
@@ -18,7 +18,7 @@ Geometric
 
 .. code-block:: cpp
    
-   #include "hl_navigation_core/states/geometric.h"
+   #include "hl_navigation/core/states/geometric.h"
 
 .. doxygenstruct:: hl_navigation::core::LineSegment
     :members:

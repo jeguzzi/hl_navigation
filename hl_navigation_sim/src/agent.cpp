@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_sim/agent.h"
+#include "hl_navigation/sim/agent.h"
 
 namespace hl_navigation::sim {
 

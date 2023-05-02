@@ -5,12 +5,12 @@
 #include <vector>
 
 #include "config.h"
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_core/common.h"
-#include "hl_navigation_core/controller_3d.h"
-#include "hl_navigation_core/kinematics.h"
-#include "hl_navigation_core/property.h"
-#include "hl_navigation_core/states/geometric.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/core/common.h"
+#include "hl_navigation/core/controller_3d.h"
+#include "hl_navigation/core/kinematics.h"
+#include "hl_navigation/core/property.h"
+#include "hl_navigation/core/states/geometric.h"
 #include "simPlusPlus/Handle.h"
 #include "simPlusPlus/Plugin.h"
 #include "stubs.h"

@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_sim/scenario.h"
+#include "hl_navigation/sim/scenario.h"
 
 namespace hl_navigation::sim {
 

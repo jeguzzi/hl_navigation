@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_core/behavior.h"
+#include "hl_navigation/core/behavior.h"
 
 #include <iostream>
 #include <stdexcept>

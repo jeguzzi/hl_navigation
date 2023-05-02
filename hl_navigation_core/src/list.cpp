@@ -5,12 +5,12 @@
 #include <iostream>
 #include <vector>
 
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_core/common.h"
-#include "hl_navigation_core/kinematics.h"
-#include "hl_navigation_core/plugins.h"
-#include "hl_navigation_core/property.h"
-#include "hl_navigation_core/utilities.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/core/common.h"
+#include "hl_navigation/core/kinematics.h"
+#include "hl_navigation/core/plugins.h"
+#include "hl_navigation/core/property.h"
+#include "hl_navigation/core/utilities.h"
 
 template <typename T>
 static void print_register(const std::string& title,

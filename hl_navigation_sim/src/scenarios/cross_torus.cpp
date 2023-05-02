@@ -2,16 +2,16 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_sim/scenarios/cross_torus.h"
+#include "hl_navigation/sim/scenarios/cross_torus.h"
 
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "hl_navigation_core/common.h"
-#include "hl_navigation_core/property.h"
-#include "hl_navigation_sim/sampling/sampler.h"
-#include "hl_navigation_sim/tasks/waypoints.h"
+#include "hl_navigation/core/common.h"
+#include "hl_navigation/core/property.h"
+#include "hl_navigation/sim/sampling/sampler.h"
+#include "hl_navigation/sim/tasks/waypoints.h"
 
 namespace hl_navigation::sim {
 

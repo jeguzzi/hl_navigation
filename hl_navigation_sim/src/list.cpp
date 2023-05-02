@@ -5,14 +5,14 @@
 #include <iostream>
 #include <vector>
 
-#include "hl_navigation_core/plugins.h"
-#include "hl_navigation_core/property.h"
-#include "hl_navigation_core/utilities.h"
-#include "hl_navigation_core/behavior.h"
-#include "hl_navigation_sim/scenario.h"
-#include "hl_navigation_sim/scenarios/antipodal.h"
-#include "hl_navigation_sim/scenarios/simple.h"
-#include "hl_navigation_sim/world.h"
+#include "hl_navigation/core/plugins.h"
+#include "hl_navigation/core/property.h"
+#include "hl_navigation/core/utilities.h"
+#include "hl_navigation/core/behavior.h"
+#include "hl_navigation/sim/scenario.h"
+#include "hl_navigation/sim/scenarios/antipodal.h"
+#include "hl_navigation/sim/scenarios/simple.h"
+#include "hl_navigation/sim/world.h"
 
 template <typename T>
 static void print_register(const std::string& title,

@@ -2,7 +2,7 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_core/controller.h"
+#include "hl_navigation/core/controller.h"
 
 namespace hl_navigation::core {
 

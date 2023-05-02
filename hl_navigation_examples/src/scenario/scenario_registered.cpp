@@ -4,13 +4,13 @@
 
 #include <iostream>
 
-#include "hl_navigation_sim/scenario.h"
-#include "hl_navigation_sim/scenarios/antipodal.h"
-#include "hl_navigation_sim/scenarios/cross.h"
-#include "hl_navigation_sim/scenarios/collisions.h"
-#include "hl_navigation_sim/scenarios/simple.h"
-#include "hl_navigation_sim/yaml/world.h"
-#include "hl_navigation_sim/yaml/scenario.h"
+#include "hl_navigation/sim/scenario.h"
+#include "hl_navigation/sim/scenarios/antipodal.h"
+#include "hl_navigation/sim/scenarios/cross.h"
+#include "hl_navigation/sim/scenarios/collisions.h"
+#include "hl_navigation/sim/scenarios/simple.h"
+#include "hl_navigation/sim/yaml/world.h"
+#include "hl_navigation/sim/yaml/scenario.h"
 #include "yaml-cpp/yaml.h"
 
 static std::string s_type = "Simple";

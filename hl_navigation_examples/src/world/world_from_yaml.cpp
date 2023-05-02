@@ -4,8 +4,8 @@
 
 #include <iostream>
 
-#include "hl_navigation_core/yaml/yaml.h"
-#include "hl_navigation_sim/yaml/world.h"
+#include "hl_navigation/core/yaml/yaml.h"
+#include "hl_navigation/sim/yaml/world.h"
 #include "yaml-cpp/yaml.h"
 
 static const char world_yaml[] = R"YAML(

@@ -1,14 +1,14 @@
-#include "hl_navigation_sim/experiment.h"
+#include "hl_navigation/sim/experiment.h"
 
 #include <filesystem>
 #include <highfive/H5DataSpace.hpp>
 #include <highfive/H5File.hpp>
 
-#include "hl_navigation_core/yaml/yaml.h"
-#include "hl_navigation_sim/sampling/sampler.h"
-#include "hl_navigation_sim/world.h"
-#include "hl_navigation_sim/yaml/experiment.h"
-#include "hl_navigation_sim/yaml/world.h"
+#include "hl_navigation/core/yaml/yaml.h"
+#include "hl_navigation/sim/sampling/sampler.h"
+#include "hl_navigation/sim/world.h"
+#include "hl_navigation/sim/yaml/experiment.h"
+#include "hl_navigation/sim/yaml/world.h"
 
 using namespace hl_navigation::core;
 using namespace hl_navigation::sim;

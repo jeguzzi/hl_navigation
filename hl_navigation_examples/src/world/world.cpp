@@ -2,15 +2,15 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_sim/world.h"
+#include "hl_navigation/sim/world.h"
 
 #include <iostream>
 
-#include "hl_navigation_core/behaviors/dummy.h"
-#include "hl_navigation_core/kinematics.h"
-#include "hl_navigation_core/yaml/yaml.h"
-#include "hl_navigation_sim/yaml/world.h"
-#include "hl_navigation_sim/tasks/waypoints.h"
+#include "hl_navigation/core/behaviors/dummy.h"
+#include "hl_navigation/core/kinematics.h"
+#include "hl_navigation/core/yaml/yaml.h"
+#include "hl_navigation/sim/yaml/world.h"
+#include "hl_navigation/sim/tasks/waypoints.h"
 
 using hl_navigation::core::DummyBehavior;
 using hl_navigation::core::OmnidirectionalKinematics;

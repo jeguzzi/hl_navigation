@@ -2,10 +2,10 @@
  * @author Jerome Guzzi - <jerome@idsia.ch>
  */
 
-#include "hl_navigation_sim/tasks/waypoints.h"
+#include "hl_navigation/sim/tasks/waypoints.h"
 
-#include "hl_navigation_core/states/geometric.h"
-#include "hl_navigation_sim/agent.h"
+#include "hl_navigation/core/states/geometric.h"
+#include "hl_navigation/sim/agent.h"
 
 namespace hl_navigation::sim {
 
