@@ -23,6 +23,7 @@ ament_target_dependencies(sim_cpp hl_navigation_core hl_navigation_sim)
 
 add_library(hl_navigation_demos SHARED src/scenario.h)
 ament_target_dependencies(hl_navigation_demos hl_navigation_core hl_navigation_sim)
+set_target_properties(hl_navigation_demos PROPERTIES LINKER_LANGUAGE CXX)
 
 install(TARGETS
   native_cpp sim_cpp
