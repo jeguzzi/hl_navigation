@@ -1,8 +1,10 @@
-Navigation
-==========
+HL Navigation
+=============
+
+[!WARNING] 
+This repository has been discontinued. Please have a look at https://github.com/idsia_robots/navground and https://github.com/idsia_robots/navground_ros that provide similar functionality.
 
 The repository contains a [ROS](http://www.ros.org) node that performs local navigation.
-
 
 The navigation node implements the three navigation behaviors described in the [article](http://ieeexplore.ieee.org/xpl/login.jsp?tp=&arnumber=6696726&url=http%3A%2F%2Fieeexplore.ieee.org%2Fxpls%2Fabs_all.jsp%3Farnumber%3D6696726)
 
