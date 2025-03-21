@@ -2,7 +2,7 @@ HL Navigation
 =============
 
 > [!WARNING] 
-> This repository has been discontinued. Please have a look at https://github.com/idsia_robots/navground and https://github.com/idsia_robots/navground_ros that provide similar functionality.
+> This repository has been discontinued. Please have a look at https://github.com/idsia_robotics/navground and https://github.com/idsia_robotics/navground_ros that provide similar functionality.
 
 The repository contains a [ROS](http://www.ros.org) node that performs local navigation.
 
